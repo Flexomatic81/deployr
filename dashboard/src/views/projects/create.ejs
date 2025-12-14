@@ -1,0 +1,113 @@
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <h4 class="mb-0"><i class="bi bi-folder-plus"></i> Neues Projekt erstellen</h4>
+            </div>
+            <div class="card-body">
+                <form method="POST" action="/projects">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Projektname</label>
+                        <input type="text" class="form-control" id="name" name="name"
+                               pattern="[a-z0-9-]+" required
+                               placeholder="mein-projekt">
+                        <div class="form-text">Nur Kleinbuchstaben, Zahlen und Bindestriche erlaubt</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="template" class="form-label">Template</label>
+                        <select class="form-select" id="template" name="template" required>
+                            <% templates.forEach(template => { %>
+                                <option value="<%= template.name %>"><%= template.displayName %></option>
+                            <% }) %>
+                        </select>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="port" class="form-label">Port</label>
+                        <input type="number" class="form-control" id="port" name="port"
+                               value="<%= nextPort %>" min="8001" max="9999" required>
+                        <div class="form-text">Nächster freier Port: <%= nextPort %></div>
+                    </div>
+
+                    <div class="alert alert-info">
+                        <i class="bi bi-info-circle"></i>
+                        <strong>Hinweis:</strong> Das Projekt wird erstellt unter:
+                        <code>/opt/webserver/users/<%= user.system_username %>/&lt;projektname&gt;</code>
+                    </div>
+
+                    <div class="d-flex gap-2">
+                        <button type="submit" class="btn btn-primary">
+                            <i class="bi bi-plus-lg"></i> Projekt erstellen
+                        </button>
+                        <a href="/projects" class="btn btn-outline-secondary">
+                            <i class="bi bi-x-lg"></i> Abbrechen
+                        </a>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Template Info -->
+        <div class="card mt-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Template-Informationen</h5>
+            </div>
+            <div class="card-body">
+                <div class="accordion" id="templateInfo">
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#staticInfo">
+                                <i class="bi bi-file-earmark-code"></i>&nbsp; Statische Website
+                            </button>
+                        </h2>
+                        <div id="staticInfo" class="accordion-collapse collapse" data-bs-parent="#templateInfo">
+                            <div class="accordion-body">
+                                <ul class="mb-0">
+                                    <li>Nginx Webserver</li>
+                                    <li>HTML, CSS, JavaScript</li>
+                                    <li>Ideal für einfache Websites</li>
+                                    <li>Keine Datenbank</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#phpInfo">
+                                <i class="bi bi-filetype-php"></i>&nbsp; PHP Website
+                            </button>
+                        </h2>
+                        <div id="phpInfo" class="accordion-collapse collapse" data-bs-parent="#templateInfo">
+                            <div class="accordion-body">
+                                <ul class="mb-0">
+                                    <li>Nginx + PHP 8.3 FPM</li>
+                                    <li>MariaDB Unterstützung</li>
+                                    <li>Ideal für WordPress, Laravel, etc.</li>
+                                    <li>Datenbank optional</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="accordion-item">
+                        <h2 class="accordion-header">
+                            <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#nodeInfo">
+                                <i class="bi bi-filetype-js"></i>&nbsp; Node.js App
+                            </button>
+                        </h2>
+                        <div id="nodeInfo" class="accordion-collapse collapse" data-bs-parent="#templateInfo">
+                            <div class="accordion-body">
+                                <ul class="mb-0">
+                                    <li>Node.js 20</li>
+                                    <li>Express.js vorinstalliert</li>
+                                    <li>MariaDB Unterstützung</li>
+                                    <li>Ideal für APIs, Web-Apps</li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

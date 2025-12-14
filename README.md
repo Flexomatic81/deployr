@@ -23,6 +23,7 @@ Jeder User kann statische Websites, PHP-Anwendungen oder Node.js Apps hosten.
 ## Features
 
 - 🚀 **Interaktives Projekt-Setup** - Keine Parameter nötig, alles wird abgefragt
+- 🖥️ **Web-Dashboard** - Browser-basierte Verwaltungsoberfläche
 - 🗄️ **Automatische Datenbank-Erstellung** - Optional beim Projekt-Setup
 - 🔐 **Sichere Credentials** - Automatisch generiert und in .env gespeichert
 - 📦 **GitHub Integration** - Repository direkt beim Setup klonen
@@ -33,9 +34,28 @@ Jeder User kann statische Websites, PHP-Anwendungen oder Node.js Apps hosten.
 
 ## Schnellstart
 
-### Erstes Projekt erstellen (Interaktiv)
+### Option A: Web-Setup (Empfohlen)
 
-Auf dem **Server**:
+Setup komplett über den Browser - kein SSH nötig:
+
+```bash
+# 1. Web-Setup starten
+chmod +x web-setup.sh
+./web-setup.sh
+
+# 2. Browser öffnen
+# http://<SERVER_IP>:3000
+
+# 3. Setup-Wizard durchlaufen:
+#    - Server-IP konfigurieren
+#    - MySQL Passwort festlegen
+#    - Admin-Account erstellen
+#    - Fertig!
+```
+
+### Option B: Kommandozeilen-Setup
+
+Klassisches Setup über Terminal:
 
 ```bash
 # 1. Setup ausführen (einmalig)
@@ -98,12 +118,18 @@ webserver/
 │   └── nodejs-app/           # Node.js Express
 │
 ├── scripts/                   # Verwaltungs-Scripts
-│   ├── create-project.sh     # ⭐ Neues Projekt erstellen (interaktiv!)
+│   ├── create-project.sh     # Neues Projekt erstellen (interaktiv!)
 │   ├── create-database.sh    # Datenbank manuell erstellen
 │   ├── delete-project.sh     # Projekt löschen
 │   ├── delete-user.sh        # User mit allen Projekten löschen
 │   ├── list-projects.sh      # Alle Projekte anzeigen
+│   ├── setup-dashboard.sh    # Dashboard installieren
 │   └── start-infrastructure.sh
+│
+├── dashboard/                # ⭐ Web-Dashboard (Node.js)
+│   ├── docker-compose.yml
+│   ├── Dockerfile
+│   └── src/                  # Dashboard Quellcode
 │
 ├── config.sh.example        # Template für Server-Konfiguration
 ├── config.sh                # Server-Konfiguration (IP, User, Ports)
@@ -151,6 +177,21 @@ rm -rf PROJEKTNAME
 # Löscht alle Projekte, Container und Datenbanken des Users
 ./scripts/delete-user.sh <username>
 ```
+
+### Web-Dashboard
+
+```bash
+# Dashboard installieren und starten
+./scripts/setup-dashboard.sh
+
+# Dashboard öffnen: http://<SERVER_IP>:3000
+```
+
+Das Dashboard bietet:
+- Projekte erstellen, starten, stoppen, löschen
+- Container-Status und Logs anzeigen
+- Datenbanken verwalten
+- Multi-User Login
 
 ### Infrastruktur
 

@@ -1,0 +1,67 @@
+<div class="row justify-content-center">
+    <div class="col-md-6 col-lg-4">
+        <div class="card shadow">
+            <div class="card-body p-4">
+                <div class="text-center mb-4">
+                    <i class="bi bi-person-plus display-4 text-primary"></i>
+                    <h2 class="mt-2">Registrieren</h2>
+                    <p class="text-muted">Neues Konto erstellen</p>
+                </div>
+
+                <form method="POST" action="/register">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Benutzername</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-person"></i></span>
+                            <input type="text" class="form-control" id="username" name="username"
+                                   pattern="[a-z0-9_-]+" required autofocus
+                                   placeholder="z.B. max_mustermann">
+                        </div>
+                        <div class="form-text">Nur Kleinbuchstaben, Zahlen, - und _</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="system_username" class="form-label">System-Benutzername</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-terminal"></i></span>
+                            <input type="text" class="form-control" id="system_username" name="system_username"
+                                   pattern="[a-z0-9_-]+" required
+                                   placeholder="z.B. max">
+                        </div>
+                        <div class="form-text">Wird für Projekt-Verzeichnisse verwendet (users/&lt;name&gt;/)</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Passwort</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock"></i></span>
+                            <input type="password" class="form-control" id="password" name="password"
+                                   minlength="6" required>
+                        </div>
+                        <div class="form-text">Mindestens 6 Zeichen</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password_confirm" class="form-label">Passwort bestätigen</label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
+                            <input type="password" class="form-control" id="password_confirm" name="password_confirm"
+                                   minlength="6" required>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary w-100">
+                        <i class="bi bi-person-plus"></i> Registrieren
+                    </button>
+                </form>
+
+                <hr class="my-4">
+
+                <div class="text-center">
+                    <p class="mb-0">Bereits ein Konto?</p>
+                    <a href="/login">Zum Login</a>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

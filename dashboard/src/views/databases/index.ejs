@@ -1,0 +1,139 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-database"></i> Datenbanken</h1>
+    <a href="/databases/create" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Neue Datenbank
+    </a>
+</div>
+
+<% if (databases.length === 0) { %>
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-database-x display-1 text-muted"></i>
+            <h3 class="mt-3">Keine Datenbanken vorhanden</h3>
+            <p class="text-muted">Erstelle deine erste Datenbank.</p>
+            <a href="/databases/create" class="btn btn-primary btn-lg">
+                <i class="bi bi-plus-lg"></i> Datenbank erstellen
+            </a>
+        </div>
+    </div>
+<% } else { %>
+    <div class="card">
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Datenbank</th>
+                            <th>Benutzer</th>
+                            <th>Passwort</th>
+                            <th>Host</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% databases.forEach(db => { %>
+                            <tr>
+                                <td>
+                                    <i class="bi bi-database-fill text-info"></i>
+                                    <strong><%= db.database %></strong>
+                                </td>
+                                <td><code><%= db.username %></code></td>
+                                <td>
+                                    <div class="input-group input-group-sm" style="width: 200px;">
+                                        <input type="password" class="form-control form-control-sm"
+                                               value="<%= db.password %>" readonly
+                                               id="pw-<%= db.database %>">
+                                        <button class="btn btn-outline-secondary" type="button"
+                                                onclick="togglePassword('pw-<%= db.database %>')">
+                                            <i class="bi bi-eye"></i>
+                                        </button>
+                                        <button class="btn btn-outline-secondary" type="button"
+                                                onclick="copyPassword('pw-<%= db.database %>')">
+                                            <i class="bi bi-clipboard"></i>
+                                        </button>
+                                    </div>
+                                </td>
+                                <td><code>webserver-mariadb:3306</code></td>
+                                <td>
+                                    <button type="button" class="btn btn-sm btn-outline-danger"
+                                            data-bs-toggle="modal" data-bs-target="#deleteModal-<%= db.database %>">
+                                        <i class="bi bi-trash"></i>
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <!-- Delete Modal -->
+                            <div class="modal fade" id="deleteModal-<%= db.database %>" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header bg-danger text-white">
+                                            <h5 class="modal-title">
+                                                <i class="bi bi-exclamation-triangle"></i> Datenbank löschen
+                                            </h5>
+                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Möchtest du die Datenbank <strong>"<%= db.database %>"</strong> wirklich löschen?</p>
+                                            <div class="alert alert-danger">
+                                                <i class="bi bi-exclamation-triangle"></i>
+                                                <strong>Achtung:</strong> Alle Daten in der Datenbank werden unwiderruflich gelöscht!
+                                            </div>
+                                        </div>
+                                        <div class="modal-footer">
+                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                                            <form action="/databases/<%= db.database %>?_method=DELETE" method="POST" class="d-inline">
+                                                <button type="submit" class="btn btn-danger">
+                                                    <i class="bi bi-trash"></i> Ja, löschen
+                                                </button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Verbindungs-Info -->
+    <div class="card mt-4">
+        <div class="card-header">
+            <h5 class="mb-0"><i class="bi bi-info-circle"></i> Verbindungsinformationen</h5>
+        </div>
+        <div class="card-body">
+            <p>Verwende diese Einstellungen in deiner Anwendung:</p>
+            <pre class="bg-light p-3 rounded"><code>DB_HOST=webserver-mariadb
+DB_PORT=3306
+DB_DATABASE=&lt;datenbank&gt;
+DB_USERNAME=&lt;benutzer&gt;
+DB_PASSWORD=&lt;passwort&gt;</code></pre>
+            <p class="text-muted mb-0">
+                <i class="bi bi-lightbulb"></i>
+                Im Docker-Netzwerk ist MariaDB unter <code>webserver-mariadb:3306</code> erreichbar.
+            </p>
+        </div>
+    </div>
+<% } %>
+
+<script>
+function togglePassword(id) {
+    const input = document.getElementById(id);
+    input.type = input.type === 'password' ? 'text' : 'password';
+}
+
+function copyPassword(id) {
+    const input = document.getElementById(id);
+    input.type = 'text';
+    input.select();
+    document.execCommand('copy');
+    input.type = 'password';
+
+    // Feedback
+    const btn = input.nextElementSibling.nextElementSibling;
+    const originalIcon = btn.innerHTML;
+    btn.innerHTML = '<i class="bi bi-check"></i>';
+    setTimeout(() => btn.innerHTML = originalIcon, 1500);
+}
+</script>

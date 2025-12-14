@@ -135,6 +135,72 @@ echo "[5/5] Konfiguration prüfen..."
 echo "✓ Server IP: $SERVER_IP"
 echo ""
 
+# Dashboard Installation abfragen
+echo ""
+echo -n "Möchtest du das Web-Dashboard installieren? (j/N): "
+read INSTALL_DASHBOARD
+INSTALL_DASHBOARD=${INSTALL_DASHBOARD:-n}
+
+DASHBOARD_INSTALLED=false
+if [ "$INSTALL_DASHBOARD" = "j" ] || [ "$INSTALL_DASHBOARD" = "J" ]; then
+    echo ""
+    echo "[+] Installiere Web-Dashboard..."
+
+    # Dashboard .env erstellen
+    if [ ! -f "$SCRIPT_DIR/dashboard/.env" ]; then
+        DASHBOARD_DB_PASSWORD=$(openssl rand -base64 16 | tr -d "=+/" | cut -c1-16)
+        SESSION_SECRET=$(openssl rand -base64 32 | tr -d "=+/")
+
+        # Root-Passwort aus infrastructure/.env holen
+        if [ -f "$SCRIPT_DIR/infrastructure/.env" ]; then
+            source "$SCRIPT_DIR/infrastructure/.env"
+        fi
+
+        cat > "$SCRIPT_DIR/dashboard/.env" << EOF
+# Dashboard Datenbank-Konfiguration
+DB_HOST=webserver-mariadb
+DB_PORT=3306
+DB_DATABASE=dashboard
+DB_USERNAME=dashboard_user
+DB_PASSWORD=$DASHBOARD_DB_PASSWORD
+
+# Session Secret
+SESSION_SECRET=$SESSION_SECRET
+
+# MySQL Root Passwort
+MYSQL_ROOT_PASSWORD=${MYSQL_ROOT_PASSWORD:-ChangeMeInProduction123!}
+
+# Pfade (Docker-intern)
+USERS_PATH=/app/users
+SCRIPTS_PATH=/app/scripts
+TEMPLATES_PATH=/app/templates
+EOF
+        echo "  ✓ Dashboard .env erstellt"
+    fi
+
+    # Warten bis MariaDB bereit ist
+    echo "  Warte auf MariaDB..."
+    sleep 5
+
+    # Dashboard Datenbank erstellen
+    docker exec -i webserver-mariadb mysql -uroot -p"${MYSQL_ROOT_PASSWORD:-ChangeMeInProduction123!}" << EOF 2>/dev/null || true
+CREATE DATABASE IF NOT EXISTS dashboard CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER IF NOT EXISTS 'dashboard_user'@'%' IDENTIFIED BY '$DASHBOARD_DB_PASSWORD';
+GRANT ALL PRIVILEGES ON dashboard.* TO 'dashboard_user'@'%';
+FLUSH PRIVILEGES;
+EOF
+    echo "  ✓ Dashboard Datenbank erstellt"
+
+    # Dashboard bauen und starten
+    cd "$SCRIPT_DIR/dashboard"
+    docker compose build --quiet
+    docker compose up -d
+    cd "$SCRIPT_DIR"
+    echo "  ✓ Dashboard gestartet"
+    DASHBOARD_INSTALLED=true
+fi
+
+echo ""
 echo "════════════════════════════════════════════"
 echo "✓ Setup abgeschlossen!"
 echo "════════════════════════════════════════════"
@@ -145,20 +211,30 @@ echo ""
 echo "Services:"
 echo "  MariaDB:     $SERVER_IP:$MARIADB_PORT"
 echo "  phpMyAdmin:  http://$SERVER_IP:$PHPMYADMIN_PORT"
+if [ "$DASHBOARD_INSTALLED" = true ]; then
+    echo -e "  ${GREEN}Dashboard:   http://$SERVER_IP:3000${NC}"
+fi
 echo ""
 echo "Nächste Schritte:"
 echo ""
-echo "1. MySQL Root Passwort ändern (falls noch nicht geschehen):"
-echo "   nano infrastructure/.env"
+if [ "$DASHBOARD_INSTALLED" = true ]; then
+    echo "1. Dashboard öffnen und registrieren:"
+    echo "   http://$SERVER_IP:3000"
+    echo ""
+    echo "2. Oder per Kommandozeile:"
+    echo "   ./scripts/create-project.sh"
+else
+    echo "1. MySQL Root Passwort ändern (falls noch nicht geschehen):"
+    echo "   nano infrastructure/.env"
+    echo ""
+    echo "2. Erstes Projekt erstellen:"
+    echo "   ./scripts/create-project.sh"
+    echo ""
+    echo "3. Optional: Web-Dashboard nachinstallieren:"
+    echo "   ./scripts/setup-dashboard.sh"
+fi
 echo ""
-echo "2. Erstes Projekt erstellen:"
-echo "   ./scripts/create-project.sh demo beispiel static-website"
-echo ""
-echo "3. Projekt starten:"
-echo "   cd users/demo/beispiel"
-echo "   docker compose up -d"
-echo ""
-echo "4. Alle Projekte anzeigen:"
+echo "Alle Projekte anzeigen:"
 echo "   ./scripts/list-projects.sh"
 echo ""
 echo "Vollständige Anleitung: siehe SETUP.md"

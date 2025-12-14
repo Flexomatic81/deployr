@@ -1,0 +1,92 @@
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-folder"></i> Projekte</h1>
+    <a href="/projects/create" class="btn btn-primary">
+        <i class="bi bi-plus-lg"></i> Neues Projekt
+    </a>
+</div>
+
+<% if (projects.length === 0) { %>
+    <div class="card">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-folder-x display-1 text-muted"></i>
+            <h3 class="mt-3">Keine Projekte vorhanden</h3>
+            <p class="text-muted">Erstelle dein erstes Projekt um loszulegen.</p>
+            <a href="/projects/create" class="btn btn-primary btn-lg">
+                <i class="bi bi-plus-lg"></i> Erstes Projekt erstellen
+            </a>
+        </div>
+    </div>
+<% } else { %>
+    <div class="row">
+        <% projects.forEach(project => { %>
+            <div class="col-md-6 col-lg-4 mb-4">
+                <div class="card h-100">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">
+                            <i class="bi bi-folder-fill text-warning"></i>
+                            <%= project.name %>
+                        </h5>
+                        <% if (project.status === 'running') { %>
+                            <span class="badge bg-success">Läuft</span>
+                        <% } else { %>
+                            <span class="badge bg-secondary">Gestoppt</span>
+                        <% } %>
+                    </div>
+                    <div class="card-body">
+                        <ul class="list-unstyled mb-3">
+                            <li>
+                                <i class="bi bi-code-slash text-muted"></i>
+                                <strong>Typ:</strong>
+                                <% if (project.templateType === 'php-website') { %>
+                                    PHP Website
+                                <% } else if (project.templateType === 'nodejs-app') { %>
+                                    Node.js App
+                                <% } else { %>
+                                    Statische Website
+                                <% } %>
+                            </li>
+                            <li>
+                                <i class="bi bi-hdd-network text-muted"></i>
+                                <strong>Port:</strong> <%= project.port %>
+                            </li>
+                            <li>
+                                <i class="bi bi-box text-muted"></i>
+                                <strong>Container:</strong>
+                                <%= project.runningContainers %>/<%= project.totalContainers %> aktiv
+                            </li>
+                            <% if (project.hasDatabase) { %>
+                                <li>
+                                    <i class="bi bi-database text-muted"></i>
+                                    <strong>Datenbank:</strong> <%= project.database %>
+                                </li>
+                            <% } %>
+                        </ul>
+                    </div>
+                    <div class="card-footer">
+                        <div class="btn-group w-100" role="group">
+                            <a href="/projects/<%= project.name %>" class="btn btn-outline-primary">
+                                <i class="bi bi-eye"></i> Details
+                            </a>
+                            <% if (project.status === 'running') { %>
+                                <form action="/projects/<%= project.name %>/stop" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-danger">
+                                        <i class="bi bi-stop-fill"></i> Stop
+                                    </button>
+                                </form>
+                            <% } else { %>
+                                <form action="/projects/<%= project.name %>/start" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-success">
+                                        <i class="bi bi-play-fill"></i> Start
+                                    </button>
+                                </form>
+                            <% } %>
+                            <a href="/logs/<%= project.name %>" class="btn btn-outline-info">
+                                <i class="bi bi-terminal"></i> Logs
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <% }) %>
+    </div>
+<% } %>

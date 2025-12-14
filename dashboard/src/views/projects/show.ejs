@@ -1,0 +1,186 @@
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="/projects">Projekte</a></li>
+        <li class="breadcrumb-item active"><%= project.name %></li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1>
+        <i class="bi bi-folder-fill text-warning"></i>
+        <%= project.name %>
+        <% if (project.status === 'running') { %>
+            <span class="badge bg-success fs-6">Läuft</span>
+        <% } else { %>
+            <span class="badge bg-secondary fs-6">Gestoppt</span>
+        <% } %>
+    </h1>
+    <div class="btn-group">
+        <% if (project.status === 'running') { %>
+            <form action="/projects/<%= project.name %>/stop" method="POST" class="d-inline">
+                <button type="submit" class="btn btn-danger">
+                    <i class="bi bi-stop-fill"></i> Stoppen
+                </button>
+            </form>
+            <form action="/projects/<%= project.name %>/restart" method="POST" class="d-inline">
+                <button type="submit" class="btn btn-warning">
+                    <i class="bi bi-arrow-clockwise"></i> Neustarten
+                </button>
+            </form>
+        <% } else { %>
+            <form action="/projects/<%= project.name %>/start" method="POST" class="d-inline">
+                <button type="submit" class="btn btn-success">
+                    <i class="bi bi-play-fill"></i> Starten
+                </button>
+            </form>
+        <% } %>
+        <a href="/logs/<%= project.name %>" class="btn btn-info">
+            <i class="bi bi-terminal"></i> Logs
+        </a>
+    </div>
+</div>
+
+<div class="row">
+    <!-- Projekt-Info -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0"><i class="bi bi-info-circle"></i> Projekt-Details</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-borderless">
+                    <tr>
+                        <th width="35%">Name:</th>
+                        <td><%= project.name %></td>
+                    </tr>
+                    <tr>
+                        <th>Typ:</th>
+                        <td>
+                            <% if (project.templateType === 'php-website') { %>
+                                <span class="badge bg-purple">PHP Website</span>
+                            <% } else if (project.templateType === 'nodejs-app') { %>
+                                <span class="badge bg-success">Node.js App</span>
+                            <% } else { %>
+                                <span class="badge bg-secondary">Statische Website</span>
+                            <% } %>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Port:</th>
+                        <td>
+                            <a href="http://<%= process.env.SERVER_IP || 'localhost' %>:<%= project.port %>" target="_blank">
+                                <%= project.port %> <i class="bi bi-box-arrow-up-right"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <tr>
+                        <th>Pfad:</th>
+                        <td><code><%= project.path %></code></td>
+                    </tr>
+                    <tr>
+                        <th>Container-Name:</th>
+                        <td><code><%= project.containerName %></code></td>
+                    </tr>
+                    <% if (project.hasDatabase) { %>
+                        <tr>
+                            <th>Datenbank:</th>
+                            <td><code><%= project.database %></code></td>
+                        </tr>
+                    <% } %>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- Container-Status -->
+    <div class="col-md-6">
+        <div class="card mb-4">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="bi bi-box"></i> Container
+                    (<%= project.runningContainers %>/<%= project.totalContainers %> aktiv)
+                </h5>
+            </div>
+            <div class="card-body">
+                <% if (project.containers.length === 0) { %>
+                    <div class="text-center text-muted py-3">
+                        <i class="bi bi-box-seam display-4"></i>
+                        <p class="mt-2">Keine Container gefunden</p>
+                        <p class="small">Starte das Projekt um Container zu erstellen</p>
+                    </div>
+                <% } else { %>
+                    <div class="list-group">
+                        <% project.containers.forEach(container => { %>
+                            <div class="list-group-item d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="bi bi-box<%= container.State === 'running' ? '-fill text-success' : ' text-muted' %>"></i>
+                                    <strong><%= container.Names[0].replace('/', '') %></strong>
+                                    <br>
+                                    <small class="text-muted"><%= container.Image %></small>
+                                </div>
+                                <% if (container.State === 'running') { %>
+                                    <span class="badge bg-success">Läuft</span>
+                                <% } else { %>
+                                    <span class="badge bg-secondary"><%= container.State %></span>
+                                <% } %>
+                            </div>
+                        <% }) %>
+                    </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Gefahrenzone -->
+<div class="card border-danger">
+    <div class="card-header bg-danger text-white">
+        <h5 class="mb-0"><i class="bi bi-exclamation-triangle"></i> Gefahrenzone</h5>
+    </div>
+    <div class="card-body">
+        <div class="d-flex justify-content-between align-items-center">
+            <div>
+                <h6 class="mb-1">Projekt löschen</h6>
+                <p class="text-muted mb-0 small">Das Projekt und alle Dateien werden unwiderruflich gelöscht.</p>
+            </div>
+            <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="bi bi-trash"></i> Löschen
+            </button>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i> Projekt löschen
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p>Bist du sicher, dass du das Projekt <strong>"<%= project.name %>"</strong> löschen möchtest?</p>
+                <div class="alert alert-danger">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong>Achtung:</strong> Diese Aktion kann nicht rückgängig gemacht werden!
+                </div>
+                <ul>
+                    <li>Alle Container werden gestoppt und entfernt</li>
+                    <li>Alle Projekt-Dateien werden gelöscht</li>
+                    <li>Die Datenbank wird <strong>nicht</strong> automatisch gelöscht</li>
+                </ul>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Abbrechen</button>
+                <form action="/projects/<%= project.name %>?_method=DELETE" method="POST" class="d-inline">
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> Ja, löschen
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
