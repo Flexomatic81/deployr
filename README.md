@@ -100,6 +100,8 @@ webserver/
 ├── scripts/                   # Verwaltungs-Scripts
 │   ├── create-project.sh     # ⭐ Neues Projekt erstellen (interaktiv!)
 │   ├── create-database.sh    # Datenbank manuell erstellen
+│   ├── delete-project.sh     # Projekt löschen
+│   ├── delete-user.sh        # User mit allen Projekten löschen
 │   ├── list-projects.sh      # Alle Projekte anzeigen
 │   └── start-infrastructure.sh
 │
@@ -133,10 +135,21 @@ webserver/
 ### Projekt löschen
 
 ```bash
-cd /opt/webserver/users/mehmed/PROJEKTNAME
+# Mit Script (empfohlen - fragt auch nach Datenbank-Löschung)
+./scripts/delete-project.sh <username> <projektname>
+
+# Manuell
+cd /opt/webserver/users/<USER>/PROJEKTNAME
 docker compose down
 cd ..
 rm -rf PROJEKTNAME
+```
+
+### User löschen
+
+```bash
+# Löscht alle Projekte, Container und Datenbanken des Users
+./scripts/delete-user.sh <username>
 ```
 
 ### Infrastruktur
@@ -260,16 +273,19 @@ Für jedes Projekt in Nginx Proxy Manager:
 ./scripts/create-project.sh
 
 # Projekt löschen
-cd users/mehmed/PROJEKT && docker compose down && cd .. && rm -rf PROJEKT
+./scripts/delete-project.sh <username> <projektname>
+
+# User löschen (inkl. aller Projekte & Datenbanken)
+./scripts/delete-user.sh <username>
 
 # Git-Update
-cd users/mehmed/PROJEKT/html && git pull
+cd users/<USER>/PROJEKT/html && git pull
 
 # Container neu starten
-cd users/mehmed/PROJEKT && docker compose restart
+cd users/<USER>/PROJEKT && docker compose restart
 
 # Logs anschauen
-cd users/mehmed/PROJEKT && docker compose logs -f
+cd users/<USER>/PROJEKT && docker compose logs -f
 
 # Alle laufenden Projekte
 docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
