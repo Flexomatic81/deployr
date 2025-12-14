@@ -1,0 +1,18 @@
+[mysqld]
+# Character Set
+character-set-server = utf8mb4
+collation-server = utf8mb4_unicode_ci
+
+# Performance
+max_connections = 200
+innodb_buffer_pool_size = 512M
+innodb_log_file_size = 128M
+
+# Logging
+general_log = 0
+slow_query_log = 1
+slow_query_log_file = /var/lib/mysql/slow-query.log
+long_query_time = 2
+
+# Security
+local_infile = 0

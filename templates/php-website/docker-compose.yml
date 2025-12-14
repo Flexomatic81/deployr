@@ -1,0 +1,39 @@
+version: '3.8'
+
+services:
+  nginx:
+    image: nginx:alpine
+    container_name: ${PROJECT_NAME:-php-web}-nginx
+    restart: unless-stopped
+    volumes:
+      - ./html:/var/www/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - webserver-network
+    ports:
+      - "${EXPOSED_PORT:-8002}:80"
+    depends_on:
+      - php
+    environment:
+      - TZ=Europe/Berlin
+
+  php:
+    image: php:8.3-fpm-alpine
+    container_name: ${PROJECT_NAME:-php-web}-php
+    restart: unless-stopped
+    volumes:
+      - ./html:/var/www/html
+      - ./php/custom.ini:/usr/local/etc/php/conf.d/custom.ini:ro
+    networks:
+      - webserver-network
+    environment:
+      - TZ=Europe/Berlin
+      - DB_HOST=webserver-mariadb
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE}
+      - DB_USERNAME=${DB_USERNAME}
+      - DB_PASSWORD=${DB_PASSWORD}
+
+networks:
+  webserver-network:
+    external: true

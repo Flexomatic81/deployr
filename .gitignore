@@ -1,0 +1,33 @@
+# Environment Files
+.env
+*.env
+!.env.example
+
+# User Data
+users/*/
+!users/README.md
+
+# Database Credentials
+.db-credentials
+
+# Logs
+*.log
+
+# Docker Volumes
+infrastructure/mariadb/data/
+
+# Backups
+*.sql
+*.tar.gz
+backup/
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
