@@ -6,21 +6,15 @@ const { exec } = require('child_process');
 const bcrypt = require('bcrypt');
 
 const BASE_PATH = '/app';
-const CONFIG_PATH = '/app/config.sh';
 const INFRASTRUCTURE_PATH = '/app/infrastructure';
+const SETUP_MARKER_PATH = '/app/infrastructure/.setup-complete';
 
 // Prüfen ob Setup bereits abgeschlossen
 async function isSetupComplete() {
     try {
-        // Prüfen ob config.sh existiert und Infrastruktur läuft
-        await fs.access(CONFIG_PATH);
-
-        // Prüfen ob MariaDB Container läuft
-        return new Promise((resolve) => {
-            exec('docker ps --filter "name=deployr-mariadb" --format "{{.Names}}"', (error, stdout) => {
-                resolve(stdout.trim() === 'deployr-mariadb');
-            });
-        });
+        // Prüfen ob Setup-Marker existiert
+        await fs.access(SETUP_MARKER_PATH);
+        return true;
     } catch {
         return false;
     }
@@ -32,7 +26,6 @@ router.get('/status', async (req, res) => {
     res.json({
         setupComplete: complete,
         dockerAvailable: await checkDocker(),
-        configExists: await fileExists(CONFIG_PATH),
         infrastructureRunning: await isInfrastructureRunning()
     });
 });
@@ -63,40 +56,28 @@ router.post('/run', async (req, res) => {
     try {
         const steps = [];
 
-        // Schritt 1: Config erstellen
-        steps.push({ step: 'config', status: 'running', message: 'Erstelle Konfiguration...' });
-        await createConfig(server_ip, system_username);
-        steps[0].status = 'done';
-
-        // Schritt 2: Infrastructure .env erstellen
-        steps.push({ step: 'infra_env', status: 'running', message: 'Erstelle Infrastruktur-Konfiguration...' });
-        await createInfrastructureEnv(mysql_root_password);
-        steps[1].status = 'done';
-
-        // Schritt 3: Docker Network erstellen
+        // Schritt 1: Docker Network erstellen
         steps.push({ step: 'network', status: 'running', message: 'Erstelle Docker-Netzwerk...' });
         await createDockerNetwork();
-        steps[2].status = 'done';
+        steps[0].status = 'done';
 
-        // Schritt 4: Infrastruktur starten
-        steps.push({ step: 'infrastructure', status: 'running', message: 'Starte MariaDB & phpMyAdmin...' });
-        await startInfrastructure();
-        steps[3].status = 'done';
-
-        // Schritt 5: Warten auf MariaDB
+        // Schritt 2: Warten auf MariaDB (läuft bereits via docker-compose)
         steps.push({ step: 'wait_db', status: 'running', message: 'Warte auf Datenbank...' });
         await waitForMariaDB(mysql_root_password);
-        steps[4].status = 'done';
+        steps[1].status = 'done';
 
-        // Schritt 6: Dashboard-Datenbank erstellen
+        // Schritt 3: Dashboard-Datenbank erstellen
         steps.push({ step: 'dashboard_db', status: 'running', message: 'Erstelle Dashboard-Datenbank...' });
         await createDashboardDatabase(mysql_root_password);
-        steps[5].status = 'done';
+        steps[2].status = 'done';
 
-        // Schritt 7: Admin-User erstellen
+        // Schritt 4: Admin-User erstellen
         steps.push({ step: 'admin', status: 'running', message: 'Erstelle Admin-Benutzer...' });
         await createAdminUser(admin_username, admin_password, system_username);
-        steps[6].status = 'done';
+        steps[3].status = 'done';
+
+        // Schritt 5: Setup als abgeschlossen markieren
+        await markSetupComplete(server_ip, system_username);
 
         res.json({ success: true, steps });
     } catch (error) {
@@ -112,15 +93,6 @@ async function checkDocker() {
     });
 }
 
-async function fileExists(filePath) {
-    try {
-        await fs.access(filePath);
-        return true;
-    } catch {
-        return false;
-    }
-}
-
 async function isInfrastructureRunning() {
     return new Promise((resolve) => {
         exec('docker ps --filter "name=deployr-mariadb" -q', (error, stdout) => {
@@ -129,49 +101,20 @@ async function isInfrastructureRunning() {
     });
 }
 
-async function createConfig(serverIp, defaultUser) {
-    const configContent = `#!/bin/bash
-# Server-Konfiguration (automatisch erstellt vom Setup-Wizard)
-
-# Server IP-Adresse
-SERVER_IP="${serverIp}"
-
-# Standard-Benutzer für SSH-Verbindungen
-DEFAULT_USER="${defaultUser}"
-
-# phpMyAdmin Port
-PHPMYADMIN_PORT="8080"
-
-# MariaDB Port
-MARIADB_PORT="3306"
-`;
-    await fs.writeFile(CONFIG_PATH, configContent);
-}
-
-async function createInfrastructureEnv(mysqlRootPassword) {
-    const envPath = path.join(INFRASTRUCTURE_PATH, '.env');
-    const envContent = `# MariaDB Root Passwort
-MYSQL_ROOT_PASSWORD=${mysqlRootPassword}
-`;
-    await fs.writeFile(envPath, envContent);
+async function markSetupComplete(serverIp, defaultUser) {
+    // Setup-Marker mit Metadaten erstellen
+    const markerContent = JSON.stringify({
+        completedAt: new Date().toISOString(),
+        serverIp,
+        defaultUser
+    }, null, 2);
+    await fs.writeFile(SETUP_MARKER_PATH, markerContent);
 }
 
 async function createDockerNetwork() {
-    return new Promise((resolve, reject) => {
+    return new Promise((resolve) => {
         exec('docker network create deployr-network 2>/dev/null || true', (error, stdout, stderr) => {
             resolve();
-        });
-    });
-}
-
-async function startInfrastructure() {
-    return new Promise((resolve, reject) => {
-        exec(`cd ${INFRASTRUCTURE_PATH} && docker compose up -d`, (error, stdout, stderr) => {
-            if (error && !stderr.includes('already exists')) {
-                reject(new Error(stderr || error.message));
-            } else {
-                resolve();
-            }
         });
     });
 }
