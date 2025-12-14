@@ -8,6 +8,18 @@ Docker-basierte Multi-User Umgebung für Webprojekte auf Linux-Servern.
 Ermöglicht mehreren Usern, isolierte Web-Projekte auf einem gemeinsamen Server zu betreiben.
 Jeder User kann statische Websites, PHP-Anwendungen oder Node.js Apps hosten.
 
+## Voraussetzungen
+
+| Komponente | Mindestversion | Hinweis |
+|------------|----------------|---------|
+| **Linux** | Beliebige Distribution | Debian, Ubuntu, CentOS, Fedora, Arch, etc. |
+| **Docker** | 20.10+ | `curl -fsSL https://get.docker.com \| sh` |
+| **Docker Compose** | v2.0+ | Als Plugin: `docker compose` |
+| **Git** | 2.0+ | Optional, für GitHub-Integration |
+| **SSH-Zugang** | - | Für Remote-Verwaltung |
+
+> Das `quick-start.sh` Script prüft automatisch ob Docker installiert ist und zeigt Installationsanleitungen.
+
 ## Features
 
 - 🚀 **Interaktives Projekt-Setup** - Keine Parameter nötig, alles wird abgefragt

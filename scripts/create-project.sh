@@ -7,22 +7,14 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_DIR="$(dirname "$SCRIPT_DIR")"
 
-# Zentrale Konfiguration laden
-CONFIG_FILE="$BASE_DIR/config.sh"
-if [ -f "$CONFIG_FILE" ]; then
-    source "$CONFIG_FILE"
-fi
-# Fallback-Werte falls config.sh nicht existiert
-SERVER_IP="${SERVER_IP:-192.168.2.125}"
-DEFAULT_USER="${DEFAULT_USER:-mehmed}"
-PHPMYADMIN_PORT="${PHPMYADMIN_PORT:-8080}"
-MARIADB_PORT="${MARIADB_PORT:-3306}"
+# Gemeinsame Funktionen laden
+source "$SCRIPT_DIR/common.sh"
 
-# Farben für bessere Lesbarkeit
-GREEN='\033[0;32m'
-BLUE='\033[0;34m'
-YELLOW='\033[1;33m'
-NC='\033[0m' # No Color
+# Docker prüfen
+check_docker
+
+# Zentrale Konfiguration laden
+load_config "$SCRIPT_DIR"
 
 echo ""
 echo "═══════════════════════════════════════════="

@@ -8,15 +8,14 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_DIR="$(dirname "$SCRIPT_DIR")"
 INFRA_DIR="$BASE_DIR/infrastructure"
 
+# Gemeinsame Funktionen laden
+source "$SCRIPT_DIR/common.sh"
+
+# Docker prüfen
+check_docker
+
 # Zentrale Konfiguration laden
-CONFIG_FILE="$BASE_DIR/config.sh"
-if [ -f "$CONFIG_FILE" ]; then
-    source "$CONFIG_FILE"
-fi
-# Fallback-Werte falls config.sh nicht existiert
-SERVER_IP="${SERVER_IP:-192.168.2.125}"
-PHPMYADMIN_PORT="${PHPMYADMIN_PORT:-8080}"
-MARIADB_PORT="${MARIADB_PORT:-3306}"
+load_config "$SCRIPT_DIR"
 
 echo "Starte Infrastruktur..."
 

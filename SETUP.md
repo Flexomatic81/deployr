@@ -7,10 +7,36 @@ Schritt-für-Schritt Anleitung für die Installation auf einem Linux-Server.
 
 ## Voraussetzungen
 
-- Linux-Server (Debian, Ubuntu, CentOS, etc.) mit Docker installiert
-- Docker Compose (v2+)
-- SSH-Zugang zum Server
-- NPM (Nginx Proxy Manager) läuft bereits (optional)
+### Erforderlich
+
+| Komponente | Mindestversion | Prüfen mit |
+|------------|----------------|------------|
+| **Linux** | Beliebig | `uname -a` |
+| **Docker** | 20.10+ | `docker --version` |
+| **Docker Compose** | v2.0+ | `docker compose version` |
+
+### Optional
+
+| Komponente | Verwendung |
+|------------|------------|
+| **Git** | GitHub/GitLab Integration |
+| **Nginx Proxy Manager** | SSL & Domain-Verwaltung |
+
+### Docker installieren (falls nicht vorhanden)
+
+```bash
+# Schnelle Installation (alle Distributionen)
+curl -fsSL https://get.docker.com | sh
+sudo usermod -aG docker $USER
+# Neu einloggen, damit die Gruppe aktiv wird!
+
+# Oder manuell:
+# Debian/Ubuntu:  sudo apt install docker.io docker-compose-plugin
+# CentOS/Fedora:  sudo dnf install docker docker-compose-plugin
+# Arch Linux:     sudo pacman -S docker docker-compose
+```
+
+> **Tipp**: Das `quick-start.sh` Script prüft automatisch ob Docker installiert ist.
 
 ## Installation
 
