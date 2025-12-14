@@ -113,21 +113,9 @@
             <h4 class="mb-4"><i class="bi bi-download"></i> Installation</h4>
 
             <div id="progressSteps">
-                <div class="progress-step pending" data-step="config">
-                    <i class="bi bi-circle me-2"></i>
-                    <span>Konfiguration erstellen</span>
-                </div>
-                <div class="progress-step pending" data-step="infra_env">
-                    <i class="bi bi-circle me-2"></i>
-                    <span>Infrastruktur-Konfiguration</span>
-                </div>
                 <div class="progress-step pending" data-step="network">
                     <i class="bi bi-circle me-2"></i>
-                    <span>Docker-Netzwerk erstellen</span>
-                </div>
-                <div class="progress-step pending" data-step="infrastructure">
-                    <i class="bi bi-circle me-2"></i>
-                    <span>MariaDB & phpMyAdmin starten</span>
+                    <span>Docker-Netzwerk prüfen</span>
                 </div>
                 <div class="progress-step pending" data-step="wait_db">
                     <i class="bi bi-circle me-2"></i>
@@ -226,7 +214,7 @@
     });
 
     async function runSetup() {
-        const steps = ['config', 'infra_env', 'network', 'infrastructure', 'wait_db', 'dashboard_db', 'admin'];
+        const steps = ['network', 'wait_db', 'dashboard_db', 'admin'];
 
         // Alle Steps auf "pending" setzen
         steps.forEach(step => {

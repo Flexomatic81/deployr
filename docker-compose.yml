@@ -60,7 +60,6 @@ services:
       - ./scripts:/app/scripts:ro
       - ./templates:/app/templates:ro
       - ./infrastructure:/app/infrastructure
-      - ./config.sh:/app/config.sh
     environment:
       - NODE_ENV=production
       - DB_HOST=mariadb
