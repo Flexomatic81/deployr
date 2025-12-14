@@ -1,10 +1,14 @@
 # Setup-Anleitung
 
-Schritt-für-Schritt Anleitung für die Installation auf dem Debian Server (192.168.2.125)
+Schritt-für-Schritt Anleitung für die Installation auf einem Linux-Server.
+
+> **Hinweis**: Die Server-IP wird bei der Ersteinrichtung in `config.sh` konfiguriert.
+> Alle Skripte verwenden diese zentrale Konfiguration.
 
 ## Voraussetzungen
 
-- Debian Server mit Docker installiert
+- Linux-Server (Debian, Ubuntu, CentOS, etc.) mit Docker installiert
+- Docker Compose (v2+)
 - SSH-Zugang zum Server
 - NPM (Nginx Proxy Manager) läuft bereits (optional)
 
@@ -16,28 +20,42 @@ Auf deinem **lokalen Rechner**:
 
 ```bash
 # Von deinem lokalen Projekt-Verzeichnis aus
-rsync -avz --exclude='.git' . mehmed@192.168.2.125:/opt/webserver/
+rsync -avz --exclude='.git' . <USER>@<SERVER_IP>:/opt/webserver/
+# Beispiel: rsync -avz --exclude='.git' . mehmed@192.168.2.125:/opt/webserver/
 ```
 
 ### 2. Auf Server einloggen
 
 ```bash
-ssh mehmed@192.168.2.125
+ssh <USER>@<SERVER_IP>
 cd /opt/webserver
 ```
 
-### 3. Scripts ausführbar machen
+### 3. Quick-Start ausführen (Empfohlen!)
 
 ```bash
-chmod +x scripts/*.sh
+chmod +x quick-start.sh
+./quick-start.sh
+
+# Das Script fragt nach:
+# - Server IP-Adresse
+# - Standard-Benutzer
+# Erstellt config.sh und startet die Infrastruktur automatisch
 ```
 
-### 4. Infrastruktur konfigurieren
+### 4. Oder: Manuelle Konfiguration
 
 ```bash
-cd infrastructure
+# Server-Konfiguration erstellen
+cp config.sh.example config.sh
+nano config.sh
+# SERVER_IP und DEFAULT_USER anpassen
 
-# .env erstellen und anpassen
+# Scripts ausführbar machen
+chmod +x scripts/*.sh
+
+# Infrastructure .env erstellen
+cd infrastructure
 cp .env.example .env
 nano .env
 # WICHTIG: MYSQL_ROOT_PASSWORD ändern!

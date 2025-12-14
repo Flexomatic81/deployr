@@ -34,7 +34,7 @@ nano .env
 docker-compose up -d
 
 # 5. In NPM konfigurieren
-# Domain -> 192.168.2.125:EXPOSED_PORT
+# Domain -> <SERVER_IP>:EXPOSED_PORT (IP aus config.sh)
 ```
 
 ## Projekt verwalten

@@ -9,10 +9,12 @@ VS Code (lokal)
     ↓ git push
 GitHub/GitLab
     ↓ git pull (via Script)
-Server (192.168.2.125)
+Server (<SERVER_IP>)
     ↓
 Docker Container → Live Website
 ```
+
+> **Hinweis**: Die Server-IP ist in `config.sh` konfiguriert.
 
 ## 1. Erstes Projekt mit Git einrichten
 
@@ -50,7 +52,7 @@ git push -u origin main
 
 ```bash
 # SSH auf Server
-ssh mehmed@192.168.2.125
+ssh <USER>@<SERVER_IP>
 cd /opt/webserver
 
 # Projekt-Container erstellen
@@ -107,7 +109,7 @@ docker compose up -d
 
    **Option A - Manuell**:
    ```bash
-   ssh mehmed@192.168.2.125
+   ssh <USER>@<SERVER_IP>
    cd /opt/webserver
    ./scripts/git-deploy.sh demo mein-projekt
    ```
@@ -131,7 +133,8 @@ Erstelle `deploy.sh` in deinem Projekt-Root:
 #!/bin/bash
 set -e
 
-SERVER="mehmed@192.168.2.125"
+# Anpassen! (oder config.sh kopieren und source)
+SERVER="<USER>@<SERVER_IP>"
 USER="demo"
 PROJECT="mein-projekt"
 
@@ -339,13 +342,15 @@ jobs:
       - name: Deploy via SSH
         uses: appleboy/ssh-action@master
         with:
-          host: 192.168.2.125
-          username: mehmed
+          host: ${{ secrets.SERVER_IP }}
+          username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           script: |
             cd /opt/webserver
             ./scripts/git-deploy.sh demo mein-projekt
 ```
+
+> **GitHub Secrets konfigurieren**: SERVER_IP, SERVER_USER, SSH_PRIVATE_KEY
 
 ### Webhooks (Auto-Deploy bei Push)
 
@@ -366,9 +371,9 @@ Für automatisches Deployment ohne manuellen Befehl - erfordert zusätzliches Se
 ```bash
 # Workflow in 3 Schritten
 git add . && git commit -m "message" && git push
-ssh mehmed@192.168.2.125 "cd /opt/webserver && ./scripts/git-deploy.sh demo projekt"
+ssh <USER>@<SERVER_IP> "cd /opt/webserver && ./scripts/git-deploy.sh demo projekt"
 
-# Oder mit Script
+# Oder mit Script (nutzt config.sh)
 ./deploy.sh
 ```
 

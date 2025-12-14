@@ -2,6 +2,8 @@
 
 Die beste Methode um direkt auf dem Server zu arbeiten.
 
+> **Hinweis**: Die Server-IP ist in `config.sh` konfiguriert. Ersetze `<SERVER_IP>` mit deiner IP.
+
 ## Was ist VS Code Remote SSH?
 
 - Öffne den Server direkt in VS Code
@@ -25,7 +27,7 @@ Die beste Methode um direkt auf dem Server zu arbeiten.
 
 1. `Ctrl+Shift+P` (oder `Cmd+Shift+P` auf Mac)
 2. Tippe: "Remote-SSH: Connect to Host"
-3. Eingeben: `mehmed@192.168.2.125`
+3. Eingeben: `<USER>@<SERVER_IP>` (z.B. `mehmed@192.168.2.125`)
 4. Enter drücken
 5. Passwort/SSH-Key eingeben
 6. Fertig!
@@ -38,10 +40,12 @@ Die beste Methode um direkt auf dem Server zu arbeiten.
 
 ```ssh
 Host webserver
-    HostName 192.168.2.125
-    User mehmed
+    HostName <SERVER_IP>
+    User <USER>
     IdentityFile ~/.ssh/id_rsa
 ```
+
+> Ersetze `<SERVER_IP>` und `<USER>` mit deinen Werten aus `config.sh`
 
 4. Speichern
 5. `Ctrl+Shift+P` → "Remote-SSH: Connect to Host"
@@ -115,7 +119,7 @@ git pull
 1. In VS Code Remote: `/opt/webserver/users/demo/meinprojekt/html/` öffnen
 2. `index.html` bearbeiten
 3. Speichern
-4. Browser: `http://192.168.2.125:8001` neu laden
+4. Browser: `http://<SERVER_IP>:PORT` neu laden
 5. Änderungen sehen
 
 ### Mit Git arbeiten
@@ -143,11 +147,11 @@ Füge mehrere Hosts in `~/.ssh/config` hinzu:
 
 ```ssh
 Host webserver
-    HostName 192.168.2.125
-    User mehmed
+    HostName <SERVER_IP>
+    User <USER>
 
 Host production
-    HostName 123.456.789.0
+    HostName <PROD_IP>
     User deploy
 ```
 
@@ -170,7 +174,7 @@ ssh-keygen -t ed25519
 
 2. Zum Server kopieren:
 ```bash
-ssh-copy-id mehmed@192.168.2.125
+ssh-copy-id <USER>@<SERVER_IP>
 ```
 
 3. Keine Passwort-Eingabe mehr nötig!
@@ -179,7 +183,7 @@ ssh-copy-id mehmed@192.168.2.125
 
 ### "Could not establish connection"
 
-- Prüfe SSH-Verbindung: `ssh mehmed@192.168.2.125`
+- Prüfe SSH-Verbindung: `ssh <USER>@<SERVER_IP>`
 - Firewall?
 - SSH-Service läuft?
 
@@ -193,8 +197,8 @@ ssh-copy-id mehmed@192.168.2.125
 - In `~/.ssh/config`:
 ```ssh
 Host webserver
-    HostName 192.168.2.125
-    User mehmed
+    HostName <SERVER_IP>
+    User <USER>
     Compression yes
     ServerAliveInterval 60
 ```

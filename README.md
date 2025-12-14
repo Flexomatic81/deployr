@@ -1,6 +1,9 @@
 # Multi-User Webserver Infrastruktur
 
-Docker-basierte Multi-User Umgebung für Webprojekte auf Debian Server (192.168.2.125)
+Docker-basierte Multi-User Umgebung für Webprojekte auf Linux-Servern.
+
+> **Server-IP konfigurierbar**: Die IP-Adresse wird in `config.sh` zentral konfiguriert.
+> Bei der Ersteinrichtung mit `./quick-start.sh` wird die IP automatisch abgefragt.
 
 Ermöglicht mehreren Usern, isolierte Web-Projekte auf einem gemeinsamen Server zu betreiben.
 Jeder User kann statische Websites, PHP-Anwendungen oder Node.js Apps hosten.
@@ -41,7 +44,7 @@ cd /opt/webserver
 # - Container direkt starten?
 
 # 3. Fertig! Website ist live
-# http://192.168.2.125:PORT
+# http://<SERVER_IP>:PORT
 ```
 
 ### Mit GitHub-Projekt
@@ -88,7 +91,9 @@ webserver/
 │   ├── list-projects.sh      # Alle Projekte anzeigen
 │   └── start-infrastructure.sh
 │
-├── README.md                 # Diese Datei
+├── config.sh.example        # Template für Server-Konfiguration
+├── config.sh                # Server-Konfiguration (IP, User, Ports)
+├── README.md                # Diese Datei
 ├── SETUP.md                 # Detaillierte Setup-Anleitung
 └── quick-start.sh           # Automatisches Setup-Script
 ```
@@ -156,10 +161,10 @@ git pull
 
 ## Services
 
-Nach dem Start verfügbar:
+Nach dem Start verfügbar (IP aus `config.sh`):
 
-- **MariaDB**: `192.168.2.125:3306` (oder `webserver-mariadb:3306` im Docker Network)
-- **phpMyAdmin**: `http://192.168.2.125:8080`
+- **MariaDB**: `<SERVER_IP>:3306` (oder `webserver-mariadb:3306` im Docker Network)
+- **phpMyAdmin**: `http://<SERVER_IP>:8080`
 
 ## VS Code Remote SSH
 
@@ -168,7 +173,7 @@ Die beste Methode um auf dem Server zu arbeiten:
 ```bash
 # 1. Extension Remote - SSH installieren
 # 2. Ctrl+Shift+P → Remote-SSH: Connect to Host
-# 3. mehmed@192.168.2.125
+# 3. <USER>@<SERVER_IP> (z.B. mehmed@192.168.2.125)
 # 4. Open Folder → /opt/webserver/users/mehmed/PROJEKTNAME/html
 # 5. Dateien bearbeiten → Speichern = LIVE!
 ```
@@ -190,7 +195,7 @@ Siehe **VSCODE_REMOTE_SSH.md** für Details.
    → Projekt ist live!
    
    VARIANTE B (Update bestehendes Projekt):
-   ssh mehmed@192.168.2.125
+   ssh <USER>@<SERVER_IP>
    cd /opt/webserver/users/mehmed/PROJEKT/html
    git pull
    
@@ -206,7 +211,7 @@ Für jedes Projekt in Nginx Proxy Manager:
 
 1. Proxy Host hinzufügen
 2. Domain: `projekt.deine-domain.de`
-3. Forward to: `192.168.2.125:PORT` (Port aus Projekt .env)
+3. Forward to: `<SERVER_IP>:PORT` (Port aus Projekt .env)
 4. SSL aktivieren
 
 ## Automatische Features

@@ -3,6 +3,10 @@
 *.env
 !.env.example
 
+# Server Configuration (contains server-specific settings)
+config.sh
+!config.sh.example
+
 # User Data
 users/*/
 !users/README.md

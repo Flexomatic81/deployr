@@ -1,12 +1,14 @@
-# Server Installation - srv-21 (192.168.2.125)
+# Server Installation - srv-21
 
-**Installationsdatum**: 2025-12-13  
+**Installationsdatum**: 2025-12-13
 **Installiert von**: mehmed
+
+> **Hinweis**: Die Server-IP ist in `config.sh` konfiguriert und wird von allen Skripten verwendet.
 
 ## Server-Details
 
 - **Hostname**: srv-21
-- **IP**: 192.168.2.125 (internes Netzwerk)
+- **IP**: Siehe `config.sh` (Standard: 192.168.2.125)
 - **OS**: Debian
 - **Docker**: v29.0.2
 - **Docker Compose**: v2.40.3
@@ -17,9 +19,9 @@
 ### MySQL/MariaDB
 
 ```
-Host: 192.168.2.125:3306 (oder webserver-mariadb im Docker Network)
+Host: <SERVER_IP>:3306 (oder webserver-mariadb im Docker Network)
 Root User: root
-Root Passwort: nOi3MicIDPKg4yG1vRj6wl0d
+Root Passwort: (siehe infrastructure/.env)
 ```
 
 **Speicherort**: `/opt/webserver/infrastructure/.env`
@@ -27,10 +29,10 @@ Root Passwort: nOi3MicIDPKg4yG1vRj6wl0d
 ### phpMyAdmin
 
 ```
-URL: http://192.168.2.125:8080
+URL: http://<SERVER_IP>:8080
 Server: webserver-mariadb
 User: root
-Passwort: (siehe oben)
+Passwort: (siehe infrastructure/.env)
 ```
 
 **Hinweis**: Nur lokal erreichbar (127.0.0.1). Für externen Zugriff über NPM exposen.
@@ -58,6 +60,7 @@ Passwort: (siehe oben)
 │       └── beispiel/    # Demo statische Website
 ├── templates/           # Projekt-Vorlagen
 ├── scripts/             # Verwaltungs-Scripts
+├── config.sh           # Server-IP Konfiguration
 ├── README.md           # Projekt-Dokumentation
 ├── SETUP.md            # Installations-Anleitung
 └── SERVER_INFO.md      # Diese Datei
@@ -125,7 +128,7 @@ Dieser Server steht hinter:
 **NPM konfigurieren für Projekt**:
 1. Proxy Host hinzufügen
 2. Domain: projekt.deine-domain.de
-3. Forward to: 192.168.2.125:PORT
+3. Forward to: `<SERVER_IP>:PORT`
 4. SSL aktivieren
 
 ## Bekannte Probleme & Lösungen
@@ -176,12 +179,12 @@ tar -czf webserver-backup-$(date +%Y%m%d).tar.gz /opt/webserver
 
 ## SSH-Zugang
 
-**User**: mehmed  
-**Host**: 192.168.2.125  
+**User**: Siehe `config.sh` (DEFAULT_USER)
+**Host**: Siehe `config.sh` (SERVER_IP)
 **Auth**: SSH-Key
 
 ```bash
-ssh mehmed@192.168.2.125
+ssh <USER>@<SERVER_IP>
 ```
 
 ## Updates

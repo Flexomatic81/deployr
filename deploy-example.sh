@@ -5,8 +5,19 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Zentrale Konfiguration laden (falls vorhanden)
+CONFIG_FILE="$SCRIPT_DIR/config.sh"
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+fi
+# Fallback-Werte falls config.sh nicht existiert
+SERVER_IP="${SERVER_IP:-192.168.2.125}"
+DEFAULT_USER="${DEFAULT_USER:-mehmed}"
+
 # Konfiguration anpassen!
-SERVER="mehmed@192.168.2.125"
+SERVER="$DEFAULT_USER@$SERVER_IP"
 USER="demo"
 PROJECT="meinprojekt"
 BRANCH="main"

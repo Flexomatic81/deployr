@@ -5,6 +5,18 @@
 
 set -e
 
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+BASE_DIR="$(dirname "$SCRIPT_DIR")"
+
+# Zentrale Konfiguration laden
+CONFIG_FILE="$BASE_DIR/config.sh"
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+fi
+# Fallback-Werte falls config.sh nicht existiert
+SERVER_IP="${SERVER_IP:-192.168.2.125}"
+MARIADB_PORT="${MARIADB_PORT:-3306}"
+
 USERNAME=$1
 DB_NAME=$2
 
@@ -73,7 +85,7 @@ echo "User:       $DB_USER"
 echo "Passwort:   $DB_PASSWORD"
 echo ""
 echo "Host:       webserver-mariadb (im Docker Network)"
-echo "            192.168.2.125:3306 (von außen)"
+echo "            $SERVER_IP:$MARIADB_PORT (von außen)"
 echo "Port:       3306"
 echo ""
 echo "Credentials gespeichert in:"

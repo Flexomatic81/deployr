@@ -7,6 +7,17 @@ set -e
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 BASE_DIR="$(dirname "$SCRIPT_DIR")"
 
+# Zentrale Konfiguration laden
+CONFIG_FILE="$BASE_DIR/config.sh"
+if [ -f "$CONFIG_FILE" ]; then
+    source "$CONFIG_FILE"
+fi
+# Fallback-Werte falls config.sh nicht existiert
+SERVER_IP="${SERVER_IP:-192.168.2.125}"
+DEFAULT_USER="${DEFAULT_USER:-mehmed}"
+PHPMYADMIN_PORT="${PHPMYADMIN_PORT:-8080}"
+MARIADB_PORT="${MARIADB_PORT:-3306}"
+
 # Farben für bessere Lesbarkeit
 GREEN='\033[0;32m'
 BLUE='\033[0;34m'
@@ -21,9 +32,9 @@ echo ""
 
 # 1. Username abfragen
 echo -e "${BLUE}1. Username:${NC}"
-echo -n "Username eingeben (Standard: mehmed): "
+echo -n "Username eingeben (Standard: $DEFAULT_USER): "
 read USERNAME
-USERNAME=${USERNAME:-mehmed}
+USERNAME=${USERNAME:-$DEFAULT_USER}
 echo -e "${GREEN}✓${NC} Username: $USERNAME"
 echo ""
 
@@ -282,7 +293,7 @@ Datenbank:  $DB_NAME
 User:       $DB_USER
 Passwort:   $DB_PASSWORD
 Host:       webserver-mariadb (im Docker Network)
-            192.168.2.125:3306 (von außen)
+            $SERVER_IP:$MARIADB_PORT (von außen)
 Port:       3306
 
 Credentials gespeichert in:
@@ -307,14 +318,14 @@ echo "   cd $PROJECT_DIR"
 echo "   docker compose up -d"
 echo ""
 echo "2. Im Browser öffnen:"
-echo "   http://192.168.2.125:$EXPOSED_PORT"
+echo "   http://$SERVER_IP:$EXPOSED_PORT"
 echo ""
 echo "3. Mit VS Code Remote SSH bearbeiten:"
-echo "   Remote-SSH → mehmed@192.168.2.125"
+echo "   Remote-SSH → $DEFAULT_USER@$SERVER_IP"
 echo "   Open Folder → $PROJECT_DIR/html"
 echo ""
 echo "4. In NPM Domain konfigurieren:"
-echo "   Domain → 192.168.2.125:$EXPOSED_PORT"
+echo "   Domain → $SERVER_IP:$EXPOSED_PORT"
 echo ""
 echo "═══════════════════════════════════════════="
 
@@ -337,11 +348,11 @@ if [ "$START_NOW" = "j" ] || [ "$START_NOW" = "J" ]; then
     docker compose up -d
     echo ""
     echo -e "${GREEN}✓ Container gestartet!${NC}"
-    echo "Website verfügbar unter: http://192.168.2.125:$EXPOSED_PORT"
+    echo "Website verfügbar unter: http://$SERVER_IP:$EXPOSED_PORT"
     
     if [ "$CREATE_DATABASE" = "j" ]; then
         echo ""
-        echo "phpMyAdmin: http://192.168.2.125:8080"
+        echo "phpMyAdmin: http://$SERVER_IP:$PHPMYADMIN_PORT"
         echo "→ Login mit: $DB_USER / $DB_PASSWORD"
     fi
 fi
