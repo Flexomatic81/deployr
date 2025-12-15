@@ -1,6 +1,38 @@
 // Webserver Dashboard JavaScript
 
+// Theme Management
+function initTheme() {
+    const themeToggle = document.getElementById('themeToggle');
+    const themeIcon = document.getElementById('themeIcon');
+
+    if (!themeToggle || !themeIcon) return;
+
+    // Aktuelles Theme aus localStorage oder default
+    const currentTheme = localStorage.getItem('theme') || 'light';
+    updateThemeIcon(themeIcon, currentTheme);
+
+    themeToggle.addEventListener('click', function() {
+        const html = document.documentElement;
+        const currentTheme = html.getAttribute('data-bs-theme');
+        const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+
+        html.setAttribute('data-bs-theme', newTheme);
+        localStorage.setItem('theme', newTheme);
+        updateThemeIcon(themeIcon, newTheme);
+    });
+}
+
+function updateThemeIcon(iconElement, theme) {
+    if (theme === 'dark') {
+        iconElement.className = 'bi bi-moon-fill';
+    } else {
+        iconElement.className = 'bi bi-sun-fill';
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
+    // Theme initialisieren
+    initTheme();
     // Auto-dismiss alerts after 5 seconds
     const alerts = document.querySelectorAll('.alert-dismissible');
     alerts.forEach(alert => {
