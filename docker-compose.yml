@@ -52,8 +52,9 @@ services:
     volumes:
       # Docker Socket für Container-Management
       - /var/run/docker.sock:/var/run/docker.sock
-      # User-Projekte
+      # User-Projekte (beide Pfade für Kompatibilität mit Docker-Socket)
       - ./users:/app/users
+      - ${HOST_USERS_PATH:-/opt/deployr/users}:${HOST_USERS_PATH:-/opt/deployr/users}
       # Scripts und Templates
       - ./scripts:/app/scripts:ro
       - ./templates:/app/templates:ro
