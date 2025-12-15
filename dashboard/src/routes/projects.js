@@ -67,6 +67,46 @@ router.post('/', requireAuth, async (req, res) => {
     }
 });
 
+// Neues Projekt von Git erstellen - Verarbeitung
+router.post('/from-git', requireAuth, async (req, res) => {
+    try {
+        const { name, repo_url, access_token, port } = req.body;
+        const systemUsername = req.session.user.system_username;
+
+        // Validierung
+        if (!/^[a-z0-9-]+$/.test(name)) {
+            req.flash('error', 'Projektname darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten');
+            return res.redirect('/projects/create');
+        }
+
+        if (!gitService.isValidGitUrl(repo_url)) {
+            req.flash('error', 'Ungültige Repository-URL. Unterstützt werden GitHub, GitLab und Bitbucket HTTPS-URLs.');
+            return res.redirect('/projects/create');
+        }
+
+        const result = await gitService.createProjectFromGit(
+            systemUsername,
+            name,
+            repo_url,
+            access_token || null,
+            parseInt(port)
+        );
+
+        const typeNames = {
+            static: 'Statische Website',
+            php: 'PHP Website',
+            nodejs: 'Node.js App'
+        };
+
+        req.flash('success', `Projekt "${name}" erfolgreich von Git erstellt! Erkannt als: ${typeNames[result.projectType] || result.projectType}`);
+        res.redirect(`/projects/${name}`);
+    } catch (error) {
+        console.error('Fehler beim Erstellen des Git-Projekts:', error);
+        req.flash('error', error.message || 'Fehler beim Erstellen des Projekts');
+        res.redirect('/projects/create');
+    }
+});
+
 // Einzelnes Projekt anzeigen
 router.get('/:name', requireAuth, async (req, res) => {
     try {
@@ -167,37 +207,6 @@ router.delete('/:name', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Fehler beim Löschen:', error);
         req.flash('error', 'Fehler beim Löschen: ' + error.message);
-        res.redirect(`/projects/${req.params.name}`);
-    }
-});
-
-// Git Repository verbinden
-router.post('/:name/git/connect', requireAuth, async (req, res) => {
-    try {
-        const systemUsername = req.session.user.system_username;
-        const { repo_url, access_token } = req.body;
-        const projectPath = gitService.getProjectPath(systemUsername, req.params.name);
-
-        // URL validieren
-        if (!gitService.isValidGitUrl(repo_url)) {
-            req.flash('error', 'Ungültige Repository-URL. Unterstützt werden GitHub, GitLab und Bitbucket HTTPS-URLs.');
-            return res.redirect(`/projects/${req.params.name}`);
-        }
-
-        // Prüfen ob bereits verbunden
-        if (gitService.isGitRepository(projectPath)) {
-            req.flash('error', 'Projekt ist bereits mit einem Git-Repository verbunden. Bitte zuerst trennen.');
-            return res.redirect(`/projects/${req.params.name}`);
-        }
-
-        // Repository klonen
-        await gitService.cloneRepository(projectPath, repo_url, access_token || null);
-
-        req.flash('success', 'Git-Repository erfolgreich verbunden!');
-        res.redirect(`/projects/${req.params.name}`);
-    } catch (error) {
-        console.error('Git connect error:', error);
-        req.flash('error', error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
 });
