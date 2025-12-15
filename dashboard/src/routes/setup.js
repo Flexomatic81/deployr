@@ -164,11 +164,11 @@ async function createAdminUser(username, password, systemUsername) {
     // Passwort hashen
     const passwordHash = await bcrypt.hash(password, 12);
 
-    // Admin-User erstellen
+    // Admin-User erstellen (is_admin und approved auf TRUE)
     await pool.execute(
-        `INSERT INTO dashboard_users (username, password_hash, system_username, is_admin)
-         VALUES (?, ?, ?, TRUE)
-         ON DUPLICATE KEY UPDATE password_hash = ?, is_admin = TRUE`,
+        `INSERT INTO dashboard_users (username, password_hash, system_username, is_admin, approved)
+         VALUES (?, ?, ?, TRUE, TRUE)
+         ON DUPLICATE KEY UPDATE password_hash = ?, is_admin = TRUE, approved = TRUE`,
         [username, passwordHash, systemUsername, passwordHash]
     );
 }
