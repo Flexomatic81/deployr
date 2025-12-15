@@ -1,0 +1,85 @@
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+        <li class="breadcrumb-item active">Alle Projekte</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-folder"></i> Alle Projekte</h1>
+    <span class="badge bg-info fs-6"><%= projects.length %> Projekte</span>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <% if (projects.length === 0) { %>
+            <p class="text-muted text-center my-4">Keine Projekte gefunden.</p>
+        <% } else { %>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Projekt</th>
+                            <th>Besitzer</th>
+                            <th>Typ</th>
+                            <th>Port</th>
+                            <th>Status</th>
+                            <th>Container</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% projects.forEach(project => { %>
+                            <tr>
+                                <td>
+                                    <i class="bi bi-folder text-warning"></i>
+                                    <strong><%= project.name %></strong>
+                                    <br>
+                                    <small class="text-muted"><code><%= project.path %></code></small>
+                                </td>
+                                <td>
+                                    <i class="bi bi-person"></i>
+                                    <%= project.ownerUsername %>
+                                    <br>
+                                    <small class="text-muted"><%= project.ownerSystemUsername %></small>
+                                </td>
+                                <td>
+                                    <% if (project.templateType === 'static-website') { %>
+                                        <span class="badge bg-secondary">Statische Website</span>
+                                    <% } else if (project.templateType === 'php-website') { %>
+                                        <span class="badge bg-purple" style="background-color: #7952b3;">PHP Website</span>
+                                    <% } else if (project.templateType === 'nodejs-app') { %>
+                                        <span class="badge bg-success">Node.js</span>
+                                    <% } else { %>
+                                        <span class="badge bg-dark"><%= project.templateType %></span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <% if (project.port && project.port !== 'N/A') { %>
+                                        <a href="http://<%= project.port %>" target="_blank" class="text-decoration-none">
+                                            <%= project.port %> <i class="bi bi-box-arrow-up-right"></i>
+                                        </a>
+                                    <% } else { %>
+                                        <span class="text-muted">-</span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <% if (project.status === 'running') { %>
+                                        <span class="badge bg-success">Läuft</span>
+                                    <% } else { %>
+                                        <span class="badge bg-secondary">Gestoppt</span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info">
+                                        <%= project.runningContainers %>/<%= project.totalContainers %>
+                                    </span>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } %>
+    </div>
+</div>

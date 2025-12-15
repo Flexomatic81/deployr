@@ -1,0 +1,73 @@
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+        <li class="breadcrumb-item"><a href="/admin/users">User-Verwaltung</a></li>
+        <li class="breadcrumb-item active">Neuer User</li>
+    </ol>
+</nav>
+
+<div class="row justify-content-center">
+    <div class="col-md-8 col-lg-6">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-person-plus"></i> Neuen User erstellen
+            </div>
+            <div class="card-body">
+                <form action="/admin/users" method="POST">
+                    <div class="mb-3">
+                        <label for="username" class="form-label">Benutzername *</label>
+                        <input type="text" class="form-control" id="username" name="username"
+                               required pattern="[a-z0-9_-]+" placeholder="max.mustermann">
+                        <div class="form-text">Nur Kleinbuchstaben, Zahlen, Unterstriche und Bindestriche.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="password" class="form-label">Passwort *</label>
+                        <div class="input-group">
+                            <input type="password" class="form-control" id="password" name="password"
+                                   required minlength="6">
+                            <button class="btn btn-outline-secondary" type="button" onclick="togglePassword('password')">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                        </div>
+                        <div class="form-text">Mindestens 6 Zeichen.</div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="system_username" class="form-label">System-Username *</label>
+                        <input type="text" class="form-control" id="system_username" name="system_username"
+                               required pattern="[a-z0-9_-]+" placeholder="mmustermann">
+                        <div class="form-text">Wird für Projektpfade verwendet. Nur Kleinbuchstaben, Zahlen, Unterstriche und Bindestriche.</div>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check">
+                            <input type="checkbox" class="form-check-input" id="is_admin" name="is_admin">
+                            <label class="form-check-label" for="is_admin">
+                                <i class="bi bi-shield-lock"></i> Administrator-Rechte
+                            </label>
+                        </div>
+                        <div class="form-text">Admins können alle Projekte sehen und User verwalten.</div>
+                    </div>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="/admin/users" class="btn btn-secondary">
+                            <i class="bi bi-arrow-left"></i> Abbrechen
+                        </a>
+                        <button type="submit" class="btn btn-success">
+                            <i class="bi bi-person-plus"></i> User erstellen
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+function togglePassword(inputId) {
+    const input = document.getElementById(inputId);
+    input.type = input.type === 'password' ? 'text' : 'password';
+}
+</script>

@@ -17,6 +17,7 @@ const projectRoutes = require('./routes/projects');
 const logRoutes = require('./routes/logs');
 const databaseRoutes = require('./routes/databases');
 const setupRoutes = require('./routes/setup');
+const adminRoutes = require('./routes/admin');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -89,6 +90,7 @@ app.use('/dashboard', dashboardRoutes);
 app.use('/projects', projectRoutes);
 app.use('/logs', logRoutes);
 app.use('/databases', databaseRoutes);
+app.use('/admin', adminRoutes);
 
 // Home Route
 app.get('/', async (req, res) => {
