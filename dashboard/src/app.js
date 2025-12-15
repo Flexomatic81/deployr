@@ -52,12 +52,28 @@ app.use(flash());
 // User Locals für Views
 app.use(setUserLocals);
 
-// Flash Messages für Views verfügbar machen
-app.use((req, res, next) => {
+// Server-IP aus Setup-Marker laden (gecached)
+let cachedServerIp = null;
+async function getServerIp() {
+    if (cachedServerIp) return cachedServerIp;
+    try {
+        const fs = require('fs').promises;
+        const setupData = await fs.readFile('/app/infrastructure/.setup-complete', 'utf8');
+        const data = JSON.parse(setupData);
+        cachedServerIp = data.serverIp || process.env.SERVER_IP || 'localhost';
+    } catch {
+        cachedServerIp = process.env.SERVER_IP || 'localhost';
+    }
+    return cachedServerIp;
+}
+
+// Flash Messages und globale Variablen für Views verfügbar machen
+app.use(async (req, res, next) => {
     res.locals.success = req.flash('success');
     res.locals.error = req.flash('error');
     res.locals.warning = req.flash('warning');
     res.locals.info = req.flash('info');
+    res.locals.serverIp = await getServerIp();
     next();
 });
 
