@@ -123,9 +123,9 @@ async function cloneRepository(projectPath, repoUrl, token = null) {
             }
 
             try {
-                // Wichtige Dateien sichern (docker-compose.yml, nginx)
+                // Wichtige Dateien sichern (docker-compose.yml, nginx, .env)
                 const backups = {};
-                const filesToPreserve = ['docker-compose.yml', 'nginx'];
+                const filesToPreserve = ['docker-compose.yml', 'nginx', '.env'];
 
                 for (const file of filesToPreserve) {
                     const filePath = path.join(projectPath, file);
@@ -183,6 +183,9 @@ async function cloneRepository(projectPath, repoUrl, token = null) {
                     saveCredentials(projectPath, repoUrl, token);
                 }
 
+                // Docker-Compose anpassen falls nötig
+                adjustDockerCompose(projectPath);
+
                 resolve({
                     success: true,
                     message: 'Repository erfolgreich geklont'
@@ -212,6 +215,64 @@ function saveCredentials(projectPath, repoUrl, token) {
     execSync(`git config credential.helper "store --file=.git-credentials"`, {
         cwd: projectPath
     });
+}
+
+/**
+ * Passt docker-compose.yml an die Repository-Struktur an
+ * - Wenn ./html nicht existiert aber index.html im Root liegt,
+ *   wird das Volume-Mount von ./html auf . geändert
+ */
+function adjustDockerCompose(projectPath) {
+    const composePath = path.join(projectPath, 'docker-compose.yml');
+    const htmlDir = path.join(projectPath, 'html');
+    const indexInRoot = path.join(projectPath, 'index.html');
+    const srcDir = path.join(projectPath, 'src');
+
+    if (!fs.existsSync(composePath)) return;
+
+    try {
+        let content = fs.readFileSync(composePath, 'utf-8');
+        let modified = false;
+
+        // Fall 1: Static Website - ./html existiert nicht, aber index.html im Root
+        if (!fs.existsSync(htmlDir) && fs.existsSync(indexInRoot)) {
+            if (content.includes('./html:/usr/share/nginx/html')) {
+                content = content.replace(
+                    './html:/usr/share/nginx/html',
+                    '.:/usr/share/nginx/html'
+                );
+                modified = true;
+                console.log('Docker-Compose angepasst: ./html -> . (index.html im Root gefunden)');
+            }
+        }
+
+        // Fall 2: Node.js App - ./src existiert nicht, aber package.json im Root
+        const packageJson = path.join(projectPath, 'package.json');
+        if (!fs.existsSync(srcDir) && fs.existsSync(packageJson)) {
+            if (content.includes('./src:/app/src')) {
+                content = content.replace('./src:/app/src', '.:/app');
+                modified = true;
+                console.log('Docker-Compose angepasst: ./src -> . (package.json im Root gefunden)');
+            }
+        }
+
+        // Fall 3: PHP Website - ./public existiert nicht, aber index.php im Root
+        const publicDir = path.join(projectPath, 'public');
+        const indexPhp = path.join(projectPath, 'index.php');
+        if (!fs.existsSync(publicDir) && fs.existsSync(indexPhp)) {
+            if (content.includes('./public:/var/www/html')) {
+                content = content.replace('./public:/var/www/html', '.:/var/www/html');
+                modified = true;
+                console.log('Docker-Compose angepasst: ./public -> . (index.php im Root gefunden)');
+            }
+        }
+
+        if (modified) {
+            fs.writeFileSync(composePath, content);
+        }
+    } catch (error) {
+        console.error('Fehler beim Anpassen der docker-compose.yml:', error.message);
+    }
 }
 
 /**
@@ -280,6 +341,209 @@ function getProjectPath(systemUsername, projectName) {
     return path.join(USERS_PATH, systemUsername, projectName);
 }
 
+/**
+ * Erkennt den Projekttyp anhand der Dateien im Verzeichnis
+ */
+function detectProjectType(projectPath) {
+    const hasIndexHtml = fs.existsSync(path.join(projectPath, 'index.html'));
+    const hasIndexPhp = fs.existsSync(path.join(projectPath, 'index.php'));
+    const hasPackageJson = fs.existsSync(path.join(projectPath, 'package.json'));
+    const hasComposerJson = fs.existsSync(path.join(projectPath, 'composer.json'));
+
+    if (hasPackageJson) {
+        return 'nodejs';
+    } else if (hasIndexPhp || hasComposerJson) {
+        return 'php';
+    } else if (hasIndexHtml) {
+        return 'static';
+    }
+
+    // Fallback: static
+    return 'static';
+}
+
+/**
+ * Generiert docker-compose.yml basierend auf Projekttyp
+ */
+function generateDockerCompose(projectType, projectName, port) {
+    const configs = {
+        static: `version: '3.8'
+
+services:
+  web:
+    image: nginx:alpine
+    container_name: \${PROJECT_NAME:-${projectName}}
+    restart: unless-stopped
+    volumes:
+      - .:/usr/share/nginx/html:ro
+      - ./nginx/default.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - deployr-network
+    ports:
+      - "\${EXPOSED_PORT:-${port}}:80"
+    environment:
+      - TZ=Europe/Berlin
+
+networks:
+  deployr-network:
+    external: true`,
+
+        php: `version: '3.8'
+
+services:
+  web:
+    image: php:8.2-apache
+    container_name: \${PROJECT_NAME:-${projectName}}
+    restart: unless-stopped
+    volumes:
+      - .:/var/www/html
+    networks:
+      - deployr-network
+    ports:
+      - "\${EXPOSED_PORT:-${port}}:80"
+    environment:
+      - TZ=Europe/Berlin
+
+networks:
+  deployr-network:
+    external: true`,
+
+        nodejs: `version: '3.8'
+
+services:
+  app:
+    image: node:20-alpine
+    container_name: \${PROJECT_NAME:-${projectName}}
+    restart: unless-stopped
+    working_dir: /app
+    volumes:
+      - .:/app
+    networks:
+      - deployr-network
+    ports:
+      - "\${EXPOSED_PORT:-${port}}:3000"
+    environment:
+      - TZ=Europe/Berlin
+      - NODE_ENV=production
+    command: sh -c "npm install && npm start"
+
+networks:
+  deployr-network:
+    external: true`
+    };
+
+    return configs[projectType] || configs.static;
+}
+
+/**
+ * Generiert nginx default.conf für statische Websites
+ */
+function generateNginxConfig() {
+    return `server {
+    listen 80;
+    server_name _;
+
+    root /usr/share/nginx/html;
+    index index.html index.htm;
+
+    gzip on;
+    gzip_vary on;
+    gzip_min_length 1024;
+    gzip_types text/plain text/css text/xml text/javascript application/x-javascript application/xml+rss application/json;
+
+    add_header X-Frame-Options "SAMEORIGIN" always;
+    add_header X-Content-Type-Options "nosniff" always;
+    add_header X-XSS-Protection "1; mode=block" always;
+
+    location / {
+        try_files $uri $uri/ =404;
+    }
+
+    location ~* \\.(jpg|jpeg|png|gif|ico|css|js|svg|woff|woff2|ttf|eot)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+    }
+
+    error_page 404 /404.html;
+    error_page 500 502 503 504 /50x.html;
+}`;
+}
+
+/**
+ * Erstellt ein neues Projekt direkt von einem Git-Repository
+ */
+async function createProjectFromGit(systemUsername, projectName, repoUrl, token, port) {
+    const projectPath = path.join(USERS_PATH, systemUsername, projectName);
+
+    // Prüfen ob Projekt bereits existiert
+    if (fs.existsSync(projectPath)) {
+        throw new Error('Ein Projekt mit diesem Namen existiert bereits');
+    }
+
+    // User-Verzeichnis erstellen
+    const userPath = path.join(USERS_PATH, systemUsername);
+    fs.mkdirSync(userPath, { recursive: true });
+
+    const authenticatedUrl = createAuthenticatedUrl(repoUrl, token);
+
+    return new Promise((resolve, reject) => {
+        // Direkt ins Projektverzeichnis klonen
+        exec(`git clone "${authenticatedUrl}" "${projectPath}"`, {
+            timeout: 120000
+        }, (error, stdout, stderr) => {
+            if (error) {
+                // Aufräumen bei Fehler
+                try {
+                    fs.rmSync(projectPath, { recursive: true, force: true });
+                } catch {}
+
+                const cleanError = stderr.replace(/https:\/\/[^@]+@/g, 'https://***@');
+                reject(new Error(`Git clone fehlgeschlagen: ${cleanError}`));
+                return;
+            }
+
+            try {
+                // Projekttyp erkennen
+                const projectType = detectProjectType(projectPath);
+                console.log(`Erkannter Projekttyp: ${projectType}`);
+
+                // docker-compose.yml generieren
+                const dockerCompose = generateDockerCompose(projectType, `${systemUsername}-${projectName}`, port);
+                fs.writeFileSync(path.join(projectPath, 'docker-compose.yml'), dockerCompose);
+
+                // .env generieren
+                const envContent = `PROJECT_NAME=${systemUsername}-${projectName}\nEXPOSED_PORT=${port}\n`;
+                fs.writeFileSync(path.join(projectPath, '.env'), envContent);
+
+                // nginx-Config für statische Websites
+                if (projectType === 'static') {
+                    const nginxDir = path.join(projectPath, 'nginx');
+                    fs.mkdirSync(nginxDir, { recursive: true });
+                    fs.writeFileSync(path.join(nginxDir, 'default.conf'), generateNginxConfig());
+                }
+
+                // Credentials speichern falls Token vorhanden
+                if (token) {
+                    saveCredentials(projectPath, repoUrl, token);
+                }
+
+                resolve({
+                    success: true,
+                    projectType,
+                    path: projectPath,
+                    port
+                });
+            } catch (err) {
+                // Aufräumen bei Fehler
+                try {
+                    fs.rmSync(projectPath, { recursive: true, force: true });
+                } catch {}
+                reject(new Error(`Fehler beim Erstellen des Projekts: ${err.message}`));
+            }
+        });
+    });
+}
+
 module.exports = {
     isGitRepository,
     getGitStatus,
@@ -287,5 +551,7 @@ module.exports = {
     pullChanges,
     disconnectRepository,
     isValidGitUrl,
-    getProjectPath
+    getProjectPath,
+    createProjectFromGit,
+    detectProjectType
 };
