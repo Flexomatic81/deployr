@@ -4,6 +4,10 @@
 
 Deployr ermöglicht mehreren Usern, isolierte Web-Projekte auf einem gemeinsamen Linux-Server zu betreiben. Mit Web-Dashboard, automatischer Datenbank-Erstellung und GitHub-Integration.
 
+<p align="center">
+  <img src="docs/images/dashboard.png" alt="Deployr Dashboard" width="800">
+</p>
+
 ## Voraussetzungen
 
 | Komponente | Mindestversion | Hinweis |
