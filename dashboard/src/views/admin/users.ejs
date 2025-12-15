@@ -1,0 +1,74 @@
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/dashboard">Dashboard</a></li>
+        <li class="breadcrumb-item"><a href="/admin">Admin</a></li>
+        <li class="breadcrumb-item active">User-Verwaltung</li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-people"></i> User-Verwaltung</h1>
+    <a href="/admin/users/create" class="btn btn-success">
+        <i class="bi bi-person-plus"></i> Neuer User
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body">
+        <% if (users.length === 0) { %>
+            <p class="text-muted text-center my-4">Keine Benutzer gefunden.</p>
+        <% } else { %>
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>Benutzername</th>
+                            <th>System-Username</th>
+                            <th>Rolle</th>
+                            <th>Projekte</th>
+                            <th>Erstellt</th>
+                            <th>Aktionen</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <% users.forEach(u => { %>
+                            <tr>
+                                <td>
+                                    <i class="bi bi-person"></i>
+                                    <%= u.username %>
+                                </td>
+                                <td><code><%= u.system_username %></code></td>
+                                <td>
+                                    <% if (u.is_admin) { %>
+                                        <span class="badge bg-danger">Admin</span>
+                                    <% } else { %>
+                                        <span class="badge bg-secondary">User</span>
+                                    <% } %>
+                                </td>
+                                <td>
+                                    <span class="badge bg-info"><%= u.projectCount %></span>
+                                </td>
+                                <td><%= new Date(u.created_at).toLocaleDateString('de-DE') %></td>
+                                <td>
+                                    <div class="btn-group btn-group-sm">
+                                        <a href="/admin/users/<%= u.id %>/edit" class="btn btn-outline-primary" title="Bearbeiten">
+                                            <i class="bi bi-pencil"></i>
+                                        </a>
+                                        <% if (u.id !== user.id) { %>
+                                            <form action="/admin/users/<%= u.id %>?_method=DELETE" method="POST" class="d-inline"
+                                                  onsubmit="return confirm('User &quot;<%= u.username %>&quot; wirklich löschen?')">
+                                                <button type="submit" class="btn btn-outline-danger" title="Löschen">
+                                                    <i class="bi bi-trash"></i>
+                                                </button>
+                                            </form>
+                                        <% } %>
+                                    </div>
+                                </td>
+                            </tr>
+                        <% }) %>
+                    </tbody>
+                </table>
+            </div>
+        <% } %>
+    </div>
+</div>
