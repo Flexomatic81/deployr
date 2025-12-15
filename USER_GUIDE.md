@@ -101,7 +101,7 @@ Falls du den Projekttyp nachträglich ändern musst:
 
 ### Projekt aufrufen
 
-- Klicke auf den **Port-Link** (z.B. `http://192.168.2.125:8002`)
+- Klicke auf den **Port-Link** in der Projektübersicht
 - Oder öffne manuell: `http://<SERVER-IP>:<PORT>`
 
 ---
@@ -118,8 +118,8 @@ Falls du den Projekttyp nachträglich ändern musst:
 ### Verbindungsdaten
 
 Für jede Datenbank siehst du:
-- **Datenbankname**: z.B. `mehmed_meinprojekt`
-- **Benutzername**: z.B. `mehmed_meinprojekt`
+- **Datenbankname**: z.B. `<username>_meinprojekt`
+- **Benutzername**: z.B. `<username>_meinprojekt`
 - **Passwort**: Klicke auf das Auge-Symbol zum Anzeigen
 - **Host**: `deployr-mariadb:3306` (im Docker-Netzwerk)
 

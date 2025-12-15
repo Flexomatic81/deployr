@@ -69,14 +69,13 @@ deployr/
 │   └── mariadb/              # DB-Konfiguration
 │
 ├── users/                     # User-Projekte
-│   ├── mehmed/
-│   │   ├── .db-credentials           # Auto-generierte DB-Zugänge
-│   │   └── mein-projekt/
-│   │       ├── docker-compose.yml
-│   │       ├── .env                  # Projekt-Config + DB-Credentials
-│   │       ├── html/                 # Website-Dateien (Git-Repo)
-│   │       └── nginx/               # Nginx-Config
-│   └── user2/
+│   └── <username>/
+│       ├── .db-credentials           # Auto-generierte DB-Zugänge
+│       └── <projektname>/
+│           ├── docker-compose.yml
+│           ├── .env                  # Projekt-Config + DB-Credentials
+│           ├── html/                 # Website-Dateien (Git-Repo)
+│           └── nginx/               # Nginx-Config
 │
 ├── templates/                 # Projekt-Vorlagen
 │   ├── static-website/       # HTML/CSS/JS
@@ -196,8 +195,8 @@ Die beste Methode um auf dem Server zu arbeiten:
 ```bash
 # 1. Extension Remote - SSH installieren
 # 2. Ctrl+Shift+P → Remote-SSH: Connect to Host
-# 3. <USER>@<SERVER_IP> (z.B. mehmed@192.168.2.125)
-# 4. Open Folder → /opt/deployr/users/mehmed/PROJEKTNAME/html
+# 3. <USER>@<SERVER_IP>
+# 4. Open Folder → /opt/deployr/users/<USER>/PROJEKTNAME/html
 # 5. Dateien bearbeiten → Speichern = LIVE!
 ```
 
@@ -225,7 +224,7 @@ Die beste Methode um auf dem Server zu arbeiten:
    VARIANTE C (Update bestehendes Git-Projekt):
    Dashboard → Projekt öffnen → "Pull" Button
    ODER: ssh <USER>@<SERVER_IP>
-   cd /opt/deployr/users/mehmed/PROJEKT
+   cd /opt/deployr/users/<USER>/PROJEKT
    git pull
 
    VARIANTE D (VS Code Remote SSH):
@@ -296,7 +295,7 @@ docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 
 - MySQL Root Passwort in `.env` setzen
 - Jeder DB-User hat nur Zugriff auf seine eigenen Datenbanken
-- Datenbanknamen werden mit Username prefixed (z.B. `mehmed_meinprojekt`)
+- Datenbanknamen werden mit Username prefixed (z.B. `<username>_meinprojekt`)
 - Container sind netzwerk-isoliert
 - SSL/TLS über Nginx Proxy Manager verwenden
 - Automatisch generierte sichere Passwörter für DB-User

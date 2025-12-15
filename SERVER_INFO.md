@@ -1,18 +1,18 @@
-# Server Installation - srv-21
+# Server Installation
 
-**Installationsdatum**: 2025-12-13
-**Installiert von**: mehmed
+**Installationsdatum**: (Datum eintragen)
+**Installiert von**: (Admin eintragen)
 
 > **Hinweis**: Die Server-IP ist in `config.sh` konfiguriert und wird von allen Skripten verwendet.
 
 ## Server-Details
 
-- **Hostname**: srv-21
-- **IP**: Siehe `config.sh` (Standard: 192.168.2.125)
-- **OS**: Debian
-- **Docker**: v29.0.2
-- **Docker Compose**: v2.40.3
-- **Installation Pfad**: /opt/webserver
+- **Hostname**: (Hostname eintragen)
+- **IP**: Siehe `config.sh`
+- **OS**: (Betriebssystem eintragen)
+- **Docker**: (Version eintragen)
+- **Docker Compose**: (Version eintragen)
+- **Installation Pfad**: /opt/deployr
 
 ## Wichtige Zugangsdaten
 
@@ -24,7 +24,7 @@ Root User: root
 Root Passwort: (siehe infrastructure/.env)
 ```
 
-**Speicherort**: `/opt/webserver/infrastructure/.env`
+**Speicherort**: `/opt/deployr/infrastructure/.env`
 
 ### phpMyAdmin
 
@@ -41,23 +41,23 @@ Passwort: (siehe infrastructure/.env)
 
 ### Infrastruktur (permanent)
 
-- **webserver-mariadb**: MariaDB 11, Port 3306 (localhost)
-- **webserver-phpmyadmin**: phpMyAdmin, Port 8080 (localhost)
+- **deployr-mariadb**: MariaDB 11, Port 3306 (localhost)
+- **deployr-phpmyadmin**: phpMyAdmin, Port 8080 (localhost)
 
 ### User-Projekte
 
-- **demo-beispiel**: Statische Demo-Website, Port 8001
+(Projekte hier dokumentieren)
 
 ## Verzeichnisstruktur
 
 ```
-/opt/webserver/
+/opt/deployr/
 ├── infrastructure/       # MariaDB + phpMyAdmin
 │   ├── .env             # MySQL Root-Passwort HIER!
 │   └── docker-compose.yml
 ├── users/               # User-Projekte
-│   └── demo/
-│       └── beispiel/    # Demo statische Website
+│   └── <username>/
+│       └── <projektname>/
 ├── templates/           # Projekt-Vorlagen
 ├── scripts/             # Verwaltungs-Scripts
 ├── config.sh           # Server-IP Konfiguration
@@ -71,7 +71,7 @@ Passwort: (siehe infrastructure/.env)
 ### Infrastruktur verwalten
 
 ```bash
-cd /opt/webserver
+cd /opt/deployr
 
 # Status aller Container
 docker ps
@@ -86,7 +86,7 @@ docker ps
 ### Neues Projekt erstellen
 
 ```bash
-cd /opt/webserver
+cd /opt/deployr
 
 # Projekt erstellen
 ./scripts/create-project.sh <username> <projektname> <template>
@@ -104,7 +104,7 @@ docker compose up -d
 ### Projekte auflisten
 
 ```bash
-cd /opt/webserver
+cd /opt/deployr
 ./scripts/list-projects.sh
 ```
 
@@ -113,9 +113,8 @@ cd /opt/webserver
 **Reservierte Ports**:
 - 3306: MariaDB (localhost)
 - 8080: phpMyAdmin (localhost)
-- 8001: demo-beispiel
 
-**Verfügbar für neue Projekte**: 8002, 8003, 8004, ...
+**Verfügbar für Projekte**: 8001, 8002, 8003, ...
 
 **Wichtig**: Jedes Projekt braucht einen eigenen Port in der `.env` Datei!
 
@@ -138,7 +137,7 @@ Dieser Server steht hinter:
 **Ursache**: Falsche Datei-Permissions  
 **Lösung**: 
 ```bash
-cd /opt/webserver/users/<user>/<projekt>
+cd /opt/deployr/users/<user>/<projekt>
 chmod 755 html/
 chmod 644 html/*
 ```
@@ -150,8 +149,8 @@ chmod 644 html/*
 **Ursache**: Config-Dateien nicht lesbar  
 **Lösung**:
 ```bash
-chmod 755 /opt/webserver/infrastructure/mariadb/conf
-chmod 644 /opt/webserver/infrastructure/mariadb/conf/*
+chmod 755 /opt/deployr/infrastructure/mariadb/conf
+chmod 644 /opt/deployr/infrastructure/mariadb/conf/*
 ```
 
 ### Problem: docker-compose Befehl nicht gefunden
@@ -164,17 +163,17 @@ chmod 644 /opt/webserver/infrastructure/mariadb/conf/*
 
 ```bash
 # Alle Datenbanken
-docker exec webserver-mariadb mysqldump -uroot -p<PASSWORD> --all-databases > backup.sql
+docker exec deployr-mariadb mysqldump -uroot -p<PASSWORD> --all-databases > backup.sql
 
 # Einzelne Datenbank
-docker exec webserver-mariadb mysqldump -u<USER> -p<PASSWORD> <DB> > db_backup.sql
+docker exec deployr-mariadb mysqldump -u<USER> -p<PASSWORD> <DB> > db_backup.sql
 ```
 
 ### Projekt-Dateien
 
 ```bash
 # Komplettes Backup
-tar -czf webserver-backup-$(date +%Y%m%d).tar.gz /opt/webserver
+tar -czf deployr-backup-$(date +%Y%m%d).tar.gz /opt/deployr
 ```
 
 ## SSH-Zugang
@@ -192,7 +191,7 @@ ssh <USER>@<SERVER_IP>
 ### Docker Images aktualisieren
 
 ```bash
-cd /opt/webserver/infrastructure
+cd /opt/deployr/infrastructure
 docker compose pull
 docker compose up -d
 ```
@@ -206,10 +205,10 @@ sudo apt upgrade
 
 ## Support & Dokumentation
 
-- **Projekt-README**: `/opt/webserver/README.md`
-- **Setup-Guide**: `/opt/webserver/SETUP.md`
-- **Templates**: `/opt/webserver/templates/README.md`
-- **User-Guide**: `/opt/webserver/users/README.md`
+- **Projekt-README**: `/opt/deployr/README.md`
+- **Setup-Guide**: `/opt/deployr/SETUP.md`
+- **Templates**: `/opt/deployr/templates/README.md`
+- **User-Guide**: `/opt/deployr/USER_GUIDE.md`
 
 ## Änderungshistorie
 
