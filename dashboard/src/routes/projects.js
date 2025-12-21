@@ -4,6 +4,8 @@ const { requireAuth } = require('../middleware/auth');
 const projectService = require('../services/project');
 const dockerService = require('../services/docker');
 const gitService = require('../services/git');
+const zipService = require('../services/zip');
+const upload = require('../middleware/upload');
 
 // Alle Projekte anzeigen
 router.get('/', requireAuth, async (req, res) => {
@@ -62,6 +64,49 @@ router.post('/', requireAuth, async (req, res) => {
         res.redirect(`/projects/${name}`);
     } catch (error) {
         console.error('Fehler beim Erstellen des Projekts:', error);
+        req.flash('error', error.message || 'Fehler beim Erstellen des Projekts');
+        res.redirect('/projects/create');
+    }
+});
+
+// Neues Projekt von ZIP erstellen - Verarbeitung
+router.post('/from-zip', requireAuth, upload.single('zipfile'), async (req, res) => {
+    try {
+        const { name, port } = req.body;
+        const systemUsername = req.session.user.system_username;
+
+        // Prüfen ob Datei hochgeladen wurde
+        if (!req.file) {
+            req.flash('error', 'Bitte wähle eine ZIP-Datei aus');
+            return res.redirect('/projects/create');
+        }
+
+        // Validierung
+        if (!/^[a-z0-9-]+$/.test(name)) {
+            req.flash('error', 'Projektname darf nur Kleinbuchstaben, Zahlen und Bindestriche enthalten');
+            return res.redirect('/projects/create');
+        }
+
+        const result = await zipService.createProjectFromZip(
+            systemUsername,
+            name,
+            req.file.path,
+            parseInt(port)
+        );
+
+        const typeNames = {
+            static: 'Statische Website',
+            php: 'PHP Website',
+            nodejs: 'Node.js App',
+            laravel: 'Laravel/Symfony',
+            'nodejs-static': 'React/Vue (Static Build)',
+            nextjs: 'Next.js (SSR)'
+        };
+
+        req.flash('success', `Projekt "${name}" erfolgreich aus ZIP erstellt! Erkannt als: ${typeNames[result.projectType] || result.projectType}`);
+        res.redirect(`/projects/${name}`);
+    } catch (error) {
+        console.error('Fehler beim Erstellen des ZIP-Projekts:', error);
         req.flash('error', error.message || 'Fehler beim Erstellen des Projekts');
         res.redirect('/projects/create');
     }

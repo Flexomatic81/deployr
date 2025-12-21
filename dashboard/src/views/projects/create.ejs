@@ -8,6 +8,11 @@
                 </button>
             </li>
             <li class="nav-item" role="presentation">
+                <button class="nav-link" id="zip-tab" data-bs-toggle="tab" data-bs-target="#zip-content" type="button">
+                    <i class="bi bi-file-earmark-zip"></i> ZIP-Upload
+                </button>
+            </li>
+            <li class="nav-item" role="presentation">
                 <button class="nav-link" id="template-tab" data-bs-toggle="tab" data-bs-target="#template-content" type="button">
                     <i class="bi bi-file-earmark-code"></i> Von Template
                 </button>
@@ -72,6 +77,65 @@
                             <div class="d-flex gap-2">
                                 <button type="submit" class="btn btn-primary">
                                     <i class="bi bi-git"></i> Projekt von Git erstellen
+                                </button>
+                                <a href="/projects" class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-lg"></i> Abbrechen
+                                </a>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tab: Von ZIP -->
+            <div class="tab-pane fade" id="zip-content" role="tabpanel">
+                <div class="card">
+                    <div class="card-header">
+                        <h4 class="mb-0"><i class="bi bi-file-earmark-zip"></i> Neues Projekt aus ZIP-Datei</h4>
+                    </div>
+                    <div class="card-body">
+                        <form method="POST" action="/projects/from-zip" enctype="multipart/form-data">
+                            <div class="mb-3">
+                                <label for="zip_name" class="form-label">Projektname</label>
+                                <input type="text" class="form-control" id="zip_name" name="name"
+                                       pattern="[a-z0-9-]+" required
+                                       placeholder="mein-projekt">
+                                <div class="form-text">Nur Kleinbuchstaben, Zahlen und Bindestriche erlaubt</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="zipfile" class="form-label">ZIP-Datei</label>
+                                <input type="file" class="form-control" id="zipfile" name="zipfile"
+                                       accept=".zip,application/zip" required>
+                                <div class="form-text">Maximale Dateigröße: 100 MB</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="zip_port" class="form-label">Port</label>
+                                <input type="number" class="form-control" id="zip_port" name="port"
+                                       value="<%= nextPort %>" min="8001" max="9999" required>
+                                <div class="form-text">Nächster freier Port: <%= nextPort %></div>
+                            </div>
+
+                            <div class="alert alert-info">
+                                <i class="bi bi-info-circle"></i>
+                                <strong>Automatische Erkennung:</strong> Der Projekttyp wird automatisch erkannt:
+                                <ul class="mb-0 mt-2">
+                                    <li><code>package.json</code> vorhanden → Node.js App</li>
+                                    <li><code>index.php</code> oder <code>composer.json</code> → PHP Website</li>
+                                    <li><code>index.html</code> → Statische Website</li>
+                                </ul>
+                            </div>
+
+                            <div class="alert alert-secondary">
+                                <i class="bi bi-folder2-open"></i>
+                                <strong>ZIP-Struktur:</strong> Falls die ZIP einen einzelnen Ordner enthält (z.B. <code>projekt-main/</code>),
+                                wird der Inhalt automatisch korrekt extrahiert.
+                            </div>
+
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary">
+                                    <i class="bi bi-upload"></i> Projekt hochladen
                                 </button>
                                 <a href="/projects" class="btn btn-outline-secondary">
                                     <i class="bi bi-x-lg"></i> Abbrechen
@@ -197,6 +261,7 @@
 document.addEventListener('DOMContentLoaded', function() {
     const templateTab = document.getElementById('template-tab');
     const gitTab = document.getElementById('git-tab');
+    const zipTab = document.getElementById('zip-tab');
     const templateInfoCard = document.getElementById('template-info-card');
 
     templateTab.addEventListener('shown.bs.tab', function() {
@@ -204,6 +269,10 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 
     gitTab.addEventListener('shown.bs.tab', function() {
+        templateInfoCard.style.display = 'none';
+    });
+
+    zipTab.addEventListener('shown.bs.tab', function() {
         templateInfoCard.style.display = 'none';
     });
 });
