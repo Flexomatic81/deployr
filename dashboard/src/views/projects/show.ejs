@@ -139,6 +139,44 @@
     </div>
 </div>
 
+<!-- Projekttyp-Warnung bei Mismatch -->
+<% if (typeMismatch) { %>
+<div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
+    <div class="d-flex align-items-center">
+        <i class="bi bi-exclamation-triangle-fill fs-4 me-3"></i>
+        <div class="flex-grow-1">
+            <strong>Projekttyp-Empfehlung:</strong> Basierend auf den Projektdateien wurde ein anderer Typ erkannt.
+            <br>
+            <small>
+                Aktuell: <strong>
+                <% if (project.templateType === 'php-website') { %>PHP Website
+                <% } else if (project.templateType === 'nodejs-app') { %>Node.js App
+                <% } else if (project.templateType === 'laravel') { %>Laravel / Symfony
+                <% } else if (project.templateType === 'nodejs-static') { %>React / Vue (Build)
+                <% } else if (project.templateType === 'nextjs') { %>Next.js (SSR)
+                <% } else { %>Statische Website<% } %>
+                </strong>
+                &rarr; Empfohlen: <strong>
+                <% if (detectedType === 'php') { %>PHP Website
+                <% } else if (detectedType === 'nodejs') { %>Node.js App
+                <% } else if (detectedType === 'laravel') { %>Laravel / Symfony
+                <% } else if (detectedType === 'nodejs-static') { %>React / Vue (Build)
+                <% } else if (detectedType === 'nextjs') { %>Next.js (SSR)
+                <% } else { %>Statische Website<% } %>
+                </strong>
+            </small>
+        </div>
+        <form action="/projects/<%= project.name %>/change-type" method="POST" class="ms-3">
+            <input type="hidden" name="type" value="<%= detectedType %>">
+            <button type="submit" class="btn btn-warning btn-sm">
+                <i class="bi bi-arrow-repeat"></i> Typ anpassen
+            </button>
+        </form>
+    </div>
+    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+</div>
+<% } %>
+
 <!-- Projekteinstellungen -->
 <div class="card mb-4">
     <div class="card-header">
@@ -179,10 +217,17 @@
                 </button>
             </div>
             <div class="col-12">
+                <% if (!typeMismatch) { %>
+                <small class="text-success">
+                    <i class="bi bi-check-circle"></i>
+                    Erkannter Projekttyp stimmt mit Konfiguration überein.
+                </small>
+                <% } else { %>
                 <small class="text-muted">
                     <i class="bi bi-info-circle"></i>
                     Beim Ändern des Typs wird die docker-compose.yml neu generiert und der Container neu gestartet.
                 </small>
+                <% } %>
             </div>
         </form>
     </div>

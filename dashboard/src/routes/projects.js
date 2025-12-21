@@ -169,10 +169,29 @@ router.get('/:name', requireAuth, async (req, res) => {
         // Git-Status abrufen
         const gitStatus = gitService.getGitStatus(project.path);
 
+        // Projekttyp automatisch erkennen und mit aktuellem vergleichen
+        const detectedType = gitService.detectProjectType(project.path);
+
+        // Mapping von erkannten Typen zu Template-Namen
+        const typeToTemplate = {
+            static: 'static-website',
+            php: 'php-website',
+            nodejs: 'nodejs-app',
+            laravel: 'laravel',
+            'nodejs-static': 'nodejs-static',
+            nextjs: 'nextjs'
+        };
+
+        const detectedTemplateType = typeToTemplate[detectedType] || 'static-website';
+        const typeMismatch = project.templateType !== detectedTemplateType;
+
         res.render('projects/show', {
             title: project.name,
             project,
-            gitStatus
+            gitStatus,
+            detectedType,
+            detectedTemplateType,
+            typeMismatch
         });
     } catch (error) {
         console.error('Fehler beim Laden des Projekts:', error);
