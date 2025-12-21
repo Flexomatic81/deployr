@@ -185,13 +185,25 @@ router.get('/:name', requireAuth, async (req, res) => {
         const detectedTemplateType = typeToTemplate[detectedType] || 'static-website';
         const typeMismatch = project.templateType !== detectedTemplateType;
 
+        // Umgebungsvariablen laden
+        const envContent = await projectService.readEnvFile(systemUsername, req.params.name);
+
+        // .env.example prüfen
+        const envExample = await projectService.checkEnvExample(systemUsername, req.params.name);
+
+        // Datenbanken des Users laden
+        const userDatabases = await projectService.getUserDbCredentials(systemUsername);
+
         res.render('projects/show', {
             title: project.name,
             project,
             gitStatus,
             detectedType,
             detectedTemplateType,
-            typeMismatch
+            typeMismatch,
+            envContent,
+            envExample,
+            userDatabases
         });
     } catch (error) {
         console.error('Fehler beim Laden des Projekts:', error);
@@ -289,6 +301,62 @@ router.post('/:name/change-type', requireAuth, async (req, res) => {
     } catch (error) {
         console.error('Fehler beim Ändern des Projekttyps:', error);
         req.flash('error', 'Fehler beim Ändern: ' + error.message);
+        res.redirect(`/projects/${req.params.name}`);
+    }
+});
+
+// Umgebungsvariablen speichern
+router.post('/:name/env', requireAuth, async (req, res) => {
+    try {
+        const systemUsername = req.session.user.system_username;
+        const { envContent } = req.body;
+
+        await projectService.writeEnvFile(systemUsername, req.params.name, envContent);
+        req.flash('success', 'Umgebungsvariablen gespeichert. Container-Neustart empfohlen.');
+        res.redirect(`/projects/${req.params.name}`);
+    } catch (error) {
+        console.error('Fehler beim Speichern der Umgebungsvariablen:', error);
+        req.flash('error', 'Fehler beim Speichern: ' + error.message);
+        res.redirect(`/projects/${req.params.name}`);
+    }
+});
+
+// .env.example zu .env kopieren
+router.post('/:name/env/copy-example', requireAuth, async (req, res) => {
+    try {
+        const systemUsername = req.session.user.system_username;
+
+        const result = await projectService.copyEnvExample(systemUsername, req.params.name);
+        req.flash('success', `${result.filename} wurde zu .env kopiert. Container-Neustart empfohlen.`);
+        res.redirect(`/projects/${req.params.name}`);
+    } catch (error) {
+        console.error('Fehler beim Kopieren der .env.example:', error);
+        req.flash('error', 'Fehler: ' + error.message);
+        res.redirect(`/projects/${req.params.name}`);
+    }
+});
+
+// Datenbank-Credentials zu .env hinzufügen
+router.post('/:name/env/add-db', requireAuth, async (req, res) => {
+    try {
+        const systemUsername = req.session.user.system_username;
+        const { database } = req.body;
+
+        // Alle DB-Credentials des Users laden
+        const credentials = await projectService.getUserDbCredentials(systemUsername);
+        const dbCredentials = credentials.find(c => c.database === database);
+
+        if (!dbCredentials) {
+            req.flash('error', 'Datenbank nicht gefunden');
+            return res.redirect(`/projects/${req.params.name}`);
+        }
+
+        await projectService.appendDbCredentials(systemUsername, req.params.name, dbCredentials);
+        req.flash('success', 'Datenbank-Credentials wurden zur .env hinzugefügt. Container-Neustart empfohlen.');
+        res.redirect(`/projects/${req.params.name}`);
+    } catch (error) {
+        console.error('Fehler beim Hinzufügen der DB-Credentials:', error);
+        req.flash('error', 'Fehler: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
 });

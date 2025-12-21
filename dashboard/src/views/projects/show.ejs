@@ -232,6 +232,64 @@
     </div>
 </div>
 
+<!-- Umgebungsvariablen -->
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center">
+        <h5 class="mb-0"><i class="bi bi-file-earmark-code"></i> Umgebungsvariablen (.env)</h5>
+        <div class="btn-group btn-group-sm">
+            <% if (envExample && envExample.exists) { %>
+            <form action="/projects/<%= project.name %>/env/copy-example" method="POST" class="d-inline">
+                <button type="submit" class="btn btn-outline-secondary" title="<%= envExample.filename %> zu .env kopieren">
+                    <i class="bi bi-file-earmark-arrow-down"></i> <%= envExample.filename %>
+                </button>
+            </form>
+            <% } %>
+            <% if (userDatabases && userDatabases.length > 0) { %>
+            <button type="button" class="btn btn-outline-secondary dropdown-toggle" data-bs-toggle="dropdown" title="Datenbank-Credentials einfügen">
+                <i class="bi bi-database-add"></i> DB einfügen
+            </button>
+            <ul class="dropdown-menu dropdown-menu-end">
+                <% userDatabases.forEach(db => { %>
+                <li>
+                    <form action="/projects/<%= project.name %>/env/add-db" method="POST">
+                        <input type="hidden" name="database" value="<%= db.database %>">
+                        <button type="submit" class="dropdown-item">
+                            <i class="bi bi-database<%= db.type === 'postgresql' ? '-fill text-primary' : ' text-warning' %>"></i>
+                            <%= db.name %> <small class="text-muted">(<%= db.type %>)</small>
+                        </button>
+                    </form>
+                </li>
+                <% }) %>
+            </ul>
+            <% } %>
+        </div>
+    </div>
+    <div class="card-body">
+        <% if (envExample && envExample.exists && !envContent.trim()) { %>
+        <div class="alert alert-info mb-3">
+            <i class="bi bi-lightbulb"></i>
+            <strong>Tipp:</strong> Es wurde eine <code><%= envExample.filename %></code> Datei gefunden.
+            Klicke oben auf den Button um sie als Vorlage zu verwenden.
+        </div>
+        <% } %>
+        <form action="/projects/<%= project.name %>/env" method="POST">
+            <div class="mb-3">
+                <textarea name="envContent" class="form-control font-monospace" rows="10"
+                    placeholder="# Umgebungsvariablen im Format KEY=value&#10;DB_HOST=localhost&#10;API_KEY=geheim"><%= envContent %></textarea>
+            </div>
+            <div class="d-flex justify-content-between align-items-center">
+                <small class="text-muted">
+                    <i class="bi bi-info-circle"></i>
+                    Nach dem Speichern muss der Container neu gestartet werden, damit die Änderungen wirksam werden.
+                </small>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-save"></i> Speichern
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <% if (gitStatus && gitStatus.connected) { %>
 <!-- Git Integration - nur anzeigen wenn verbunden -->
 <div class="card mb-4">

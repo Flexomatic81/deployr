@@ -360,6 +360,189 @@ async function changeProjectType(systemUsername, projectName, newType) {
     };
 }
 
+// Umgebungsvariablen aus .env lesen
+async function readEnvFile(systemUsername, projectName) {
+    const projectPath = path.join(USERS_PATH, systemUsername, projectName);
+    const envPath = path.join(projectPath, '.env');
+
+    try {
+        const content = await fs.readFile(envPath, 'utf8');
+        return content;
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            return ''; // Leere Datei wenn nicht vorhanden
+        }
+        throw error;
+    }
+}
+
+// Umgebungsvariablen in .env schreiben
+async function writeEnvFile(systemUsername, projectName, content) {
+    const projectPath = path.join(USERS_PATH, systemUsername, projectName);
+    const envPath = path.join(projectPath, '.env');
+
+    // Prüfen ob Projekt existiert
+    try {
+        await fs.access(projectPath);
+    } catch (error) {
+        throw new Error('Projekt nicht gefunden');
+    }
+
+    await fs.writeFile(envPath, content, 'utf8');
+    return { success: true };
+}
+
+// Prüfen ob .env.example existiert
+async function checkEnvExample(systemUsername, projectName) {
+    const projectPath = path.join(USERS_PATH, systemUsername, projectName);
+    const envExampleNames = ['.env.example', '.env.sample', '.env.dist', '.env.template'];
+
+    for (const name of envExampleNames) {
+        const examplePath = path.join(projectPath, name);
+        try {
+            await fs.access(examplePath);
+            const content = await fs.readFile(examplePath, 'utf8');
+            return { exists: true, filename: name, content };
+        } catch (e) {
+            // Datei existiert nicht, weiter prüfen
+        }
+    }
+
+    return { exists: false, filename: null, content: null };
+}
+
+// .env.example zu .env kopieren
+async function copyEnvExample(systemUsername, projectName) {
+    const projectPath = path.join(USERS_PATH, systemUsername, projectName);
+    const envPath = path.join(projectPath, '.env');
+
+    const example = await checkEnvExample(systemUsername, projectName);
+    if (!example.exists) {
+        throw new Error('Keine .env.example Datei gefunden');
+    }
+
+    // Existierenden .env Inhalt laden (falls vorhanden)
+    let existingContent = '';
+    try {
+        existingContent = await fs.readFile(envPath, 'utf8');
+    } catch (e) {
+        // .env existiert nicht
+    }
+
+    // Example-Inhalt + existierenden Inhalt mergen
+    // Existierende Variablen nicht überschreiben
+    const existingVars = parseEnvFile(existingContent);
+    const exampleLines = example.content.split('\n');
+    const resultLines = [];
+
+    for (const line of exampleLines) {
+        const trimmed = line.trim();
+        // Kommentare und leere Zeilen übernehmen
+        if (trimmed.startsWith('#') || trimmed === '') {
+            resultLines.push(line);
+            continue;
+        }
+        // Variable parsen
+        const match = trimmed.match(/^([A-Za-z_][A-Za-z0-9_]*)=/);
+        if (match) {
+            const varName = match[1];
+            // Wenn Variable bereits existiert, bestehenden Wert behalten
+            if (existingVars[varName] !== undefined) {
+                resultLines.push(`${varName}=${existingVars[varName]}`);
+            } else {
+                resultLines.push(line);
+            }
+        } else {
+            resultLines.push(line);
+        }
+    }
+
+    await fs.writeFile(envPath, resultLines.join('\n'), 'utf8');
+    return { success: true, filename: example.filename };
+}
+
+// Datenbank-Credentials zu .env hinzufügen
+async function appendDbCredentials(systemUsername, projectName, dbCredentials) {
+    const projectPath = path.join(USERS_PATH, systemUsername, projectName);
+    const envPath = path.join(projectPath, '.env');
+
+    let content = '';
+    try {
+        content = await fs.readFile(envPath, 'utf8');
+    } catch (e) {
+        // .env existiert nicht
+    }
+
+    // Prüfen ob DB-Credentials schon vorhanden
+    if (content.includes('# === Dployr Datenbank-Credentials ===')) {
+        // Bestehende Credentials ersetzen
+        content = content.replace(
+            /# === Dployr Datenbank-Credentials ===[\s\S]*?(?=\n\n|\n#(?! ===)|$)/,
+            ''
+        ).trim();
+    }
+
+    // Credentials-Block erstellen
+    const credentialsBlock = `
+
+# === Dployr Datenbank-Credentials ===
+DB_CONNECTION=${dbCredentials.type === 'postgresql' ? 'pgsql' : 'mysql'}
+DB_HOST=${dbCredentials.host}
+DB_PORT=${dbCredentials.port}
+DB_DATABASE=${dbCredentials.database}
+DB_USERNAME=${dbCredentials.username}
+DB_PASSWORD=${dbCredentials.password}
+`;
+
+    await fs.writeFile(envPath, content + credentialsBlock, 'utf8');
+    return { success: true };
+}
+
+// Datenbank-Credentials für einen User laden
+async function getUserDbCredentials(systemUsername) {
+    const credentialsPath = path.join(USERS_PATH, systemUsername, '.db-credentials');
+    const credentials = [];
+
+    try {
+        const content = await fs.readFile(credentialsPath, 'utf8');
+        const blocks = content.split(/\n(?=# Database:)/);
+
+        for (const block of blocks) {
+            if (!block.trim()) continue;
+
+            const lines = block.split('\n');
+            const headerMatch = lines[0].match(/# Database: (\S+)/);
+            if (!headerMatch) continue;
+
+            const dbName = headerMatch[1];
+            const vars = {};
+
+            for (const line of lines) {
+                const match = line.match(/^([A-Z_]+)=(.*)$/);
+                if (match) {
+                    vars[match[1]] = match[2];
+                }
+            }
+
+            if (vars.DB_DATABASE) {
+                credentials.push({
+                    name: dbName,
+                    type: vars.DB_TYPE || 'mariadb',
+                    host: vars.DB_HOST,
+                    port: vars.DB_PORT,
+                    database: vars.DB_DATABASE,
+                    username: vars.DB_USERNAME,
+                    password: vars.DB_PASSWORD
+                });
+            }
+        }
+    } catch (e) {
+        // Keine Credentials-Datei
+    }
+
+    return credentials;
+}
+
 module.exports = {
     getUserProjects,
     getProjectInfo,
@@ -368,5 +551,11 @@ module.exports = {
     createProject,
     deleteProject,
     changeProjectType,
-    parseEnvFile
+    parseEnvFile,
+    readEnvFile,
+    writeEnvFile,
+    checkEnvExample,
+    copyEnvExample,
+    appendDbCredentials,
+    getUserDbCredentials
 };
