@@ -2,7 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { exec } = require('child_process');
 const dockerService = require('./docker');
-const { generateDockerCompose, generateNginxConfig } = require('./git');
+const { generateDockerCompose, generateNginxConfig, getGitPath, isGitRepository } = require('./git');
 
 const USERS_PATH = process.env.USERS_PATH || '/app/users';
 const SCRIPTS_PATH = process.env.SCRIPTS_PATH || '/app/scripts';
@@ -363,12 +363,18 @@ async function changeProjectType(systemUsername, projectName, newType) {
 // Docker-System-Variablen die nicht vom User geändert werden sollen
 const SYSTEM_ENV_VARS = ['PROJECT_NAME', 'EXPOSED_PORT'];
 
-// Ermitteln wo die App-.env Datei liegt (html/ oder Root)
+// Ermitteln wo die App-.env Datei liegt (html/ oder Git-Pfad oder Root)
 async function getAppEnvPath(systemUsername, projectName) {
     const projectPath = path.join(USERS_PATH, systemUsername, projectName);
-    const htmlPath = path.join(projectPath, 'html');
 
-    // Prüfen ob html/ Ordner existiert (Git/ZIP Projekte mit html/ Struktur)
+    // Bei Git-Projekten: getGitPath verwenden (unterstützt alte und neue Struktur)
+    if (isGitRepository(projectPath)) {
+        const gitPath = getGitPath(projectPath);
+        return path.join(gitPath, '.env');
+    }
+
+    // Für nicht-Git-Projekte: html/ Ordner prüfen
+    const htmlPath = path.join(projectPath, 'html');
     try {
         await fs.access(htmlPath);
         // html/ existiert, prüfen ob dort App-Dateien sind
@@ -451,13 +457,28 @@ async function writeEnvFile(systemUsername, projectName, content) {
     return { success: true };
 }
 
-// Prüfen ob .env.example existiert (im Projekt-Root oder html/ Unterordner)
+// Prüfen ob .env.example existiert (im Git-Pfad, html/ oder Projekt-Root)
 async function checkEnvExample(systemUsername, projectName) {
     const projectPath = path.join(USERS_PATH, systemUsername, projectName);
-    const htmlPath = path.join(projectPath, 'html');
     const envExampleNames = ['.env.example', '.env.sample', '.env.dist', '.env.template'];
 
-    // Zuerst im html/ Unterordner suchen (Git/ZIP Projekte)
+    // Bei Git-Projekten: Im Git-Pfad suchen (unterstützt alte und neue Struktur)
+    if (isGitRepository(projectPath)) {
+        const gitPath = getGitPath(projectPath);
+        for (const name of envExampleNames) {
+            const examplePath = path.join(gitPath, name);
+            try {
+                await fs.access(examplePath);
+                const content = await fs.readFile(examplePath, 'utf8');
+                return { exists: true, filename: name, content, inGit: true };
+            } catch (e) {
+                // Datei existiert nicht, weiter prüfen
+            }
+        }
+    }
+
+    // Für nicht-Git-Projekte: html/ Unterordner suchen
+    const htmlPath = path.join(projectPath, 'html');
     for (const name of envExampleNames) {
         const examplePath = path.join(htmlPath, name);
         try {
@@ -469,7 +490,7 @@ async function checkEnvExample(systemUsername, projectName) {
         }
     }
 
-    // Falls nicht gefunden, im Projekt-Root suchen
+    // Falls nicht gefunden, im Projekt-Root suchen (für Template-Projekte)
     for (const name of envExampleNames) {
         const examplePath = path.join(projectPath, name);
         try {
