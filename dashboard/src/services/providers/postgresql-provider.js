@@ -37,11 +37,16 @@ async function createDatabase(systemUsername, databaseName) {
             [dbUser]
         );
 
-        // User erstellen falls nicht vorhanden
+        // User erstellen oder Passwort aktualisieren
         if (userExists.rows.length === 0) {
             // Passwort muss escaped werden für SQL
             await pool.query(
                 `CREATE USER "${dbUser}" WITH PASSWORD '${dbPassword}'`
+            );
+        } else {
+            // User existiert bereits - Passwort aktualisieren
+            await pool.query(
+                `ALTER USER "${dbUser}" WITH PASSWORD '${dbPassword}'`
             );
         }
 

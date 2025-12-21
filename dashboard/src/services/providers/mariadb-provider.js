@@ -27,9 +27,14 @@ async function createDatabase(systemUsername, databaseName) {
             `CREATE DATABASE IF NOT EXISTS \`${fullDbName}\` CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci`
         );
 
-        // User erstellen
+        // User erstellen oder Passwort aktualisieren falls User bereits existiert
         await rootConnection.execute(
             `CREATE USER IF NOT EXISTS '${dbUser}'@'%' IDENTIFIED BY '${dbPassword}'`
+        );
+
+        // Passwort setzen (falls User bereits existierte)
+        await rootConnection.execute(
+            `ALTER USER '${dbUser}'@'%' IDENTIFIED BY '${dbPassword}'`
         );
 
         // Rechte vergeben
