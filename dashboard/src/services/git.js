@@ -713,5 +713,6 @@ module.exports = {
     getProjectPath,
     createProjectFromGit,
     detectProjectType,
-    generateDockerCompose
+    generateDockerCompose,
+    generateNginxConfig
 };
