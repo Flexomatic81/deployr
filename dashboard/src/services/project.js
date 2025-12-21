@@ -2,7 +2,7 @@ const fs = require('fs').promises;
 const path = require('path');
 const { exec } = require('child_process');
 const dockerService = require('./docker');
-const { generateDockerCompose } = require('./git');
+const { generateDockerCompose, generateNginxConfig } = require('./git');
 
 const USERS_PATH = process.env.USERS_PATH || '/app/users';
 const SCRIPTS_PATH = process.env.SCRIPTS_PATH || '/app/scripts';
@@ -339,6 +339,16 @@ async function changeProjectType(systemUsername, projectName, newType) {
     const newCompose = generateDockerCompose(newType, containerName, port);
     const composePath = path.join(projectPath, 'docker-compose.yml');
     await fs.writeFile(composePath, newCompose);
+
+    // nginx-Config für statische Websites erstellen
+    if (newType === 'static') {
+        const nginxDir = path.join(projectPath, 'nginx');
+        await fs.mkdir(nginxDir, { recursive: true });
+        await fs.writeFile(
+            path.join(nginxDir, 'default.conf'),
+            generateNginxConfig()
+        );
+    }
 
     // Container starten
     await dockerService.startProject(projectPath);
