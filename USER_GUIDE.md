@@ -113,21 +113,25 @@ Falls du den Projekttyp nachträglich ändern musst:
 1. Gehe zu **"Datenbanken"** im Menü
 2. Klicke **"Neue Datenbank"**
 3. Gib einen Namen ein (wird automatisch mit deinem Username prefixed)
-4. Klicke **"Erstellen"**
+4. Wähle den **Datenbanktyp**:
+   - **MariaDB**: MySQL-kompatibel, ideal für WordPress, Laravel, PHP-Projekte
+   - **PostgreSQL**: Fortschrittliche Features, ideal für komplexe Anwendungen
+5. Klicke **"Erstellen"**
 
 ### Verbindungsdaten
 
 Für jede Datenbank siehst du:
 - **Datenbankname**: z.B. `<username>_meinprojekt`
+- **Typ**: MariaDB oder PostgreSQL (als Badge)
 - **Benutzername**: z.B. `<username>_meinprojekt`
 - **Passwort**: Klicke auf das Auge-Symbol zum Anzeigen
-- **Host**: `dployr-mariadb:3306` (im Docker-Netzwerk)
+- **Host**: Je nach Typ unterschiedlich
 
 ### Datenbank in deiner App nutzen
 
-Füge diese Umgebungsvariablen in deine `.env` Datei ein:
-
+**Für MariaDB:**
 ```env
+DB_TYPE=mariadb
 DB_HOST=dployr-mariadb
 DB_PORT=3306
 DB_DATABASE=<dein_datenbankname>
@@ -135,11 +139,30 @@ DB_USERNAME=<dein_benutzername>
 DB_PASSWORD=<dein_passwort>
 ```
 
-### phpMyAdmin
+**Für PostgreSQL:**
+```env
+DB_TYPE=postgresql
+DB_HOST=dployr-postgresql
+DB_PORT=5432
+DB_DATABASE=<dein_datenbankname>
+DB_USERNAME=<dein_benutzername>
+DB_PASSWORD=<dein_passwort>
+```
 
-Für grafische Datenbank-Verwaltung:
+### Datenbank-Verwaltung
+
+**phpMyAdmin (MariaDB):**
 1. Öffne `http://<SERVER-IP>:8080`
-2. Melde dich mit deinen Datenbank-Credentials an
+2. Melde dich mit deinen MariaDB-Credentials an
+
+**pgAdmin (PostgreSQL):**
+1. Öffne `http://<SERVER-IP>:5050`
+2. Melde dich mit dem pgAdmin-Passwort an
+3. Füge deinen PostgreSQL-Server hinzu:
+   - Host: `dployr-postgresql`
+   - Port: `5432`
+   - Username: Dein DB-Benutzername
+   - Password: Dein DB-Passwort
 
 ### Datenbank löschen
 
@@ -215,11 +238,16 @@ Klicke auf das **Sonnen-/Mond-Symbol** in der Navigationsleiste, um zwischen hel
 - Klicke auf **"Starten"** auf der Projekt-Detailseite
 - Prüfe die **Logs** auf Fehler
 
-### Mein PHP-Projekt kann sich nicht mit der Datenbank verbinden
+### Mein Projekt kann sich nicht mit der Datenbank verbinden
 
 1. Prüfe die `.env` Datei in deinem Projekt
-2. Stelle sicher, dass `DB_HOST=dployr-mariadb` gesetzt ist
-3. Prüfe Benutzername und Passwort
+2. Stelle sicher, dass der richtige Host gesetzt ist:
+   - MariaDB: `DB_HOST=dployr-mariadb`
+   - PostgreSQL: `DB_HOST=dployr-postgresql`
+3. Prüfe den richtigen Port:
+   - MariaDB: `DB_PORT=3306`
+   - PostgreSQL: `DB_PORT=5432`
+4. Prüfe Benutzername und Passwort
 
 ### Wie kann ich Dateien bearbeiten?
 
@@ -238,7 +266,9 @@ Klicke auf das **Sonnen-/Mond-Symbol** in der Navigationsleiste, um zwischen hel
 |---------|------|
 | Dashboard | 3000 |
 | phpMyAdmin | 8080 |
+| pgAdmin | 5050 |
 | MariaDB | 3306 (nur lokal) |
+| PostgreSQL | 5432 (nur lokal) |
 | Projekte | 8001, 8002, 8003, ... |
 
 ### Wie groß dürfen meine Projekte sein?
