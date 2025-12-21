@@ -19,30 +19,49 @@
 ### MySQL/MariaDB
 
 ```
-Host: <SERVER_IP>:3306 (oder webserver-mariadb im Docker Network)
+Host: <SERVER_IP>:3306 (oder dployr-mariadb im Docker Network)
 Root User: root
-Root Passwort: (siehe infrastructure/.env)
+Root Passwort: (siehe .env → MYSQL_ROOT_PASSWORD)
 ```
 
-**Speicherort**: `/opt/dployr/infrastructure/.env`
+### PostgreSQL
 
-### phpMyAdmin
+```
+Host: <SERVER_IP>:5432 (oder dployr-postgresql im Docker Network)
+Root User: postgres
+Root Passwort: (siehe .env → POSTGRES_ROOT_PASSWORD)
+```
+
+**Speicherort**: `/opt/dployr/.env`
+
+### phpMyAdmin (MariaDB)
 
 ```
 URL: http://<SERVER_IP>:8080
-Server: webserver-mariadb
+Server: dployr-mariadb
 User: root
-Passwort: (siehe infrastructure/.env)
+Passwort: (siehe .env → MYSQL_ROOT_PASSWORD)
 ```
 
-**Hinweis**: Nur lokal erreichbar (127.0.0.1). Für externen Zugriff über NPM exposen.
+### pgAdmin (PostgreSQL)
+
+```
+URL: http://<SERVER_IP>:5050
+Login E-Mail: (siehe .env → PGADMIN_EMAIL, Standard: admin@local.dev)
+Login Passwort: (siehe .env → PGADMIN_PASSWORD)
+```
+
+**Hinweis**: Ports sind standardmäßig nur lokal erreichbar (127.0.0.1). Für externen Zugriff über NPM exposen.
 
 ## Laufende Services
 
 ### Infrastruktur (permanent)
 
 - **dployr-mariadb**: MariaDB 11, Port 3306 (localhost)
-- **dployr-phpmyadmin**: phpMyAdmin, Port 8080 (localhost)
+- **dployr-postgresql**: PostgreSQL 16, Port 5432 (localhost)
+- **dployr-phpmyadmin**: phpMyAdmin, Port 8080
+- **dployr-pgadmin**: pgAdmin 4, Port 5050
+- **dployr-dashboard**: Web-Dashboard, Port 3000
 
 ### User-Projekte
 
@@ -111,8 +130,11 @@ cd /opt/dployr
 ## Port-Vergabe
 
 **Reservierte Ports**:
+- 3000: Web-Dashboard
 - 3306: MariaDB (localhost)
-- 8080: phpMyAdmin (localhost)
+- 5432: PostgreSQL (localhost)
+- 8080: phpMyAdmin
+- 5050: pgAdmin
 
 **Verfügbar für Projekte**: 8001, 8002, 8003, ...
 

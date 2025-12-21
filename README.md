@@ -27,7 +27,7 @@ Dployr ermöglicht mehreren Usern, isolierte Web-Projekte auf einem gemeinsamen 
 - 📦 **GitHub Integration** - Repository direkt beim Setup klonen
 - 🎯 **Auto Port-Erkennung** - Findet automatisch freie Ports
 - 🐳 **Docker-basierte Isolation** - Jedes Projekt läuft isoliert
-- 🗃️ **Zentrale MariaDB** - Mit User-Isolation und phpMyAdmin
+- 🗃️ **MariaDB + PostgreSQL** - Beide Datenbanken verfügbar mit phpMyAdmin & pgAdmin
 - 📋 **Fertige Templates** - Static, PHP, Node.js sofort einsatzbereit
 - 👥 **Multi-User mit Admin-Freischaltung** - Neue User müssen durch Admin genehmigt werden
 - 🔄 **Projekt-Typ änderbar** - Nachträglicher Wechsel zwischen Static/PHP/Node.js
@@ -56,7 +56,9 @@ docker compose up -d
 
 **Was wird gestartet:**
 - MariaDB (Port 3306)
+- PostgreSQL (Port 5432)
 - phpMyAdmin (Port 8080)
+- pgAdmin (Port 5050)
 - Web-Dashboard (Port 3000)
 
 Nach dem Setup-Wizard kannst du direkt loslegen!
@@ -189,8 +191,22 @@ git pull
 
 Nach dem Start verfügbar:
 
-- **MariaDB**: `<SERVER_IP>:3306` (oder `dployr-mariadb:3306` im Docker Network)
-- **phpMyAdmin**: `http://<SERVER_IP>:8080`
+| Service | Externer Zugriff | Docker Network |
+|---------|-----------------|----------------|
+| **MariaDB** | `<SERVER_IP>:3306` | `dployr-mariadb:3306` |
+| **PostgreSQL** | `<SERVER_IP>:5432` | `dployr-postgresql:5432` |
+| **phpMyAdmin** | `http://<SERVER_IP>:8080` | - |
+| **pgAdmin** | `http://<SERVER_IP>:5050` | - |
+| **Dashboard** | `http://<SERVER_IP>:3000` | - |
+
+### Datenbank-Auswahl
+
+Bei der Erstellung einer neuen Datenbank im Dashboard kannst du zwischen **MariaDB** und **PostgreSQL** wählen:
+
+- **MariaDB**: MySQL-kompatibel, ideal für WordPress, Laravel, PHP-Projekte
+- **PostgreSQL**: Fortschrittliche Features, ideal für komplexe Anwendungen, Django, Rails
+
+Die Verbindungsdaten werden automatisch generiert und in `.db-credentials` gespeichert.
 
 ## VS Code Remote SSH
 
@@ -297,7 +313,9 @@ docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 
 ## Sicherheit
 
-- MySQL Root Passwort in `.env` setzen
+- MySQL Root Passwort in `.env` setzen (`MYSQL_ROOT_PASSWORD`)
+- PostgreSQL Root Passwort in `.env` setzen (`POSTGRES_ROOT_PASSWORD`)
+- pgAdmin Passwort in `.env` setzen (`PGADMIN_PASSWORD`)
 - Jeder DB-User hat nur Zugriff auf seine eigenen Datenbanken
 - Datenbanknamen werden mit Username prefixed (z.B. `<username>_meinprojekt`)
 - Container sind netzwerk-isoliert
@@ -305,3 +323,20 @@ docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
 - Automatisch generierte sichere Passwörter für DB-User
 - Neue Benutzer müssen durch Admin freigeschaltet werden
 - Server-IP wird im Setup-Wizard konfiguriert und sicher gespeichert
+
+## Konfiguration (.env)
+
+```bash
+# Pflicht
+MYSQL_ROOT_PASSWORD=DeinSicheresPasswort123!
+POSTGRES_ROOT_PASSWORD=DeinSicheresPostgresPasswort123!
+PGADMIN_PASSWORD=DeinPgAdminPasswort123!
+SESSION_SECRET=  # openssl rand -base64 32
+
+# Optional (Standardwerte)
+DASHBOARD_PORT=3000
+PHPMYADMIN_PORT=8080
+PGADMIN_PORT=5050
+PGADMIN_EMAIL=admin@local.dev
+SERVER_IP=  # Wird automatisch erkannt
+```
