@@ -614,13 +614,15 @@ async function getUserDbCredentials(systemUsername) {
 
     try {
         const content = await fs.readFile(credentialsPath, 'utf8');
-        const blocks = content.split(/\n(?=# Database:)/);
+        // Unterstützt sowohl "# Datenbank:" (aktuell) als auch "# Database:" (legacy)
+        const blocks = content.split(/\n(?=# (?:Datenbank|Database):)/);
 
         for (const block of blocks) {
             if (!block.trim()) continue;
 
             const lines = block.split('\n');
-            const headerMatch = lines[0].match(/# Database: (\S+)/);
+            // Unterstützt sowohl "# Datenbank:" als auch "# Database:"
+            const headerMatch = lines[0].match(/# (?:Datenbank|Database):\s*([^\s(]+)/);
             if (!headerMatch) continue;
 
             const dbName = headerMatch[1];
