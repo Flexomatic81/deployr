@@ -41,10 +41,11 @@ dashboard/src/
 ├── routes/             # Express route handlers
 │   ├── auth.js         # Login, register, logout
 │   ├── dashboard.js    # Main dashboard
-│   ├── projects.js     # Project CRUD, Git/ZIP deployment
+│   ├── projects.js     # Project CRUD, Git/ZIP deployment, sharing
 │   ├── databases.js    # Database CRUD with type selection
 │   ├── admin.js        # User management, approval workflow
-│   └── setup.js        # Initial configuration wizard
+│   ├── setup.js        # Initial configuration wizard
+│   └── help.js         # Help/documentation page
 ├── services/           # Business logic layer
 │   ├── project.js      # Project lifecycle, type changes
 │   ├── docker.js       # Container orchestration via dockerode
@@ -52,6 +53,7 @@ dashboard/src/
 │   ├── user.js         # Authentication, approval workflow
 │   ├── git.js          # Git ops, type detection, docker-compose generation
 │   ├── zip.js          # ZIP extraction, auto-flatten
+│   ├── sharing.js      # Project sharing, permission management
 │   └── providers/      # Database-specific implementations
 │       ├── mariadb-provider.js
 │       └── postgresql-provider.js
@@ -66,7 +68,7 @@ Database operations are abstracted through providers. Each provider implements:
 
 Credentials are stored in `/app/users/{systemUsername}/.db-credentials` with format:
 ```
-# Database: mydb (created: 2024-01-15, type: postgresql)
+# Datenbank: username_mydb (erstellt: 2024-01-15T12:00:00.000Z, typ: postgresql)
 DB_TYPE=postgresql
 DB_HOST=dployr-postgresql
 DB_PORT=5432
@@ -246,6 +248,27 @@ Git-Projekte können automatisch aktualisiert werden, wenn neue Commits gepusht 
 
 **Service:** `autodeploy.js` - Polling-Logik, Deployment-Ausführung, Historie-Logging
 
+## Project Sharing
+
+Projekte können mit anderen Benutzern geteilt werden.
+
+**Berechtigungsstufen:**
+- `read` - Nur Ansehen (Status, Logs, Projektinfos)
+- `manage` - Operationen erlaubt (Start/Stop, Pull, Deploy, .env bearbeiten)
+- `full` - Fast alle Rechte (+ Projekttyp ändern)
+
+**Nur der Besitzer kann:** Projekt löschen, Git-Verbindung trennen, Auto-Deploy konfigurieren, Freigaben verwalten
+
+**Datenbank-Tabelle:** `project_shares` (owner_id, project_name, shared_with_id, permission)
+
+**Routes:**
+- `GET /projects/:name/shares` - Liste aller Shares (nur Besitzer)
+- `POST /projects/:name/shares` - Neuen Share erstellen
+- `PUT /projects/:name/shares/:userId` - Berechtigung ändern
+- `DELETE /projects/:name/shares/:userId` - Share entfernen
+
+**Service:** `sharing.js` - Share-Verwaltung, Berechtigungsprüfung, Permission-Helper
+
 ## Key Services
 
 | Service | Purpose |
@@ -256,6 +279,7 @@ Git-Projekte können automatisch aktualisiert werden, wenn neue Commits gepusht 
 | `git.js` | Git clone (to html/), type detection, docker-compose generation, path helpers (getGitPath, isGitRepository) |
 | `zip.js` | ZIP extraction (to html/), auto-flatten, project creation |
 | `autodeploy.js` | Auto-deploy polling, deployment execution, history logging |
+| `sharing.js` | Project sharing, permission levels (read/manage/full), access control |
 
 ## Middleware
 
