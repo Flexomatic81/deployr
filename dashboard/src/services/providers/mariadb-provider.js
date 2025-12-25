@@ -1,5 +1,5 @@
 const mysql = require('mysql2/promise');
-const crypto = require('crypto');
+const { generatePassword } = require('../utils/crypto');
 
 const DB_HOST = 'dployr-mariadb';
 const DB_PORT = 3306;
@@ -110,11 +110,6 @@ function getConnectionInfo() {
         type: 'mariadb',
         managementUrl: `/phpmyadmin`
     };
-}
-
-// Sicheres Passwort generieren
-function generatePassword(length = 16) {
-    return crypto.randomBytes(length).toString('base64').slice(0, length).replace(/[+/=]/g, 'x');
 }
 
 module.exports = {

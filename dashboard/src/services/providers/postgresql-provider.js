@@ -1,5 +1,5 @@
 const { Pool } = require('pg');
-const crypto = require('crypto');
+const { generatePassword } = require('../utils/crypto');
 
 const DB_HOST = 'dployr-postgresql';
 const DB_PORT = 5432;
@@ -128,11 +128,6 @@ function getConnectionInfo() {
         type: 'postgresql',
         managementUrl: `/pgadmin`
     };
-}
-
-// Sicheres Passwort generieren
-function generatePassword(length = 16) {
-    return crypto.randomBytes(length).toString('base64').slice(0, length).replace(/[+/=]/g, 'x');
 }
 
 module.exports = {
