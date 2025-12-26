@@ -1,4 +1,5 @@
 const mysql = require('mysql2/promise');
+const { logger } = require('./logger');
 
 let pool = null;
 
@@ -20,7 +21,7 @@ function getPool() {
 
         // Error-Handler für Verbindungsprobleme
         pool.on('error', (err) => {
-            console.error('Database pool error:', err);
+            logger.error('Database pool error', { error: err.message, code: err.code });
             if (err.code === 'PROTOCOL_CONNECTION_LOST' || err.code === 'ECONNREFUSED') {
                 pool = null; // Pool zurücksetzen für Reconnect
             }
@@ -71,7 +72,7 @@ async function initDatabase() {
             `);
             // Bestehende User automatisch freischalten
             await connection.execute(`UPDATE dashboard_users SET approved = TRUE WHERE approved IS NULL OR id > 0`);
-            console.log('Migration: approved-Spalte hinzugefügt, bestehende User freigeschaltet');
+            logger.info('Migration: approved-Spalte hinzugefügt, bestehende User freigeschaltet');
         } catch (e) {
             // Spalte existiert bereits - ignorieren
         }
@@ -108,7 +109,7 @@ async function initDatabase() {
             await connection.execute(`
                 ALTER TABLE project_autodeploy ADD COLUMN interval_minutes INT DEFAULT 5
             `);
-            console.log('Migration: interval_minutes-Spalte hinzugefuegt');
+            logger.info('Migration: interval_minutes-Spalte hinzugefügt');
         } catch (e) {
             // Spalte existiert bereits - ignorieren
         }
@@ -151,9 +152,9 @@ async function initDatabase() {
         `);
 
         connection.release();
-        console.log('Datenbank-Schema initialisiert');
+        logger.info('Datenbank-Schema initialisiert');
     } catch (error) {
-        console.error('Datenbank-Initialisierung fehlgeschlagen:', error.message);
+        logger.error('Datenbank-Initialisierung fehlgeschlagen', { error: error.message });
         throw error;
     }
 }

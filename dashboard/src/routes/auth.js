@@ -3,6 +3,7 @@ const router = express.Router();
 const userService = require('../services/user');
 const { redirectIfAuth, requireAuth } = require('../middleware/auth');
 const { validate } = require('../middleware/validation');
+const { logger } = require('../config/logger');
 
 // Login-Seite anzeigen
 router.get('/login', redirectIfAuth, (req, res) => {
@@ -45,7 +46,7 @@ router.post('/login', redirectIfAuth, validate('login'), async (req, res) => {
         req.flash('success', `Willkommen zurück, ${user.username}!`);
         res.redirect('/dashboard');
     } catch (error) {
-        console.error('Login-Fehler:', error);
+        logger.error('Login-Fehler', { error: error.message });
         req.flash('error', 'Ein Fehler ist aufgetreten');
         res.redirect('/login');
     }
@@ -75,7 +76,7 @@ router.post('/register', redirectIfAuth, validate('register'), async (req, res) 
         req.flash('info', 'Registrierung eingegangen! Ein Administrator muss Ihr Konto noch freischalten.');
         res.redirect('/login');
     } catch (error) {
-        console.error('Registrierungs-Fehler:', error);
+        logger.error('Registrierungs-Fehler', { error: error.message });
         req.flash('error', 'Ein Fehler ist aufgetreten');
         res.redirect('/register');
     }
@@ -85,7 +86,7 @@ router.post('/register', redirectIfAuth, validate('register'), async (req, res) 
 router.post('/logout', requireAuth, (req, res) => {
     req.session.destroy((err) => {
         if (err) {
-            console.error('Logout-Fehler:', err);
+            logger.error('Logout-Fehler', { error: err.message });
         }
         res.redirect('/login');
     });
@@ -95,7 +96,7 @@ router.post('/logout', requireAuth, (req, res) => {
 router.get('/logout', requireAuth, (req, res) => {
     req.session.destroy((err) => {
         if (err) {
-            console.error('Logout-Fehler:', err);
+            logger.error('Logout-Fehler', { error: err.message });
         }
         res.redirect('/login');
     });

@@ -1,4 +1,5 @@
 const Joi = require('joi');
+const { logger } = require('../config/logger');
 
 // Validation Schemas
 const schemas = {
@@ -138,7 +139,7 @@ function validate(schemaName) {
     return (req, res, next) => {
         const schema = schemas[schemaName];
         if (!schema) {
-            console.error(`Validation schema '${schemaName}' not found`);
+            logger.error('Validation schema not found', { schemaName });
             return next();
         }
 

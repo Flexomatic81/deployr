@@ -5,6 +5,7 @@ const fs = require('fs');
 const gitService = require('./git');
 const dockerService = require('./docker');
 const { VALID_INTERVALS } = require('../config/constants');
+const { logger } = require('../config/logger');
 
 const USERS_PATH = process.env.USERS_PATH || '/app/users';
 
@@ -146,7 +147,7 @@ async function checkForUpdates(systemUsername, projectName, branch = 'main') {
             remoteCommit: remoteHead.substring(0, 7)
         };
     } catch (error) {
-        console.error(`[AutoDeploy] Fehler bei Update-Check für ${systemUsername}/${projectName}:`, error.message);
+        logger.error('[AutoDeploy] Fehler bei Update-Check', { systemUsername, projectName, error: error.message });
         return { hasUpdates: false, error: error.message };
     }
 }
@@ -159,7 +160,7 @@ async function executeDeploy(userId, systemUsername, projectName, triggerType = 
 
     // Prüfen ob bereits ein Deployment läuft
     if (deploymentLocks.has(lockKey)) {
-        console.log(`[AutoDeploy] Deployment für ${projectName} läuft bereits, überspringe`);
+        logger.debug('[AutoDeploy] Deployment läuft bereits, überspringe', { projectName });
         return { success: false, skipped: true };
     }
 
@@ -246,7 +247,7 @@ async function executeDeploy(userId, systemUsername, projectName, triggerType = 
             duration_ms: Date.now() - startTime
         });
 
-        console.log(`[AutoDeploy] Erfolgreiches Deployment für ${systemUsername}/${projectName}: ${oldCommitHash?.substring(0,7)} -> ${newCommitHash?.substring(0,7)}`);
+        logger.info('[AutoDeploy] Erfolgreiches Deployment', { systemUsername, projectName, oldCommit: oldCommitHash?.substring(0,7), newCommit: newCommitHash?.substring(0,7) });
 
         return {
             success: true,
@@ -257,7 +258,7 @@ async function executeDeploy(userId, systemUsername, projectName, triggerType = 
         };
 
     } catch (error) {
-        console.error(`[AutoDeploy] Fehler beim Deployment für ${projectName}:`, error.message);
+        logger.error('[AutoDeploy] Fehler beim Deployment', { projectName, error: error.message });
 
         if (logId) {
             await updateDeploymentLog(logId, {
@@ -325,11 +326,11 @@ async function getLastSuccessfulDeployment(userId, projectName) {
  * Führt einen Polling-Zyklus für alle aktiven Auto-Deploy Projekte aus
  */
 async function runPollingCycle() {
-    console.log('[AutoDeploy] Starte Polling-Zyklus...');
+    logger.info('[AutoDeploy] Starte Polling-Zyklus...');
 
     try {
         const configs = await getAllActiveAutoDeployConfigs();
-        console.log(`[AutoDeploy] ${configs.length} aktive Auto-Deploy Projekte gefunden`);
+        logger.info('[AutoDeploy] Aktive Projekte gefunden', { count: configs.length });
 
         for (const config of configs) {
             try {
@@ -337,7 +338,7 @@ async function runPollingCycle() {
 
                 // Prüfen ob Projekt noch existiert
                 if (!fs.existsSync(projectPath)) {
-                    console.log(`[AutoDeploy] Projekt ${config.project_name} existiert nicht mehr, deaktiviere`);
+                    logger.warn('[AutoDeploy] Projekt existiert nicht mehr, deaktiviere', { projectName: config.project_name });
                     await disableAutoDeploy(config.user_id, config.project_name);
                     continue;
                 }
@@ -367,22 +368,22 @@ async function runPollingCycle() {
                 );
 
                 if (updateCheck.error) {
-                    console.log(`[AutoDeploy] Fehler bei ${config.project_name}: ${updateCheck.error}`);
+                    logger.warn('[AutoDeploy] Fehler bei Update-Check', { projectName: config.project_name, error: updateCheck.error });
                     continue;
                 }
 
                 if (updateCheck.hasUpdates) {
-                    console.log(`[AutoDeploy] Updates gefunden für ${config.project_name}, starte Deployment...`);
+                    logger.info('[AutoDeploy] Updates gefunden, starte Deployment', { projectName: config.project_name });
                     await executeDeploy(config.user_id, config.system_username, config.project_name, 'auto');
                 }
             } catch (error) {
-                console.error(`[AutoDeploy] Fehler bei Projekt ${config.project_name}:`, error.message);
+                logger.error('[AutoDeploy] Fehler bei Projekt', { projectName: config.project_name, error: error.message });
             }
         }
 
-        console.log('[AutoDeploy] Polling-Zyklus abgeschlossen');
+        logger.info('[AutoDeploy] Polling-Zyklus abgeschlossen');
     } catch (error) {
-        console.error('[AutoDeploy] Fehler im Polling-Zyklus:', error.message);
+        logger.error('[AutoDeploy] Fehler im Polling-Zyklus', { error: error.message });
     }
 }
 

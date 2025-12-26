@@ -3,6 +3,7 @@ const path = require('path');
 const { exec } = require('child_process');
 const dockerService = require('./docker');
 const { generateDockerCompose, generateNginxConfig, getGitPath, isGitRepository } = require('./git');
+const { logger } = require('../config/logger');
 
 const USERS_PATH = process.env.USERS_PATH || '/app/users';
 const SCRIPTS_PATH = process.env.SCRIPTS_PATH || '/app/scripts';
@@ -78,7 +79,7 @@ async function getProjectInfo(systemUsername, projectName) {
             database: envData.DB_DATABASE || null
         };
     } catch (error) {
-        console.error(`Fehler beim Laden von Projekt ${projectName}:`, error);
+        logger.error('Fehler beim Laden von Projekt', { projectName, error: error.message });
         return null;
     }
 }
@@ -139,7 +140,7 @@ async function getAvailableTemplates() {
                 displayName: getTemplateDisplayName(entry.name)
             }));
     } catch (error) {
-        console.error('Fehler beim Laden der Templates:', error);
+        logger.error('Fehler beim Laden der Templates', { error: error.message });
         return [
             { name: 'static-website', displayName: 'Statische Website (HTML/CSS/JS)' },
             { name: 'php-website', displayName: 'PHP Website' },
@@ -186,7 +187,7 @@ async function getNextAvailablePort() {
             }
         }
     } catch (error) {
-        console.error('Fehler beim Ermitteln der Ports:', error);
+        logger.error('Fehler beim Ermitteln der Ports', { error: error.message });
     }
 
     // Starte bei Port 8001 und finde den nächsten freien
@@ -292,7 +293,7 @@ async function deleteProject(systemUsername, projectName, deleteDatabase = false
     try {
         await dockerService.stopProject(projectPath);
     } catch (error) {
-        console.error('Fehler beim Stoppen der Container:', error);
+        logger.error('Fehler beim Stoppen der Container', { error: error.message });
     }
 
     // Projekt-Verzeichnis löschen
@@ -337,7 +338,7 @@ async function changeProjectType(systemUsername, projectName, newType) {
     try {
         await dockerService.stopProject(projectPath);
     } catch (error) {
-        console.error('Fehler beim Stoppen:', error);
+        logger.error('Fehler beim Stoppen', { error: error.message });
     }
 
     // Neue docker-compose.yml generieren

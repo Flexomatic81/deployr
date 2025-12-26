@@ -3,6 +3,7 @@ const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const { getProjectAccess } = require('../middleware/projectAccess');
 const dockerService = require('../services/docker');
+const { logger } = require('../config/logger');
 
 // Logs für ein Projekt anzeigen
 router.get('/:projectName', requireAuth, getProjectAccess('projectName'), async (req, res) => {
@@ -29,7 +30,7 @@ router.get('/:projectName', requireAuth, getProjectAccess('projectName'), async 
             projectAccess: req.projectAccess
         });
     } catch (error) {
-        console.error('Fehler beim Laden der Logs:', error);
+        logger.error('Fehler beim Laden der Logs', { error: error.message });
         req.flash('error', 'Fehler beim Laden der Logs');
         return res.redirect('/projects');
     }
@@ -53,7 +54,7 @@ router.get('/:projectName/api', requireAuth, getProjectAccess('projectName'), as
 
         res.json({ containerLogs });
     } catch (error) {
-        console.error('API Log-Fehler:', error);
+        logger.error('API Log-Fehler', { error: error.message });
         res.status(500).json({ error: error.message });
     }
 });

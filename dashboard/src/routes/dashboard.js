@@ -5,6 +5,7 @@ const projectService = require('../services/project');
 const databaseService = require('../services/database');
 const userService = require('../services/user');
 const sharingService = require('../services/sharing');
+const { logger } = require('../config/logger');
 
 // Dashboard Hauptseite
 router.get('/', requireAuth, async (req, res) => {
@@ -58,7 +59,7 @@ router.get('/', requireAuth, async (req, res) => {
             pendingUsersCount
         });
     } catch (error) {
-        console.error('Dashboard-Fehler:', error);
+        logger.error('Dashboard-Fehler', { error: error.message });
         req.flash('error', 'Fehler beim Laden des Dashboards');
         res.render('dashboard', {
             title: 'Dashboard',

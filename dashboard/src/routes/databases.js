@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const { requireAuth } = require('../middleware/auth');
 const databaseService = require('../services/database');
+const { logger } = require('../config/logger');
 
 // Alle Datenbanken anzeigen
 router.get('/', requireAuth, async (req, res) => {
@@ -24,7 +25,7 @@ router.get('/', requireAuth, async (req, res) => {
             hasPostgreSQL
         });
     } catch (error) {
-        console.error('Fehler beim Laden der Datenbanken:', error);
+        logger.error('Fehler beim Laden der Datenbanken', { error: error.message });
         req.flash('error', 'Fehler beim Laden der Datenbanken');
         return res.redirect('/dashboard');
     }
@@ -51,7 +52,7 @@ router.post('/', requireAuth, async (req, res) => {
         req.flash('success', `${typeName}-Datenbank "${dbInfo.database}" erfolgreich erstellt!`);
         return res.redirect('/databases');
     } catch (error) {
-        console.error('Fehler beim Erstellen der Datenbank:', error);
+        logger.error('Fehler beim Erstellen der Datenbank', { error: error.message });
         req.flash('error', error.message || 'Fehler beim Erstellen der Datenbank');
         return res.redirect('/databases/create');
     }
@@ -66,7 +67,7 @@ router.delete('/:name', requireAuth, async (req, res) => {
         req.flash('success', `Datenbank "${req.params.name}" gelöscht`);
         return res.redirect('/databases');
     } catch (error) {
-        console.error('Fehler beim Löschen:', error);
+        logger.error('Fehler beim Löschen der Datenbank', { error: error.message });
         req.flash('error', 'Fehler beim Löschen: ' + error.message);
         return res.redirect('/databases');
     }
