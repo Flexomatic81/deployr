@@ -293,27 +293,89 @@
                     <p>Die Zugangsdaten werden automatisch generiert und gespeichert.</p>
 
                     <h5 class="mt-4">Datenbank mit Projekt verbinden</h5>
-                    <p>In der Projektansicht unter "Umgebungsvariablen":</p>
+                    <p>Damit deine Anwendung auf die Datenbank zugreifen kann, müssen die Zugangsdaten in der <code>.env</code>-Datei deines Projekts hinterlegt werden.</p>
+
+                    <h6>So funktioniert es:</h6>
                     <ol>
+                        <li>Gehe zur Projektansicht und scrolle zu "Umgebungsvariablen"</li>
                         <li>Klicke auf den Button <i class="bi bi-database-add"></i> <strong>DB einrichten</strong></li>
                         <li>Wähle eine deiner Datenbanken aus dem Dropdown</li>
-                        <li>Die Credentials werden <strong>intelligent</strong> in die <code>.env</code> eingefügt (siehe unten)</li>
+                        <li>Die Credentials werden automatisch in die <code>.env</code> geschrieben</li>
                         <li>Starte den Container neu, damit die Änderungen wirksam werden</li>
                     </ol>
 
-                    <h5 class="mt-4">Intelligente DB-Einrichtung</h5>
-                    <p>Das System erkennt automatisch verschiedene Variablennamen für Datenbank-Credentials:</p>
-                    <ul>
-                        <li><strong>Host:</strong> <code>DB_HOST</code>, <code>DATABASE_HOST</code>, <code>MYSQL_HOST</code>, <code>POSTGRES_HOST</code>, ...</li>
-                        <li><strong>User:</strong> <code>DB_USER</code>, <code>DB_USERNAME</code>, <code>MYSQL_USER</code>, ...</li>
-                        <li><strong>Passwort:</strong> <code>DB_PASSWORD</code>, <code>DATABASE_PASSWORD</code>, ...</li>
-                        <li><strong>Datenbank:</strong> <code>DB_NAME</code>, <code>DB_DATABASE</code>, <code>MYSQL_DATABASE</code>, ...</li>
-                    </ul>
+                    <h5 class="mt-4">Was passiert im Hintergrund?</h5>
+                    <p>Beim Klick auf "DB einrichten" führt das System folgende Schritte aus:</p>
+                    <ol>
+                        <li><strong>Vorlage laden:</strong> Falls eine <code>.env.example</code> existiert, wird diese als Basis verwendet</li>
+                        <li><strong>Variablen erkennen:</strong> Das System durchsucht die Datei nach bekannten Datenbank-Variablennamen</li>
+                        <li><strong>Werte ersetzen:</strong> Gefundene DB-Variablen werden mit den korrekten Dployr-Credentials ersetzt</li>
+                        <li><strong>Fehlende ergänzen:</strong> Nicht gefundene Credentials werden am Ende der Datei hinzugefügt</li>
+                        <li><strong>Andere behalten:</strong> Alle anderen Variablen (API-Keys, App-Settings, etc.) bleiben unverändert</li>
+                    </ol>
+
+                    <h5 class="mt-4">Erkannte Variablennamen</h5>
+                    <p>Das System erkennt automatisch verschiedene Schreibweisen für Datenbank-Credentials:</p>
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Credential</th>
+                                    <th>Erkannte Variablen</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr>
+                                    <td><strong>Host</strong></td>
+                                    <td><code>DB_HOST</code>, <code>DATABASE_HOST</code>, <code>MYSQL_HOST</code>, <code>POSTGRES_HOST</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Port</strong></td>
+                                    <td><code>DB_PORT</code>, <code>DATABASE_PORT</code>, <code>MYSQL_PORT</code>, <code>POSTGRES_PORT</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Datenbank</strong></td>
+                                    <td><code>DB_DATABASE</code>, <code>DB_NAME</code>, <code>MYSQL_DATABASE</code>, <code>POSTGRES_DB</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Benutzer</strong></td>
+                                    <td><code>DB_USERNAME</code>, <code>DB_USER</code>, <code>MYSQL_USER</code>, <code>POSTGRES_USER</code></td>
+                                </tr>
+                                <tr>
+                                    <td><strong>Passwort</strong></td>
+                                    <td><code>DB_PASSWORD</code>, <code>DATABASE_PASSWORD</code>, <code>MYSQL_PASSWORD</code></td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <h5 class="mt-4">Beispiel</h5>
+                    <p>Angenommen dein Projekt hat folgende <code>.env.example</code>:</p>
+                    <pre class="bg-dark text-light p-3 rounded"><code>APP_NAME=MeineApp
+APP_DEBUG=true
+DB_HOST=localhost
+DB_USER=root
+DB_PASSWORD=
+DB_NAME=myapp</code></pre>
+                    <p>Nach Auswahl der Datenbank <code>mehmed_tetris</code> wird die <code>.env</code> zu:</p>
+                    <pre class="bg-dark text-light p-3 rounded"><code>APP_NAME=MeineApp
+APP_DEBUG=true
+DB_HOST=dployr-mariadb
+DB_USER=mehmed_tetris
+DB_PASSWORD=generiertes_passwort
+DB_NAME=mehmed_tetris</code></pre>
+                    <p class="text-muted"><small>Die App-Variablen bleiben erhalten, nur die DB-Variablen werden ersetzt.</small></p>
 
                     <div class="alert alert-success">
                         <i class="bi bi-lightbulb"></i>
                         <strong>Tipp:</strong> Wenn dein Projekt eine <code>.env.example</code> hat, wird diese automatisch als Vorlage verwendet.
-                        Die DB-Variablen werden mit den richtigen Werten ersetzt, alle anderen Variablen bleiben erhalten!
+                        Du musst die Datei nicht vorher manuell kopieren!
+                    </div>
+
+                    <div class="alert alert-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                        <strong>Wichtig:</strong> Nach dem Einrichten der Datenbank muss der Container neu gestartet werden,
+                        damit die Anwendung die neuen Umgebungsvariablen lädt.
                     </div>
 
                     <div class="alert alert-secondary">
