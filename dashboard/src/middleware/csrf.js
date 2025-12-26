@@ -2,17 +2,20 @@ const { doubleCsrf } = require('csrf-csrf');
 const { logger } = require('../config/logger');
 
 // CSRF Protection mit csrf-csrf (Double Submit Cookie Pattern)
+const isProduction = process.env.NODE_ENV === 'production' && process.env.USE_HTTPS === 'true';
+
 const {
     generateToken,
     doubleCsrfProtection
 } = doubleCsrf({
     getSecret: () => process.env.SESSION_SECRET || 'change-this-secret',
-    cookieName: '__Host-dployr.x-csrf-token',
+    // __Host- Prefix erfordert HTTPS, daher nur in Produktion verwenden
+    cookieName: isProduction ? '__Host-dployr.x-csrf-token' : 'dployr.x-csrf-token',
     cookieOptions: {
         httpOnly: true,
         sameSite: 'strict',
         path: '/',
-        secure: process.env.NODE_ENV === 'production' && process.env.USE_HTTPS === 'true'
+        secure: isProduction
     },
     size: 64,
     ignoredMethods: ['GET', 'HEAD', 'OPTIONS'],
