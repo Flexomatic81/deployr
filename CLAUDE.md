@@ -4,16 +4,19 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Code Style
 
-**Language Requirements:**
-- All code comments MUST be in English
+**Language Requirements - Everything in English:**
+- All code comments MUST be in English (in .js, .ejs, .sh, .yml files)
 - All log messages (logger.info, logger.error, etc.) MUST be in English
 - All variable and function names MUST be in English
 - All JSDoc comments MUST be in English
 - HTML/EJS comments (`<!-- -->`, `<%# %>`) MUST be in English
+- Configuration file comments (.env.example, docker-compose.yml) MUST be in English
+- Shell script comments and echo messages MUST be in English
+- Documentation files (README.md, CLAUDE.md, etc.) MUST be in English
 
-**Exception - UI Text:**
-- User-facing UI text (labels, buttons, error messages, flash messages) remains in **German**
-- This includes: form labels, button text, validation messages, flash notifications, page titles
+**Exception - UI Text (German):**
+- User-facing UI text rendered in the browser remains in **German**
+- This includes: form labels, button text, validation messages, flash notifications, page titles, help tooltips
 
 **Examples:**
 ```javascript
