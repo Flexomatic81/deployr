@@ -78,6 +78,15 @@ function requestLogger(req, res, next) {
             ip: req.ip || req.connection.remoteAddress
         };
 
+        // Source Maps und andere unwichtige 404s nicht loggen
+        const ignoredPatterns = ['.map', '.ico', '/favicon'];
+        const shouldIgnore = res.statusCode === 404 &&
+            ignoredPatterns.some(pattern => req.originalUrl.includes(pattern));
+
+        if (shouldIgnore) {
+            return; // Nicht loggen
+        }
+
         if (res.statusCode >= 500) {
             logger.error('Request failed', logData);
         } else if (res.statusCode >= 400) {
