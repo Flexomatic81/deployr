@@ -9,6 +9,11 @@ const {
     doubleCsrfProtection
 } = doubleCsrf({
     getSecret: () => process.env.SESSION_SECRET || 'change-this-secret',
+    // Session-Identifier für CSRF-Token-Bindung
+    getSessionIdentifier: (req) => {
+        // Verwende Session-ID oder IP als Fallback
+        return req.session?.id || req.ip || 'anonymous';
+    },
     // __Host- Prefix erfordert HTTPS, daher nur in Produktion verwenden
     cookieName: isProduction ? '__Host-dployr.x-csrf-token' : 'dployr.x-csrf-token',
     cookieOptions: {
