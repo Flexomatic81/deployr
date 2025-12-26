@@ -438,3 +438,16 @@ There are two different type detection functions:
 | `detectTemplateType()` | `project.js` | Reads configured type from docker-compose.yml |
 
 The project detail page compares both to detect mismatches and offers one-click correction.
+
+## Claude Code Skills
+
+Project-specific skills for development workflow (in `.claude/commands/`):
+
+| Skill | Purpose |
+|-------|---------|
+| `/dployr-check` | Quick consistency check (German text, console.log, security, personal data) |
+| `/dployr-review` | Deep code review (architecture, best practices, security, performance) |
+| `/dployr-test` | Run tests and analyze results with improvement suggestions |
+| `/dployr-changelog` | Generate changelog from Git commits for releases |
+
+Usage: Type the skill name (e.g., `/dployr-check`) in Claude Code to execute.
