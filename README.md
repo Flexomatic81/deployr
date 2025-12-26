@@ -344,6 +344,9 @@ cd users/<USER>/PROJECT && docker compose logs -f
 
 # All running projects
 docker ps --format 'table {{.Names}}\t{{.Status}}\t{{.Ports}}'
+
+# Deploy update (git pull + rebuild + restart)
+./scripts/deploy.sh
 ```
 
 ## Security
