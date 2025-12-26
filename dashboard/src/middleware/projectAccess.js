@@ -6,6 +6,7 @@
 const projectService = require('../services/project');
 const sharingService = require('../services/sharing');
 const { PERMISSION_LEVELS } = require('../config/constants');
+const { logger } = require('../config/logger');
 
 /**
  * Middleware: Prüft Projekt-Zugriff (eigenes oder geteiltes Projekt)
@@ -57,7 +58,7 @@ function getProjectAccess(paramName = 'name') {
             req.flash('error', 'Projekt nicht gefunden');
             return res.redirect('/projects');
         } catch (error) {
-            console.error('Fehler bei Projektzugriffsprüfung:', error);
+            logger.error('Fehler bei Projektzugriffsprüfung', { error: error.message });
             req.flash('error', 'Fehler beim Laden des Projekts');
             return res.redirect('/projects');
         }

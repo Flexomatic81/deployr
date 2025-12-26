@@ -9,6 +9,7 @@ const zipService = require('../services/zip');
 const autoDeployService = require('../services/autodeploy');
 const sharingService = require('../services/sharing');
 const upload = require('../middleware/upload');
+const { logger } = require('../config/logger');
 
 // Alle Projekte anzeigen
 router.get('/', requireAuth, async (req, res) => {
@@ -49,7 +50,7 @@ router.get('/', requireAuth, async (req, res) => {
             sharedProjects
         });
     } catch (error) {
-        console.error('Fehler beim Laden der Projekte:', error);
+        logger.error('Fehler beim Laden der Projekte', { error: error.message });
         req.flash('error', 'Fehler beim Laden der Projekte');
         res.redirect('/dashboard');
     }
@@ -67,7 +68,7 @@ router.get('/create', requireAuth, async (req, res) => {
             nextPort
         });
     } catch (error) {
-        console.error('Fehler beim Laden des Formulars:', error);
+        logger.error('Fehler beim Laden des Formulars', { error: error.message });
         req.flash('error', 'Fehler beim Laden des Formulars');
         res.redirect('/projects');
     }
@@ -89,7 +90,7 @@ router.post('/', requireAuth, async (req, res) => {
         req.flash('success', `Projekt "${name}" erfolgreich erstellt!`);
         res.redirect(`/projects/${name}`);
     } catch (error) {
-        console.error('Fehler beim Erstellen des Projekts:', error);
+        logger.error('Fehler beim Erstellen des Projekts', { error: error.message });
         req.flash('error', error.message || 'Fehler beim Erstellen des Projekts');
         res.redirect('/projects/create');
     }
@@ -132,7 +133,7 @@ router.post('/from-zip', requireAuth, upload.single('zipfile'), async (req, res)
         req.flash('success', `Projekt "${name}" erfolgreich aus ZIP erstellt! Erkannt als: ${typeNames[result.projectType] || result.projectType}`);
         res.redirect(`/projects/${name}`);
     } catch (error) {
-        console.error('Fehler beim Erstellen des ZIP-Projekts:', error);
+        logger.error('Fehler beim Erstellen des ZIP-Projekts', { error: error.message });
         req.flash('error', error.message || 'Fehler beim Erstellen des Projekts');
         res.redirect('/projects/create');
     }
@@ -175,7 +176,7 @@ router.post('/from-git', requireAuth, async (req, res) => {
         req.flash('success', `Projekt "${name}" erfolgreich von Git erstellt! Erkannt als: ${typeNames[result.projectType] || result.projectType}`);
         res.redirect(`/projects/${name}`);
     } catch (error) {
-        console.error('Fehler beim Erstellen des Git-Projekts:', error);
+        logger.error('Fehler beim Erstellen des Git-Projekts', { error: error.message });
         req.flash('error', error.message || 'Fehler beim Erstellen des Projekts');
         res.redirect('/projects/create');
     }
@@ -263,7 +264,7 @@ router.get('/:name', requireAuth, getProjectAccess(), async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Fehler beim Laden des Projekts:', error);
+        logger.error('Fehler beim Laden des Projekts', { error: error.message });
         req.flash('error', 'Fehler beim Laden des Projekts');
         res.redirect('/projects');
     }
@@ -277,7 +278,7 @@ router.post('/:name/start', requireAuth, getProjectAccess(), requirePermission('
         req.flash('success', `Projekt "${req.params.name}" gestartet`);
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Fehler beim Starten:', error);
+        logger.error('Fehler beim Starten', { error: error.message });
         req.flash('error', 'Fehler beim Starten: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -291,7 +292,7 @@ router.post('/:name/stop', requireAuth, getProjectAccess(), requirePermission('m
         req.flash('success', `Projekt "${req.params.name}" gestoppt`);
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Fehler beim Stoppen:', error);
+        logger.error('Fehler beim Stoppen', { error: error.message });
         req.flash('error', 'Fehler beim Stoppen: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -305,7 +306,7 @@ router.post('/:name/restart', requireAuth, getProjectAccess(), requirePermission
         req.flash('success', `Projekt "${req.params.name}" neugestartet`);
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Fehler beim Neustarten:', error);
+        logger.error('Fehler beim Neustarten', { error: error.message });
         req.flash('error', 'Fehler beim Neustarten: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -335,7 +336,7 @@ router.post('/:name/change-type', requireAuth, getProjectAccess(), requirePermis
         req.flash('success', `Projekttyp auf "${typeNames[type]}" geändert. Container wurde neu gestartet.`);
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Fehler beim Ändern des Projekttyps:', error);
+        logger.error('Fehler beim Ändern des Projekttyps', { error: error.message });
         req.flash('error', 'Fehler beim Ändern: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -351,7 +352,7 @@ router.post('/:name/env', requireAuth, getProjectAccess(), requirePermission('ma
         req.flash('success', 'Umgebungsvariablen gespeichert. Container-Neustart empfohlen.');
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Fehler beim Speichern der Umgebungsvariablen:', error);
+        logger.error('Fehler beim Speichern der Umgebungsvariablen', { error: error.message });
         req.flash('error', 'Fehler beim Speichern: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -366,7 +367,7 @@ router.post('/:name/env/copy-example', requireAuth, getProjectAccess(), requireP
         req.flash('success', `${result.filename} wurde zu .env kopiert. Container-Neustart empfohlen.`);
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Fehler beim Kopieren der .env.example:', error);
+        logger.error('Fehler beim Kopieren der .env.example', { error: error.message });
         req.flash('error', 'Fehler: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -391,7 +392,7 @@ router.post('/:name/env/add-db', requireAuth, getProjectAccess(), requirePermiss
         req.flash('success', 'Datenbank-Credentials wurden zur .env hinzugefügt. Container-Neustart empfohlen.');
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Fehler beim Hinzufügen der DB-Credentials:', error);
+        logger.error('Fehler beim Hinzufügen der DB-Credentials', { error: error.message });
         req.flash('error', 'Fehler: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -418,7 +419,7 @@ router.delete('/:name', requireAuth, getProjectAccess(), async (req, res) => {
         req.flash('success', `Projekt "${req.params.name}" gelöscht`);
         res.redirect('/projects');
     } catch (error) {
-        console.error('Fehler beim Löschen:', error);
+        logger.error('Fehler beim Löschen', { error: error.message });
         req.flash('error', 'Fehler beim Löschen: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -445,7 +446,7 @@ router.post('/:name/git/pull', requireAuth, getProjectAccess(), requirePermissio
 
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Git pull error:', error);
+        logger.error('Git pull error', { error: error.message });
         req.flash('error', error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -475,7 +476,7 @@ router.post('/:name/git/disconnect', requireAuth, getProjectAccess(), async (req
         req.flash('success', 'Git-Verbindung getrennt');
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Git disconnect error:', error);
+        logger.error('Git disconnect error', { error: error.message });
         req.flash('error', error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -506,7 +507,7 @@ router.post('/:name/autodeploy/enable', requireAuth, getProjectAccess(), async (
         req.flash('success', `Auto-Deploy aktiviert. Prüft alle 5 Minuten auf Updates.`);
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Auto-Deploy enable error:', error);
+        logger.error('Auto-Deploy enable error', { error: error.message });
         req.flash('error', 'Fehler beim Aktivieren: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -524,7 +525,7 @@ router.post('/:name/autodeploy/disable', requireAuth, getProjectAccess(), async 
         req.flash('success', 'Auto-Deploy deaktiviert');
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Auto-Deploy disable error:', error);
+        logger.error('Auto-Deploy disable error', { error: error.message });
         req.flash('error', 'Fehler beim Deaktivieren: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -543,7 +544,7 @@ router.post('/:name/autodeploy/interval', requireAuth, getProjectAccess(), async
         req.flash('success', `Intervall auf ${interval} Minuten gesetzt`);
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Auto-Deploy interval error:', error);
+        logger.error('Auto-Deploy interval error', { error: error.message });
         req.flash('error', 'Fehler beim Ändern des Intervalls: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -584,7 +585,7 @@ router.post('/:name/autodeploy/trigger', requireAuth, getProjectAccess(), requir
 
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Auto-Deploy trigger error:', error);
+        logger.error('Auto-Deploy trigger error', { error: error.message });
         req.flash('error', 'Fehler: ' + error.message);
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -601,7 +602,7 @@ router.get('/:name/autodeploy/history', requireAuth, getProjectAccess(), async (
         );
         res.json(history);
     } catch (error) {
-        console.error('Deployment history error:', error);
+        logger.error('Deployment history error', { error: error.message });
         res.status(500).json({ error: error.message });
     }
 });
@@ -637,7 +638,7 @@ router.post('/:name/shares', requireAuth, getProjectAccess(), async (req, res) =
         req.flash('success', 'Projekt erfolgreich geteilt');
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Share error:', error);
+        logger.error('Share error', { error: error.message });
         req.flash('error', error.message || 'Fehler beim Teilen');
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -669,7 +670,7 @@ router.post('/:name/shares/:userId/update', requireAuth, getProjectAccess(), asy
         req.flash('success', 'Berechtigung aktualisiert');
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Update share error:', error);
+        logger.error('Update share error', { error: error.message });
         req.flash('error', error.message || 'Fehler beim Aktualisieren');
         res.redirect(`/projects/${req.params.name}`);
     }
@@ -694,7 +695,7 @@ router.post('/:name/shares/:userId/delete', requireAuth, getProjectAccess(), asy
         req.flash('success', 'Freigabe entfernt');
         res.redirect(`/projects/${req.params.name}`);
     } catch (error) {
-        console.error('Delete share error:', error);
+        logger.error('Delete share error', { error: error.message });
         req.flash('error', error.message || 'Fehler beim Entfernen');
         res.redirect(`/projects/${req.params.name}`);
     }

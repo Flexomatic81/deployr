@@ -3,6 +3,7 @@ const router = express.Router();
 const fs = require('fs').promises;
 const bcrypt = require('bcrypt');
 const Docker = require('dockerode');
+const { logger } = require('../config/logger');
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
@@ -80,7 +81,7 @@ router.post('/run', async (req, res) => {
 
         res.json({ success: true, steps });
     } catch (error) {
-        console.error('Setup-Fehler:', error);
+        logger.error('Setup-Fehler', { error: error.message });
         res.status(500).json({ success: false, error: error.message });
     }
 });

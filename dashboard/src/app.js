@@ -158,11 +158,11 @@ function loadVersionInfo() {
             const data = JSON.parse(fs.readFileSync(versionPath, 'utf8'));
             if (data.hash && data.hash !== 'unknown') {
                 versionInfo = data;
-                console.log(`Version: ${versionInfo.hash} (${versionInfo.date})`);
+                logger.info('Version geladen', { hash: versionInfo.hash, date: versionInfo.date });
             }
         }
     } catch (error) {
-        console.log('Versionsinformationen nicht verfügbar');
+        logger.debug('Versionsinformationen nicht verfügbar');
     }
 }
 loadVersionInfo();
@@ -198,7 +198,7 @@ app.use(async (req, res, next) => {
         next();
     } catch (error) {
         // Bei Fehler (z.B. DB nicht erreichbar) zum Setup weiterleiten
-        console.log('Setup-Check Fehler, leite zum Setup weiter:', error.message);
+        logger.debug('Setup-Check Fehler, leite zum Setup weiter', { error: error.message });
         return res.redirect('/setup');
     }
 });

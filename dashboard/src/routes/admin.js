@@ -3,6 +3,7 @@ const router = express.Router();
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const userService = require('../services/user');
 const projectService = require('../services/project');
+const { logger } = require('../config/logger');
 
 // Alle Admin-Routen erfordern Admin-Rechte
 router.use(requireAuth);
@@ -35,7 +36,7 @@ router.get('/', async (req, res) => {
             }
         });
     } catch (error) {
-        console.error('Fehler im Admin-Dashboard:', error);
+        logger.error('Fehler im Admin-Dashboard', { error: error.message });
         req.flash('error', 'Fehler beim Laden der Admin-Übersicht');
         res.redirect('/dashboard');
     }
@@ -51,7 +52,7 @@ router.get('/pending', async (req, res) => {
             pendingUsers
         });
     } catch (error) {
-        console.error('Fehler beim Laden der ausstehenden Registrierungen:', error);
+        logger.error('Fehler beim Laden der ausstehenden Registrierungen', { error: error.message });
         req.flash('error', 'Fehler beim Laden der ausstehenden Registrierungen');
         res.redirect('/admin');
     }
@@ -70,7 +71,7 @@ router.post('/users/:id/approve', async (req, res) => {
 
         res.redirect('/admin/pending');
     } catch (error) {
-        console.error('Fehler beim Freischalten:', error);
+        logger.error('Fehler beim Freischalten', { error: error.message });
         req.flash('error', 'Fehler beim Freischalten: ' + error.message);
         res.redirect('/admin/pending');
     }
@@ -83,7 +84,7 @@ router.post('/users/:id/reject', async (req, res) => {
         req.flash('success', 'Registrierung wurde abgelehnt');
         res.redirect('/admin/pending');
     } catch (error) {
-        console.error('Fehler beim Ablehnen:', error);
+        logger.error('Fehler beim Ablehnen', { error: error.message });
         req.flash('error', 'Fehler beim Ablehnen: ' + error.message);
         res.redirect('/admin/pending');
     }
@@ -108,7 +109,7 @@ router.get('/users', async (req, res) => {
             users
         });
     } catch (error) {
-        console.error('Fehler beim Laden der User:', error);
+        logger.error('Fehler beim Laden der User', { error: error.message });
         req.flash('error', 'Fehler beim Laden der User-Liste');
         res.redirect('/admin');
     }
@@ -154,7 +155,7 @@ router.post('/users', async (req, res) => {
         req.flash('success', `User "${username}" erfolgreich erstellt`);
         res.redirect('/admin/users');
     } catch (error) {
-        console.error('Fehler beim Erstellen des Users:', error);
+        logger.error('Fehler beim Erstellen des Users', { error: error.message });
         req.flash('error', 'Fehler beim Erstellen des Users');
         res.redirect('/admin/users/create');
     }
@@ -175,7 +176,7 @@ router.get('/users/:id/edit', async (req, res) => {
             editUser
         });
     } catch (error) {
-        console.error('Fehler beim Laden des Users:', error);
+        logger.error('Fehler beim Laden des Users', { error: error.message });
         req.flash('error', 'Fehler beim Laden des Users');
         res.redirect('/admin/users');
     }
@@ -209,7 +210,7 @@ router.put('/users/:id', async (req, res) => {
         req.flash('success', 'User erfolgreich aktualisiert');
         res.redirect('/admin/users');
     } catch (error) {
-        console.error('Fehler beim Aktualisieren des Users:', error);
+        logger.error('Fehler beim Aktualisieren des Users', { error: error.message });
         req.flash('error', 'Fehler beim Aktualisieren des Users');
         res.redirect(`/admin/users/${req.params.id}/edit`);
     }
@@ -237,7 +238,7 @@ router.delete('/users/:id', async (req, res) => {
         req.flash('success', 'User erfolgreich gelöscht');
         res.redirect('/admin/users');
     } catch (error) {
-        console.error('Fehler beim Löschen des Users:', error);
+        logger.error('Fehler beim Löschen des Users', { error: error.message });
         req.flash('error', 'Fehler beim Löschen des Users');
         res.redirect('/admin/users');
     }
@@ -267,7 +268,7 @@ router.get('/projects', async (req, res) => {
             projects: allProjects
         });
     } catch (error) {
-        console.error('Fehler beim Laden der Projekte:', error);
+        logger.error('Fehler beim Laden der Projekte', { error: error.message });
         req.flash('error', 'Fehler beim Laden der Projekte');
         res.redirect('/admin');
     }

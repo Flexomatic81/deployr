@@ -1,4 +1,5 @@
 const Docker = require('dockerode');
+const { logger } = require('../config/logger');
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
 const USERS_PATH = process.env.USERS_PATH || '/app/users';
@@ -24,7 +25,7 @@ async function getUserContainers(systemUsername) {
                    container.Labels['com.webserver.user'] === systemUsername;
         });
     } catch (error) {
-        console.error('Fehler beim Abrufen der Container:', error);
+        logger.error('Fehler beim Abrufen der Container', { error: error.message });
         return [];
     }
 }
@@ -39,7 +40,7 @@ async function getProjectContainers(projectName) {
             return name === projectName || name.startsWith(projectName + '-');
         });
     } catch (error) {
-        console.error('Fehler beim Abrufen der Projekt-Container:', error);
+        logger.error('Fehler beim Abrufen der Projekt-Container', { error: error.message });
         return [];
     }
 }
@@ -95,7 +96,7 @@ async function getContainerLogs(containerId, lines = 100) {
             .filter(line => line.trim())
             .join('\n');
     } catch (error) {
-        console.error('Fehler beim Abrufen der Logs:', error);
+        logger.error('Fehler beim Abrufen der Logs', { error: error.message });
         return 'Fehler beim Laden der Logs: ' + error.message;
     }
 }

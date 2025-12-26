@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const simpleGit = require('simple-git');
 const { generateNginxConfig } = require('./utils/nginx');
+const { logger } = require('../config/logger');
 
 const USERS_PATH = process.env.USERS_PATH || '/app/users';
 
@@ -87,7 +88,7 @@ function getGitStatus(projectPath) {
             hasLocalChanges
         };
     } catch (error) {
-        console.error('Git status error:', error.message);
+        logger.error('Git status error', { error: error.message });
         return {
             connected: true,
             error: 'Fehler beim Abrufen des Git-Status'
@@ -251,7 +252,7 @@ function adjustDockerCompose(projectPath) {
                     '.:/usr/share/nginx/html'
                 );
                 modified = true;
-                console.log('Docker-Compose angepasst: ./html -> . (index.html im Root gefunden)');
+                logger.debug('Docker-Compose angepasst: ./html -> . (index.html im Root gefunden)');
             }
         }
 
@@ -261,7 +262,7 @@ function adjustDockerCompose(projectPath) {
             if (content.includes('./src:/app/src')) {
                 content = content.replace('./src:/app/src', '.:/app');
                 modified = true;
-                console.log('Docker-Compose angepasst: ./src -> . (package.json im Root gefunden)');
+                logger.debug('Docker-Compose angepasst: ./src -> . (package.json im Root gefunden)');
             }
         }
 
@@ -272,7 +273,7 @@ function adjustDockerCompose(projectPath) {
             if (content.includes('./public:/var/www/html')) {
                 content = content.replace('./public:/var/www/html', '.:/var/www/html');
                 modified = true;
-                console.log('Docker-Compose angepasst: ./public -> . (index.php im Root gefunden)');
+                logger.debug('Docker-Compose angepasst: ./public -> . (index.php im Root gefunden)');
             }
         }
 
@@ -280,7 +281,7 @@ function adjustDockerCompose(projectPath) {
             fs.writeFileSync(composePath, content);
         }
     } catch (error) {
-        console.error('Fehler beim Anpassen der docker-compose.yml:', error.message);
+        logger.error('Fehler beim Anpassen der docker-compose.yml', { error: error.message });
     }
 }
 
@@ -634,7 +635,7 @@ async function createProjectFromGit(systemUsername, projectName, repoUrl, token,
 
         // Projekttyp erkennen (aus html/ Ordner)
         const projectType = detectProjectType(htmlPath);
-        console.log(`Erkannter Projekttyp: ${projectType}`);
+        logger.info('Projekttyp erkannt', { projectType });
 
         // docker-compose.yml generieren (im Projektroot)
         const dockerCompose = generateDockerCompose(projectType, `${systemUsername}-${projectName}`, port);

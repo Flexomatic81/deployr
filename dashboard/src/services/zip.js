@@ -3,6 +3,7 @@ const fs = require('fs');
 const path = require('path');
 const gitService = require('./git');
 const { generateNginxConfig } = require('./utils/nginx');
+const { logger } = require('../config/logger');
 
 const USERS_PATH = process.env.USERS_PATH || '/app/users';
 
@@ -30,7 +31,7 @@ function flattenIfNeeded(destPath) {
         const singleEntryPath = path.join(destPath, singleEntry);
 
         if (fs.statSync(singleEntryPath).isDirectory()) {
-            console.log(`ZIP-Struktur: Verschiebe Inhalt von ${singleEntry}/ nach oben`);
+            logger.debug('ZIP-Struktur: Verschiebe Inhalt nach oben', { folder: singleEntry });
 
             // Alle Dateien aus dem Unterordner verschieben
             const subEntries = fs.readdirSync(singleEntryPath);
@@ -72,7 +73,7 @@ async function createProjectFromZip(systemUsername, projectName, zipPath, port) 
         fs.mkdirSync(projectPath, { recursive: true });
 
         // ZIP entpacken
-        console.log(`Entpacke ZIP nach ${projectPath}`);
+        logger.info('Entpacke ZIP', { projectPath });
         extractZip(zipPath, projectPath);
 
         // Prüfen ob nur ein Unterordner existiert und ggf. flatten
@@ -80,7 +81,7 @@ async function createProjectFromZip(systemUsername, projectName, zipPath, port) 
 
         // Projekttyp erkennen (nutzt git.js Funktion)
         const projectType = gitService.detectProjectType(projectPath);
-        console.log(`Erkannter Projekttyp: ${projectType}`);
+        logger.info('Projekttyp erkannt', { projectType });
 
         // docker-compose.yml generieren (nutzt git.js Funktion)
         const dockerCompose = gitService.generateDockerCompose(
@@ -135,7 +136,7 @@ function cleanupZip(zipPath) {
             fs.unlinkSync(zipPath);
         }
     } catch (error) {
-        console.error('Fehler beim Löschen der ZIP-Datei:', error.message);
+        logger.warn('Fehler beim Löschen der ZIP-Datei', { error: error.message });
     }
 }
 
