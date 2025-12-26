@@ -6,9 +6,11 @@ const MySQLStore = require('express-mysql-session')(session);
 const flash = require('express-flash');
 const expressLayouts = require('express-ejs-layouts');
 const methodOverride = require('method-override');
+const cookieParser = require('cookie-parser');
 const path = require('path');
 const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
+const { doubleCsrfProtection, csrfTokenMiddleware, csrfErrorHandler } = require('./middleware/csrf');
 
 const { initDatabase, getPool } = require('./config/database');
 const { setUserLocals } = require('./middleware/auth');
@@ -82,6 +84,7 @@ app.set('layout', 'layout');
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
+app.use(cookieParser(process.env.SESSION_SECRET || 'change-this-secret'));
 app.use(methodOverride('_method'));
 
 // Session Store - wird später initialisiert wenn DB verfügbar
@@ -132,6 +135,10 @@ app.use(flash());
 
 // User Locals für Views
 app.use(setUserLocals);
+
+// CSRF Protection (nach Session, vor Routes)
+app.use(doubleCsrfProtection);
+app.use(csrfTokenMiddleware);
 
 // Server-IP aus Setup-Marker laden (gecached)
 let cachedServerIp = null;
@@ -242,6 +249,9 @@ app.use((req, res) => {
         message: 'Die angeforderte Seite wurde nicht gefunden.'
     });
 });
+
+// CSRF Error Handler (vor allgemeinem Error Handler)
+app.use(csrfErrorHandler);
 
 // Error Handler
 app.use((err, req, res, next) => {

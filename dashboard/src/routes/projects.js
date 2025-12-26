@@ -9,6 +9,7 @@ const zipService = require('../services/zip');
 const autoDeployService = require('../services/autodeploy');
 const sharingService = require('../services/sharing');
 const upload = require('../middleware/upload');
+const { validateZipMiddleware } = require('../middleware/upload');
 const { logger } = require('../config/logger');
 
 // Alle Projekte anzeigen
@@ -97,7 +98,7 @@ router.post('/', requireAuth, async (req, res) => {
 });
 
 // Neues Projekt von ZIP erstellen - Verarbeitung
-router.post('/from-zip', requireAuth, upload.single('zipfile'), async (req, res) => {
+router.post('/from-zip', requireAuth, upload.single('zipfile'), validateZipMiddleware, async (req, res) => {
     try {
         const { name, port } = req.body;
         const systemUsername = req.session.user.system_username;

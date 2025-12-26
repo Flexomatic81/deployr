@@ -1,5 +1,68 @@
 // Webserver Dashboard JavaScript
 
+// CSRF Token Management
+function initCsrfProtection() {
+    const csrfToken = document.querySelector('meta[name="csrf-token"]')?.content;
+    if (!csrfToken) return;
+
+    // Füge CSRF-Token zu allen bestehenden Formularen hinzu
+    document.querySelectorAll('form[method="POST"], form[method="post"]').forEach(form => {
+        if (!form.querySelector('input[name="_csrf"]')) {
+            const input = document.createElement('input');
+            input.type = 'hidden';
+            input.name = '_csrf';
+            input.value = csrfToken;
+            form.appendChild(input);
+        }
+    });
+
+    // MutationObserver für dynamisch hinzugefügte Formulare
+    const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+            mutation.addedNodes.forEach(node => {
+                if (node.nodeType === Node.ELEMENT_NODE) {
+                    // Prüfe ob das hinzugefügte Element ein Formular ist
+                    if (node.tagName === 'FORM' && (node.method === 'post' || node.method === 'POST')) {
+                        if (!node.querySelector('input[name="_csrf"]')) {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = '_csrf';
+                            input.value = csrfToken;
+                            node.appendChild(input);
+                        }
+                    }
+                    // Prüfe auch verschachtelte Formulare
+                    node.querySelectorAll?.('form[method="POST"], form[method="post"]').forEach(form => {
+                        if (!form.querySelector('input[name="_csrf"]')) {
+                            const input = document.createElement('input');
+                            input.type = 'hidden';
+                            input.name = '_csrf';
+                            input.value = csrfToken;
+                            form.appendChild(input);
+                        }
+                    });
+                }
+            });
+        });
+    });
+
+    observer.observe(document.body, { childList: true, subtree: true });
+
+    // Füge CSRF-Header zu fetch-Requests hinzu
+    const originalFetch = window.fetch;
+    window.fetch = function(url, options = {}) {
+        if (options.method && ['POST', 'PUT', 'DELETE', 'PATCH'].includes(options.method.toUpperCase())) {
+            options.headers = options.headers || {};
+            if (!(options.headers instanceof Headers)) {
+                options.headers['X-CSRF-Token'] = csrfToken;
+            } else {
+                options.headers.set('X-CSRF-Token', csrfToken);
+            }
+        }
+        return originalFetch(url, options);
+    };
+}
+
 // Theme Management
 function initTheme() {
     const themeToggle = document.getElementById('themeToggle');
@@ -31,6 +94,9 @@ function updateThemeIcon(iconElement, theme) {
 }
 
 document.addEventListener('DOMContentLoaded', function() {
+    // CSRF Protection initialisieren (muss vor anderen Form-Handlern laufen)
+    initCsrfProtection();
+
     // Theme initialisieren
     initTheme();
     // Auto-dismiss alerts after 5 seconds
