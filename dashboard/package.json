@@ -1,7 +1,8 @@
 {
   "name": "dployr-dashboard",
   "version": "1.0.0",
-  "description": "Dployr - Web Dashboard für Multi-User Hosting",
+  "description": "Dployr - Web Dashboard for Multi-User Hosting",
+  "license": "AGPL-3.0-or-later",
   "main": "src/app.js",
   "scripts": {
     "start": "node src/app.js",

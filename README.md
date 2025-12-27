@@ -393,3 +393,7 @@ HOST_USERS_PATH=/home/user/dployr/users
 ```
 
 This path is used by the dashboard to execute docker-compose commands on the host system.
+
+## License
+
+This project is licensed under the [GNU Affero General Public License v3.0](LICENSE).
