@@ -271,15 +271,6 @@ The best method to work on the server:
 3. Done! Website is updated
 ```
 
-## NPM Integration
-
-For each project in Nginx Proxy Manager:
-
-1. Add Proxy Host
-2. Domain: `project.your-domain.com`
-3. Forward to: `<SERVER_IP>:PORT` (Port from project .env)
-4. Enable SSL
-
 ## Automatic Features
 
 ### Port Management
