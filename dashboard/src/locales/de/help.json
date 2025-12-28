@@ -280,6 +280,15 @@
           "zip": "ZIP-Upload: Dateien als ZIP hochladen",
           "env": ".env-Editor: Umgebungsvariablen direkt im Dashboard bearbeiten"
         }
+      },
+      "docker": {
+        "q": "Kann ich eigene Dockerfiles oder docker-compose.yml verwenden?",
+        "a": {
+          "intro": "Nein, eigene Docker-Konfigurationen werden aus Sicherheitsgründen nicht unterstützt.",
+          "reason": "Dployr verwendet vordefinierte Templates für alle Projekttypen (Static, PHP, Node.js, etc.).",
+          "removed": "Folgende Dateien werden automatisch entfernt: Dockerfile, docker-compose.yml, compose.yml, .dockerignore",
+          "why": "Dies verhindert Sicherheitsrisiken wie Privilege Escalation oder Ressourcenmissbrauch."
+        }
       }
     }
   }

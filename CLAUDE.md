@@ -101,7 +101,8 @@ dashboard/src/
 │   │   └── postgresql-provider.js
 │   └── utils/          # Shared utility functions
 │       ├── nginx.js    # Nginx config generation
-│       └── crypto.js   # Password generation
+│       ├── crypto.js   # Password generation
+│       └── security.js # Security utilities (blocked files removal)
 ├── views/              # EJS templates with express-ejs-layouts
 └── tests/              # Unit tests (Jest)
     ├── services/       # Service tests
@@ -206,6 +207,23 @@ The dashboard implements multiple security layers:
 - **Input Validation**: Joi schemas for login, register, project creation
 - **MySQL Session Store**: Persistent sessions (survives restarts)
 - **CSRF Protection**: Via session-based forms
+- **Blocked Docker Files**: Custom Dockerfiles/docker-compose.yml are automatically removed
+
+### Blocked Project Files
+
+Users cannot deploy custom Docker configurations. The following files are automatically removed from Git clones and ZIP uploads:
+
+- `Dockerfile`, `dockerfile`
+- `docker-compose.yml`, `docker-compose.yaml`
+- `compose.yml`, `compose.yaml`
+- `.dockerignore`
+
+This is enforced by `removeBlockedFiles()` in `services/utils/security.js`. The blocked files list is defined in `config/constants.js` as `BLOCKED_PROJECT_FILES`.
+
+**Why?** Users can only deploy using the predefined project templates (static, PHP, Node.js, etc.). This prevents:
+- Privilege escalation via custom Docker images
+- Resource abuse via unlimited container configurations
+- Security bypasses via custom network settings
 
 ## Logging
 
@@ -419,6 +437,7 @@ Projects can be shared with other users.
 |--------|---------|
 | `utils/nginx.js` | `generateNginxConfig()` for static website nginx config |
 | `utils/crypto.js` | `generatePassword()` for secure password generation |
+| `utils/security.js` | `removeBlockedFiles()` for removing Docker files from uploads |
 
 ## Config Modules
 
@@ -426,7 +445,7 @@ Projects can be shared with other users.
 |--------|---------|
 | `config/database.js` | MySQL connection pool |
 | `config/logger.js` | Winston logger setup (console + file) |
-| `config/constants.js` | `PERMISSION_LEVELS`, `VALID_INTERVALS`, `PROJECT_TYPES`, `DB_VARIABLE_ALIASES` |
+| `config/constants.js` | `PERMISSION_LEVELS`, `VALID_INTERVALS`, `PROJECT_TYPES`, `BLOCKED_PROJECT_FILES`, `DB_VARIABLE_ALIASES` |
 
 ## Project Type Detection
 
