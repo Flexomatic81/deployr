@@ -389,7 +389,7 @@ router.post('/:name/env/add-db', requireAuth, getProjectAccess(), requirePermiss
         const { database } = req.body;
 
         // Load all DB credentials of the current user
-        const credentials = projectService.getUserDbCredentials(req.session.user.system_username);
+        const credentials = await projectService.getUserDbCredentials(req.session.user.system_username);
         const dbCredentials = credentials.find(c => c.database === database);
 
         if (!dbCredentials) {
