@@ -219,3 +219,20 @@ input[type="password"].form-control-sm {
     border-bottom-left-radius: calc(0.5rem - 1px);
     border-bottom-right-radius: calc(0.5rem - 1px);
 }
+
+/* Theme-aware logos */
+.logo-dark {
+    display: none;
+}
+
+.logo-light {
+    display: inline;
+}
+
+[data-bs-theme="dark"] .logo-dark {
+    display: inline;
+}
+
+[data-bs-theme="dark"] .logo-light {
+    display: none;
+}
