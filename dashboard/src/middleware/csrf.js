@@ -25,14 +25,27 @@ const {
 
 // Middleware that makes CSRF token available in res.locals
 function csrfTokenMiddleware(req, res, next) {
-    // Generate token if not present
+    // Generate token if not present in session
     let token = req.session?.csrfToken;
-    if (!token) {
+    if (!token && req.session) {
         token = generateToken(req);
+        // Explicitly store token in session (generateToken calls storeTokenInState internally,
+        // but we ensure it's set here for consistency)
+        req.session.csrfToken = token;
+        // Force session save to ensure token is persisted before page renders
+        req.session.save((err) => {
+            if (err) {
+                logger.error('Failed to save session for CSRF token', { error: err.message });
+            }
+            res.locals.csrfToken = token;
+            res.locals.csrfInput = `<input type="hidden" name="_csrf" value="${token}">`;
+            next();
+        });
+        return;
     }
 
-    res.locals.csrfToken = token;
-    res.locals.csrfInput = `<input type="hidden" name="_csrf" value="${token}">`;
+    res.locals.csrfToken = token || '';
+    res.locals.csrfInput = `<input type="hidden" name="_csrf" value="${token || ''}">`;
 
     next();
 }
