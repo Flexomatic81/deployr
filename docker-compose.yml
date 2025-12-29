@@ -82,13 +82,11 @@ services:
       postgresql:
         condition: service_healthy
 
-  # Nginx Proxy Manager (optional - start with: docker compose --profile proxy up -d)
+  # Nginx Proxy Manager (optional - controlled via Dashboard Admin Panel)
   npm:
     image: jc21/nginx-proxy-manager:latest
     container_name: dployr-npm
-    restart: unless-stopped
-    profiles:
-      - proxy
+    restart: "no"
     environment:
       DISABLE_IPV6: "true"
     ports:

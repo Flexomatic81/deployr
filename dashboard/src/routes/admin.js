@@ -612,4 +612,59 @@ router.post('/settings/npm/test', async (req, res) => {
     }
 });
 
+// Get NPM container status
+router.get('/settings/npm/status', async (req, res) => {
+    try {
+        const status = await proxyService.getContainerStatus();
+        res.json({ success: true, ...status });
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Start NPM container
+router.post('/settings/npm/start', async (req, res) => {
+    try {
+        const result = await proxyService.startContainer();
+        if (result.success) {
+            logger.info('NPM container started by admin', { userId: req.session.user.id });
+            res.json({ success: true, message: req.t('admin:npm.containerStarted') });
+        } else {
+            res.json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Stop NPM container
+router.post('/settings/npm/stop', async (req, res) => {
+    try {
+        const result = await proxyService.stopContainer();
+        if (result.success) {
+            logger.info('NPM container stopped by admin', { userId: req.session.user.id });
+            res.json({ success: true, message: req.t('admin:npm.containerStopped') });
+        } else {
+            res.json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Restart NPM container
+router.post('/settings/npm/restart', async (req, res) => {
+    try {
+        const result = await proxyService.restartContainer();
+        if (result.success) {
+            logger.info('NPM container restarted by admin', { userId: req.session.user.id });
+            res.json({ success: true, message: req.t('admin:npm.containerRestarted') });
+        } else {
+            res.json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;

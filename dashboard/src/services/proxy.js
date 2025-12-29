@@ -8,9 +8,12 @@
  */
 
 const axios = require('axios');
+const Docker = require('dockerode');
 const { pool } = require('../config/database');
 const { logger } = require('../config/logger');
 
+const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+const NPM_CONTAINER_NAME = 'dployr-npm';
 const NPM_API_URL = process.env.NPM_API_URL || 'http://dployr-npm:81/api';
 const NPM_ENABLED = process.env.NPM_ENABLED === 'true';
 
@@ -253,6 +256,121 @@ async function testConnection() {
 }
 
 // ============================================
+// Container control functions
+// ============================================
+
+/**
+ * Get the NPM container status
+ * @returns {Promise<{exists: boolean, running: boolean, status: string}>}
+ */
+async function getContainerStatus() {
+    try {
+        const containers = await docker.listContainers({ all: true });
+        const npmContainer = containers.find(c =>
+            c.Names.some(name => name === '/' + NPM_CONTAINER_NAME || name === NPM_CONTAINER_NAME)
+        );
+
+        if (!npmContainer) {
+            return { exists: false, running: false, status: 'not_found' };
+        }
+
+        const isRunning = npmContainer.State === 'running';
+        return {
+            exists: true,
+            running: isRunning,
+            status: npmContainer.State,
+            containerId: npmContainer.Id
+        };
+    } catch (error) {
+        logger.error('Failed to get NPM container status', { error: error.message });
+        return { exists: false, running: false, status: 'error', error: error.message };
+    }
+}
+
+/**
+ * Start the NPM container
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function startContainer() {
+    try {
+        const container = docker.getContainer(NPM_CONTAINER_NAME);
+        await container.start();
+        logger.info('NPM container started');
+        return { success: true };
+    } catch (error) {
+        // Container might already be running
+        if (error.statusCode === 304) {
+            return { success: true, message: 'Container already running' };
+        }
+        logger.error('Failed to start NPM container', { error: error.message });
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Stop the NPM container
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function stopContainer() {
+    try {
+        const container = docker.getContainer(NPM_CONTAINER_NAME);
+        await container.stop();
+        logger.info('NPM container stopped');
+        return { success: true };
+    } catch (error) {
+        // Container might already be stopped
+        if (error.statusCode === 304) {
+            return { success: true, message: 'Container already stopped' };
+        }
+        logger.error('Failed to stop NPM container', { error: error.message });
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Restart the NPM container
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function restartContainer() {
+    try {
+        const container = docker.getContainer(NPM_CONTAINER_NAME);
+        await container.restart();
+        logger.info('NPM container restarted');
+        return { success: true };
+    } catch (error) {
+        logger.error('Failed to restart NPM container', { error: error.message });
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Get NPM container logs
+ * @param {number} lines - Number of log lines to retrieve
+ * @returns {Promise<string>}
+ */
+async function getContainerLogs(lines = 100) {
+    try {
+        const container = docker.getContainer(NPM_CONTAINER_NAME);
+        const logs = await container.logs({
+            stdout: true,
+            stderr: true,
+            tail: lines,
+            timestamps: true
+        });
+
+        // Convert buffer to string and clean up
+        return logs.toString('utf8')
+            .split('\n')
+            .map(line => line.substring(8)) // Remove Docker log prefix
+            .filter(line => line.trim())
+            .join('\n');
+    } catch (error) {
+        logger.error('Failed to get NPM container logs', { error: error.message });
+        return 'Error loading logs: ' + error.message;
+    }
+}
+
+// ============================================
 // Database functions for project_domains table
 // ============================================
 
@@ -390,6 +508,13 @@ module.exports = {
     listProxyHosts,
     requestCertificate,
     enableSSL,
+
+    // Container control functions
+    getContainerStatus,
+    startContainer,
+    stopContainer,
+    restartContainer,
+    getContainerLogs,
 
     // Database functions
     saveDomainMapping,

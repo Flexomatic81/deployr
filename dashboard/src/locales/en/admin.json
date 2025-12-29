@@ -161,10 +161,14 @@
     "status": {
       "title": "Status",
       "running": "Running",
-      "configured": "Configured (not started)",
-      "disabled": "Disabled"
+      "configured": "Stopped",
+      "disabled": "Disabled",
+      "notFound": "Not Found"
     },
     "quickActions": "Quick Actions",
+    "start": "Start",
+    "stop": "Stop",
+    "restart": "Restart",
     "testConnection": "Test Connection",
     "openPanel": "Open NPM Panel",
     "testing": "Testing...",
@@ -195,6 +199,9 @@
     "saved": "NPM settings saved.",
     "notEnabled": "NPM is not enabled.",
     "connectionSuccess": "Connection successful!",
-    "connectionFailed": "Connection failed."
+    "connectionFailed": "Connection failed.",
+    "containerStarted": "NPM container started.",
+    "containerStopped": "NPM container stopped.",
+    "containerRestarted": "NPM container restarted."
   }
 }

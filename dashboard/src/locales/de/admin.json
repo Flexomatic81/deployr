@@ -161,10 +161,14 @@
     "status": {
       "title": "Status",
       "running": "Läuft",
-      "configured": "Konfiguriert (nicht gestartet)",
-      "disabled": "Deaktiviert"
+      "configured": "Gestoppt",
+      "disabled": "Deaktiviert",
+      "notFound": "Nicht gefunden"
     },
     "quickActions": "Schnellaktionen",
+    "start": "Starten",
+    "stop": "Stoppen",
+    "restart": "Neustarten",
     "testConnection": "Verbindung testen",
     "openPanel": "NPM Panel öffnen",
     "testing": "Teste...",
@@ -195,6 +199,9 @@
     "saved": "NPM-Einstellungen wurden gespeichert.",
     "notEnabled": "NPM ist nicht aktiviert.",
     "connectionSuccess": "Verbindung erfolgreich!",
-    "connectionFailed": "Verbindung fehlgeschlagen."
+    "connectionFailed": "Verbindung fehlgeschlagen.",
+    "containerStarted": "NPM-Container wurde gestartet.",
+    "containerStopped": "NPM-Container wurde gestoppt.",
+    "containerRestarted": "NPM-Container wurde neu gestartet."
   }
 }

@@ -13,20 +13,16 @@
 <!-- Status Card -->
 <div class="row mb-4">
     <div class="col-md-6">
-        <div class="card <%= npmStatus ? 'border-success' : 'border-secondary' %>">
+        <div class="card" id="statusCard">
             <div class="card-body">
                 <div class="d-flex justify-content-between align-items-center">
                     <div>
                         <h6 class="text-muted mb-1"><%= t('admin:npm.status.title') %></h6>
-                        <% if (npmStatus) { %>
-                            <span class="badge bg-success fs-6"><i class="bi bi-check-circle"></i> <%= t('admin:npm.status.running') %></span>
-                        <% } else if (npm.enabled) { %>
-                            <span class="badge bg-warning text-dark fs-6"><i class="bi bi-exclamation-circle"></i> <%= t('admin:npm.status.configured') %></span>
-                        <% } else { %>
-                            <span class="badge bg-secondary fs-6"><i class="bi bi-x-circle"></i> <%= t('admin:npm.status.disabled') %></span>
-                        <% } %>
+                        <span id="statusBadge" class="badge bg-secondary fs-6">
+                            <span class="spinner-border spinner-border-sm"></span> <%= t('common:loading') %>
+                        </span>
                     </div>
-                    <i class="bi bi-hdd-network fs-1 <%= npmStatus ? 'text-success' : 'text-secondary' %> opacity-50"></i>
+                    <i class="bi bi-hdd-network fs-1 text-secondary opacity-50" id="statusIcon"></i>
                 </div>
             </div>
         </div>
@@ -35,14 +31,23 @@
         <div class="card">
             <div class="card-body">
                 <h6 class="text-muted mb-2"><%= t('admin:npm.quickActions') %></h6>
+                <div class="btn-group me-2" role="group">
+                    <button type="button" class="btn btn-outline-success btn-sm" id="startBtn" <%= !npm.enabled ? 'disabled' : '' %>>
+                        <i class="bi bi-play-fill"></i> <%= t('admin:npm.start') %>
+                    </button>
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="stopBtn" <%= !npm.enabled ? 'disabled' : '' %>>
+                        <i class="bi bi-stop-fill"></i> <%= t('admin:npm.stop') %>
+                    </button>
+                    <button type="button" class="btn btn-outline-warning btn-sm" id="restartBtn" <%= !npm.enabled ? 'disabled' : '' %>>
+                        <i class="bi bi-arrow-clockwise"></i> <%= t('admin:npm.restart') %>
+                    </button>
+                </div>
                 <button type="button" class="btn btn-outline-primary btn-sm" id="testConnectionBtn" <%= !npm.enabled ? 'disabled' : '' %>>
                     <i class="bi bi-plug"></i> <%= t('admin:npm.testConnection') %>
                 </button>
-                <% if (npmStatus) { %>
-                    <a href="http://<%= setupMarker.serverIp || 'localhost' %>:<%= npm.adminPort %>" target="_blank" class="btn btn-outline-success btn-sm">
-                        <i class="bi bi-box-arrow-up-right"></i> <%= t('admin:npm.openPanel') %>
-                    </a>
-                <% } %>
+                <a href="http://<%= setupMarker.serverIp || 'localhost' %>:<%= npm.adminPort %>" target="_blank" class="btn btn-outline-info btn-sm" id="openPanelBtn" style="display: none;">
+                    <i class="bi bi-box-arrow-up-right"></i> <%= t('admin:npm.openPanel') %>
+                </a>
             </div>
         </div>
     </div>
@@ -140,8 +145,8 @@
         <div class="mb-3">
             <label class="form-label fw-bold"><%= t('admin:npm.startCommand') %></label>
             <div class="input-group">
-                <code class="form-control bg-dark text-light font-monospace">docker compose --profile proxy up -d</code>
-                <button class="btn btn-outline-secondary" type="button" onclick="copyCommand(this, 'docker compose --profile proxy up -d')">
+                <code class="form-control bg-dark text-light font-monospace">docker start dployr-npm</code>
+                <button class="btn btn-outline-secondary" type="button" onclick="copyCommand(this, 'docker start dployr-npm')">
                     <i class="bi bi-clipboard"></i>
                 </button>
             </div>
@@ -150,8 +155,8 @@
         <div class="mb-3">
             <label class="form-label fw-bold"><%= t('admin:npm.stopCommand') %></label>
             <div class="input-group">
-                <code class="form-control bg-dark text-light font-monospace">docker compose --profile proxy down</code>
-                <button class="btn btn-outline-secondary" type="button" onclick="copyCommand(this, 'docker compose --profile proxy down')">
+                <code class="form-control bg-dark text-light font-monospace">docker stop dployr-npm</code>
+                <button class="btn btn-outline-secondary" type="button" onclick="copyCommand(this, 'docker stop dployr-npm')">
                     <i class="bi bi-clipboard"></i>
                 </button>
             </div>
@@ -160,8 +165,8 @@
         <div>
             <label class="form-label fw-bold"><%= t('admin:npm.logsCommand') %></label>
             <div class="input-group">
-                <code class="form-control bg-dark text-light font-monospace">docker compose logs -f npm</code>
-                <button class="btn btn-outline-secondary" type="button" onclick="copyCommand(this, 'docker compose logs -f npm')">
+                <code class="form-control bg-dark text-light font-monospace">docker logs -f dployr-npm</code>
+                <button class="btn btn-outline-secondary" type="button" onclick="copyCommand(this, 'docker logs -f dployr-npm')">
                     <i class="bi bi-clipboard"></i>
                 </button>
             </div>
@@ -170,9 +175,121 @@
 </div>
 
 <script>
+const csrfToken = '<%= csrfToken %>';
+const npmEnabled = <%= npm.enabled ? 'true' : 'false' %>;
+
+// Status translations
+const statusTexts = {
+    running: '<i class="bi bi-check-circle"></i> <%= t("admin:npm.status.running") %>',
+    configured: '<i class="bi bi-exclamation-circle"></i> <%= t("admin:npm.status.configured") %>',
+    disabled: '<i class="bi bi-x-circle"></i> <%= t("admin:npm.status.disabled") %>',
+    notFound: '<i class="bi bi-question-circle"></i> <%= t("admin:npm.status.notFound") %>'
+};
+
+// Fetch and update container status
+async function updateContainerStatus() {
+    const statusBadge = document.getElementById('statusBadge');
+    const statusIcon = document.getElementById('statusIcon');
+    const statusCard = document.getElementById('statusCard');
+    const openPanelBtn = document.getElementById('openPanelBtn');
+    const startBtn = document.getElementById('startBtn');
+    const stopBtn = document.getElementById('stopBtn');
+    const restartBtn = document.getElementById('restartBtn');
+
+    try {
+        const response = await fetch('/admin/settings/npm/status');
+        const data = await response.json();
+
+        if (data.running) {
+            statusBadge.className = 'badge bg-success fs-6';
+            statusBadge.innerHTML = statusTexts.running;
+            statusIcon.className = 'bi bi-hdd-network fs-1 text-success opacity-50';
+            statusCard.className = 'card border-success';
+            openPanelBtn.style.display = 'inline-block';
+            startBtn.disabled = true;
+            stopBtn.disabled = false;
+            restartBtn.disabled = false;
+        } else if (data.exists) {
+            statusBadge.className = 'badge bg-warning text-dark fs-6';
+            statusBadge.innerHTML = statusTexts.configured;
+            statusIcon.className = 'bi bi-hdd-network fs-1 text-warning opacity-50';
+            statusCard.className = 'card border-warning';
+            openPanelBtn.style.display = 'none';
+            startBtn.disabled = false;
+            stopBtn.disabled = true;
+            restartBtn.disabled = true;
+        } else if (!npmEnabled) {
+            statusBadge.className = 'badge bg-secondary fs-6';
+            statusBadge.innerHTML = statusTexts.disabled;
+            statusIcon.className = 'bi bi-hdd-network fs-1 text-secondary opacity-50';
+            statusCard.className = 'card border-secondary';
+            openPanelBtn.style.display = 'none';
+        } else {
+            statusBadge.className = 'badge bg-secondary fs-6';
+            statusBadge.innerHTML = statusTexts.notFound;
+            statusIcon.className = 'bi bi-hdd-network fs-1 text-secondary opacity-50';
+            statusCard.className = 'card border-secondary';
+            openPanelBtn.style.display = 'none';
+        }
+    } catch (error) {
+        statusBadge.className = 'badge bg-danger fs-6';
+        statusBadge.innerHTML = '<i class="bi bi-x-circle"></i> Error';
+    }
+}
+
+// Container control action
+async function containerAction(action, btn) {
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch(`/admin/settings/npm/${action}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            // Wait a moment for container state to change
+            setTimeout(updateContainerStatus, 1000);
+        } else {
+            alert(data.error || 'Action failed');
+        }
+    } catch (error) {
+        alert('Error: ' + error.message);
+    }
+
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+}
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    updateContainerStatus();
+    // Refresh status every 10 seconds
+    setInterval(updateContainerStatus, 10000);
+});
+
 // Toggle settings visibility based on enable checkbox
 document.getElementById('npm_enabled').addEventListener('change', function() {
     document.getElementById('npmSettings').classList.toggle('d-none', !this.checked);
+});
+
+// Container control buttons
+document.getElementById('startBtn').addEventListener('click', function() {
+    containerAction('start', this);
+});
+
+document.getElementById('stopBtn').addEventListener('click', function() {
+    containerAction('stop', this);
+});
+
+document.getElementById('restartBtn').addEventListener('click', function() {
+    containerAction('restart', this);
 });
 
 // Test connection button
@@ -187,7 +304,7 @@ document.getElementById('testConnectionBtn').addEventListener('click', async fun
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
-                'X-CSRF-Token': '<%= csrfToken %>'
+                'X-CSRF-Token': csrfToken
             }
         });
         const data = await response.json();

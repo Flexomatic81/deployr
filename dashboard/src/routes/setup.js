@@ -187,9 +187,30 @@ async function configureNpm(email, password) {
         await fs.writeFile(envPath, newEnvContent + '\n');
 
         logger.info('NPM configuration saved', { email });
+
+        // Start NPM container
+        await startNpmContainer();
     } catch (error) {
         logger.error('Failed to configure NPM', { error: error.message });
         throw new Error('Failed to save NPM configuration');
+    }
+}
+
+async function startNpmContainer() {
+    try {
+        const container = docker.getContainer('dployr-npm');
+        await container.start();
+        logger.info('NPM container started during setup');
+    } catch (error) {
+        // Container might already be running (304) or not exist
+        if (error.statusCode === 304) {
+            logger.info('NPM container already running');
+        } else if (error.statusCode === 404) {
+            logger.warn('NPM container not found - may need to run docker compose up first');
+        } else {
+            logger.error('Failed to start NPM container', { error: error.message });
+            // Don't throw - setup should succeed even if NPM doesn't start
+        }
     }
 }
 
