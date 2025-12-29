@@ -1,0 +1,401 @@
+/**
+ * Nginx Proxy Manager API Service
+ *
+ * Handles communication with NPM's REST API for:
+ * - Authentication (JWT tokens)
+ * - Proxy host management
+ * - SSL certificate management
+ */
+
+const axios = require('axios');
+const { pool } = require('../config/database');
+const { logger } = require('../config/logger');
+
+const NPM_API_URL = process.env.NPM_API_URL || 'http://dployr-npm:81/api';
+const NPM_ENABLED = process.env.NPM_ENABLED === 'true';
+
+// Token cache (in-memory, refreshed on expiry)
+let cachedToken = null;
+let tokenExpiry = null;
+
+/**
+ * Check if NPM integration is enabled
+ */
+function isEnabled() {
+    return NPM_ENABLED;
+}
+
+/**
+ * Get JWT token for NPM API authentication
+ */
+async function getToken() {
+    // Return cached token if still valid
+    if (cachedToken && tokenExpiry && Date.now() < tokenExpiry) {
+        return cachedToken;
+    }
+
+    const email = process.env.NPM_API_EMAIL;
+    const password = process.env.NPM_API_PASSWORD;
+
+    if (!email || !password) {
+        throw new Error('NPM API credentials not configured');
+    }
+
+    try {
+        const response = await axios.post(`${NPM_API_URL}/tokens`, {
+            identity: email,
+            secret: password
+        }, {
+            timeout: 10000
+        });
+
+        cachedToken = response.data.token;
+        // Token valid for 23 hours (NPM default is 1 day)
+        tokenExpiry = Date.now() + (23 * 60 * 60 * 1000);
+
+        logger.info('NPM API token obtained');
+        return cachedToken;
+    } catch (error) {
+        logger.error('NPM API authentication failed', {
+            error: error.message,
+            status: error.response?.status
+        });
+        throw new Error('Failed to authenticate with Nginx Proxy Manager');
+    }
+}
+
+/**
+ * Create authenticated axios instance
+ */
+async function getApiClient() {
+    const token = await getToken();
+    return axios.create({
+        baseURL: NPM_API_URL,
+        headers: {
+            'Authorization': `Bearer ${token}`,
+            'Content-Type': 'application/json'
+        },
+        timeout: 30000
+    });
+}
+
+/**
+ * Create a proxy host for a project
+ * @param {string} containerName - The container name to proxy to
+ * @param {string} domain - The domain name
+ * @param {number} port - The target port
+ * @param {object} options - Additional options (sslEnabled, http2)
+ */
+async function createProxyHost(containerName, domain, port, options = {}) {
+    if (!isEnabled()) {
+        throw new Error('NPM integration is not enabled');
+    }
+
+    const client = await getApiClient();
+
+    const payload = {
+        domain_names: [domain],
+        forward_scheme: 'http',
+        forward_host: containerName,
+        forward_port: parseInt(port) || 80,
+        certificate_id: 0,
+        ssl_forced: false,
+        http2_support: options.http2 !== false,
+        block_exploits: true,
+        allow_websocket_upgrade: true,
+        access_list_id: 0,
+        meta: {
+            letsencrypt_agree: true,
+            dns_challenge: false
+        },
+        advanced_config: ''
+    };
+
+    try {
+        const response = await client.post('/nginx/proxy-hosts', payload);
+        logger.info('Proxy host created', { domain, containerName, proxyHostId: response.data.id });
+        return response.data;
+    } catch (error) {
+        const errorMessage = error.response?.data?.message || error.message;
+        logger.error('Failed to create proxy host', {
+            domain,
+            containerName,
+            error: errorMessage,
+            status: error.response?.status
+        });
+
+        if (error.response?.status === 400 && errorMessage.includes('already exists')) {
+            throw new Error('Domain is already configured in another proxy host');
+        }
+        throw new Error(`Failed to create proxy host: ${errorMessage}`);
+    }
+}
+
+/**
+ * Delete a proxy host
+ * @param {number} proxyHostId - The proxy host ID to delete
+ */
+async function deleteProxyHost(proxyHostId) {
+    if (!isEnabled() || !proxyHostId) return;
+
+    const client = await getApiClient();
+
+    try {
+        await client.delete(`/nginx/proxy-hosts/${proxyHostId}`);
+        logger.info('Proxy host deleted', { proxyHostId });
+    } catch (error) {
+        logger.error('Failed to delete proxy host', {
+            proxyHostId,
+            error: error.message,
+            status: error.response?.status
+        });
+        // Don't throw - cleanup should not fail the operation
+    }
+}
+
+/**
+ * Get all proxy hosts
+ */
+async function listProxyHosts() {
+    if (!isEnabled()) return [];
+
+    const client = await getApiClient();
+
+    try {
+        const response = await client.get('/nginx/proxy-hosts');
+        return response.data;
+    } catch (error) {
+        logger.error('Failed to list proxy hosts', { error: error.message });
+        return [];
+    }
+}
+
+/**
+ * Request Let's Encrypt certificate for a domain
+ * @param {string} domain - The domain to request certificate for
+ * @param {string} email - Email for Let's Encrypt
+ */
+async function requestCertificate(domain, email) {
+    if (!isEnabled()) {
+        throw new Error('NPM integration is not enabled');
+    }
+
+    const client = await getApiClient();
+
+    const payload = {
+        domain_names: [domain],
+        meta: {
+            letsencrypt_email: email || process.env.NPM_API_EMAIL,
+            letsencrypt_agree: true,
+            dns_challenge: false
+        }
+    };
+
+    try {
+        const response = await client.post('/nginx/certificates', payload);
+        logger.info('Certificate requested', { domain, certificateId: response.data.id });
+        return response.data;
+    } catch (error) {
+        logger.error('Failed to request certificate', {
+            domain,
+            error: error.response?.data?.message || error.message
+        });
+        throw new Error('Failed to request SSL certificate. Make sure the domain points to this server.');
+    }
+}
+
+/**
+ * Update proxy host with SSL certificate
+ * @param {number} proxyHostId - The proxy host ID
+ * @param {number} certificateId - The certificate ID
+ */
+async function enableSSL(proxyHostId, certificateId) {
+    if (!isEnabled()) {
+        throw new Error('NPM integration is not enabled');
+    }
+
+    const client = await getApiClient();
+
+    try {
+        // First get the current proxy host to preserve settings
+        const current = await client.get(`/nginx/proxy-hosts/${proxyHostId}`);
+
+        const response = await client.put(`/nginx/proxy-hosts/${proxyHostId}`, {
+            ...current.data,
+            certificate_id: certificateId,
+            ssl_forced: true,
+            http2_support: true
+        });
+
+        logger.info('SSL enabled for proxy host', { proxyHostId, certificateId });
+        return response.data;
+    } catch (error) {
+        logger.error('Failed to enable SSL', {
+            proxyHostId,
+            error: error.response?.data?.message || error.message
+        });
+        throw new Error('Failed to enable SSL for this domain');
+    }
+}
+
+/**
+ * Test NPM API connection
+ */
+async function testConnection() {
+    if (!isEnabled()) return false;
+
+    try {
+        await getToken();
+        return true;
+    } catch (error) {
+        return false;
+    }
+}
+
+// ============================================
+// Database functions for project_domains table
+// ============================================
+
+/**
+ * Save domain mapping to database
+ * @param {number} userId - User ID
+ * @param {string} projectName - Project name
+ * @param {string} domain - Domain name
+ * @param {number} proxyHostId - NPM proxy host ID
+ * @param {number} certificateId - NPM certificate ID (optional)
+ */
+async function saveDomainMapping(userId, projectName, domain, proxyHostId, certificateId = null) {
+    await pool.execute(
+        `INSERT INTO project_domains (user_id, project_name, domain, proxy_host_id, certificate_id, ssl_enabled)
+         VALUES (?, ?, ?, ?, ?, ?)
+         ON DUPLICATE KEY UPDATE
+            proxy_host_id = VALUES(proxy_host_id),
+            certificate_id = VALUES(certificate_id),
+            ssl_enabled = VALUES(ssl_enabled),
+            updated_at = CURRENT_TIMESTAMP`,
+        [userId, projectName, domain, proxyHostId, certificateId, certificateId ? true : false]
+    );
+    logger.info('Domain mapping saved', { userId, projectName, domain });
+}
+
+/**
+ * Get domains for a project
+ * @param {number} userId - User ID
+ * @param {string} projectName - Project name
+ */
+async function getProjectDomains(userId, projectName) {
+    const [rows] = await pool.execute(
+        `SELECT * FROM project_domains WHERE user_id = ? AND project_name = ? ORDER BY created_at DESC`,
+        [userId, projectName]
+    );
+    return rows;
+}
+
+/**
+ * Get a single domain record
+ * @param {number} userId - User ID
+ * @param {string} projectName - Project name
+ * @param {string} domain - Domain name
+ */
+async function getDomainRecord(userId, projectName, domain) {
+    const [rows] = await pool.execute(
+        `SELECT * FROM project_domains WHERE user_id = ? AND project_name = ? AND domain = ?`,
+        [userId, projectName, domain]
+    );
+    return rows[0] || null;
+}
+
+/**
+ * Delete domain mapping and cleanup NPM proxy host
+ * @param {number} userId - User ID
+ * @param {string} projectName - Project name
+ * @param {string} domain - Domain name
+ */
+async function deleteDomainMapping(userId, projectName, domain) {
+    // Get the proxy host ID first
+    const [rows] = await pool.execute(
+        `SELECT proxy_host_id FROM project_domains
+         WHERE user_id = ? AND project_name = ? AND domain = ?`,
+        [userId, projectName, domain]
+    );
+
+    if (rows.length > 0 && rows[0].proxy_host_id) {
+        // Delete from NPM first
+        await deleteProxyHost(rows[0].proxy_host_id);
+    }
+
+    // Delete from database
+    await pool.execute(
+        `DELETE FROM project_domains WHERE user_id = ? AND project_name = ? AND domain = ?`,
+        [userId, projectName, domain]
+    );
+
+    logger.info('Domain mapping deleted', { userId, projectName, domain });
+}
+
+/**
+ * Update SSL status for a domain
+ * @param {number} userId - User ID
+ * @param {string} projectName - Project name
+ * @param {string} domain - Domain name
+ * @param {number} certificateId - Certificate ID
+ */
+async function updateDomainSSL(userId, projectName, domain, certificateId) {
+    await pool.execute(
+        `UPDATE project_domains
+         SET certificate_id = ?, ssl_enabled = TRUE, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = ? AND project_name = ? AND domain = ?`,
+        [certificateId, userId, projectName, domain]
+    );
+    logger.info('Domain SSL updated', { userId, projectName, domain, certificateId });
+}
+
+/**
+ * Delete all domains for a project (used when deleting project)
+ * @param {number} userId - User ID
+ * @param {string} projectName - Project name
+ */
+async function deleteProjectDomains(userId, projectName) {
+    // Get all proxy host IDs
+    const [rows] = await pool.execute(
+        `SELECT proxy_host_id FROM project_domains WHERE user_id = ? AND project_name = ?`,
+        [userId, projectName]
+    );
+
+    // Delete from NPM
+    for (const row of rows) {
+        if (row.proxy_host_id) {
+            await deleteProxyHost(row.proxy_host_id);
+        }
+    }
+
+    // Delete from database
+    await pool.execute(
+        `DELETE FROM project_domains WHERE user_id = ? AND project_name = ?`,
+        [userId, projectName]
+    );
+
+    logger.info('All project domains deleted', { userId, projectName });
+}
+
+module.exports = {
+    // Status
+    isEnabled,
+    testConnection,
+
+    // NPM API functions
+    getToken,
+    createProxyHost,
+    deleteProxyHost,
+    listProxyHosts,
+    requestCertificate,
+    enableSSL,
+
+    // Database functions
+    saveDomainMapping,
+    getProjectDomains,
+    getDomainRecord,
+    deleteDomainMapping,
+    updateDomainSSL,
+    deleteProjectDomains
+};

@@ -17,7 +17,9 @@
     "logsDescription": "View and filter application logs of the dashboard.",
     "showLogs": "Show Logs",
     "errorsOnly": "Errors Only",
-    "deploymentsDescription": "Monitor all deployments from all users."
+    "deploymentsDescription": "Monitor all deployments from all users.",
+    "npmDescription": "Configure domain management and SSL certificates for projects.",
+    "configureNpm": "Configure NPM"
   },
 
   "users": {
@@ -152,5 +154,47 @@
     "userNotFound": "User not found",
     "cannotDeleteSelf": "You cannot delete yourself",
     "cannotDeleteLastAdmin": "The last administrator cannot be deleted"
+  },
+
+  "npm": {
+    "title": "Nginx Proxy Manager",
+    "status": {
+      "title": "Status",
+      "running": "Running",
+      "configured": "Configured (not started)",
+      "disabled": "Disabled"
+    },
+    "quickActions": "Quick Actions",
+    "testConnection": "Test Connection",
+    "openPanel": "Open NPM Panel",
+    "testing": "Testing...",
+    "configuration": "Configuration",
+    "enable": "Enable Nginx Proxy Manager",
+    "enableHelp": "Enables domain and SSL management for projects.",
+    "credentials": "Credentials",
+    "email": "Admin Email",
+    "emailHelp": "Used for Let's Encrypt and as NPM login.",
+    "password": "Admin Password",
+    "passwordPlaceholder": "Enter password",
+    "passwordUnchanged": "••••••••",
+    "passwordHelp": "At least 8 characters. Leave empty to keep unchanged.",
+    "passwordLength": "Password must be at least 8 characters.",
+    "ports": "Ports",
+    "httpPort": "HTTP Port",
+    "httpPortHelp": "Default: 80",
+    "httpsPort": "HTTPS Port",
+    "httpsPortHelp": "Default: 443",
+    "adminPort": "Admin Port",
+    "adminPortHelp": "Default: 81",
+    "restartHint": "After changing port configuration, the NPM container must be restarted.",
+    "dockerCommands": "Docker Commands",
+    "dockerCommandsHelp": "Use these commands to start, stop and view logs of the Nginx Proxy Manager.",
+    "startCommand": "Start NPM",
+    "stopCommand": "Stop NPM",
+    "logsCommand": "Show NPM Logs",
+    "saved": "NPM settings saved.",
+    "notEnabled": "NPM is not enabled.",
+    "connectionSuccess": "Connection successful!",
+    "connectionFailed": "Connection failed."
   }
 }

@@ -7,10 +7,13 @@ const { createReadStream } = require('fs');
 const { requireAuth, requireAdmin } = require('../middleware/auth');
 const userService = require('../services/user');
 const projectService = require('../services/project');
+const proxyService = require('../services/proxy');
 const { logger } = require('../config/logger');
 const { pool } = require('../config/database');
 
 const LOG_DIR = process.env.LOG_DIR || '/app/logs';
+const ENV_PATH = '/app/infrastructure/.env';
+const SETUP_MARKER_PATH = '/app/infrastructure/.setup-complete';
 
 // All admin routes require admin privileges
 router.use(requireAuth);
@@ -460,6 +463,152 @@ router.get('/deployments', async (req, res) => {
         logger.error('Error loading deployment history', { error: error.message });
         req.flash('error', req.t('common:errors.loadError'));
         res.redirect('/admin');
+    }
+});
+
+// ============================================
+// NPM Settings
+// ============================================
+
+// Helper function: Read .env file
+async function readEnvFile() {
+    try {
+        const content = await fs.readFile(ENV_PATH, 'utf-8');
+        const envVars = {};
+        content.split('\n').forEach(line => {
+            const match = line.match(/^([^#=]+)=(.*)$/);
+            if (match) {
+                envVars[match[1].trim()] = match[2].trim();
+            }
+        });
+        return envVars;
+    } catch {
+        return {};
+    }
+}
+
+// Helper function: Write .env file
+async function writeEnvFile(envVars) {
+    const content = Object.entries(envVars)
+        .map(([key, value]) => `${key}=${value}`)
+        .join('\n');
+    await fs.writeFile(ENV_PATH, content + '\n');
+}
+
+// Helper function: Read setup marker
+async function readSetupMarker() {
+    try {
+        const content = await fs.readFile(SETUP_MARKER_PATH, 'utf-8');
+        return JSON.parse(content);
+    } catch {
+        return {};
+    }
+}
+
+// Helper function: Update setup marker
+async function updateSetupMarker(updates) {
+    const current = await readSetupMarker();
+    const updated = { ...current, ...updates };
+    await fs.writeFile(SETUP_MARKER_PATH, JSON.stringify(updated, null, 2));
+}
+
+// Show NPM settings
+router.get('/settings/npm', async (req, res) => {
+    try {
+        const envVars = await readEnvFile();
+        const setupMarker = await readSetupMarker();
+        const npmStatus = await proxyService.isEnabled();
+
+        res.render('admin/settings-npm', {
+            title: req.t('admin:npm.title'),
+            npm: {
+                enabled: envVars.NPM_ENABLED === 'true',
+                email: envVars.NPM_API_EMAIL || '',
+                // Do not send password to frontend
+                hasPassword: !!envVars.NPM_API_PASSWORD,
+                httpPort: envVars.NPM_HTTP_PORT || '80',
+                httpsPort: envVars.NPM_HTTPS_PORT || '443',
+                adminPort: envVars.NPM_ADMIN_PORT || '81'
+            },
+            setupMarker,
+            npmStatus
+        });
+    } catch (error) {
+        logger.error('Error loading NPM settings', { error: error.message });
+        req.flash('error', req.t('common:errors.loadError'));
+        res.redirect('/admin');
+    }
+});
+
+// Save NPM settings
+router.post('/settings/npm', async (req, res) => {
+    try {
+        const { npm_enabled, npm_email, npm_password, npm_http_port, npm_https_port, npm_admin_port } = req.body;
+
+        // Read current env vars
+        const envVars = await readEnvFile();
+
+        // Update NPM settings
+        envVars.NPM_ENABLED = npm_enabled === 'on' ? 'true' : 'false';
+
+        if (npm_email) {
+            envVars.NPM_API_EMAIL = npm_email;
+        }
+
+        // Only update password if provided (not empty)
+        if (npm_password && npm_password.trim()) {
+            if (npm_password.length < 8) {
+                req.flash('error', req.t('admin:npm.passwordLength'));
+                return res.redirect('/admin/settings/npm');
+            }
+            envVars.NPM_API_PASSWORD = npm_password;
+        }
+
+        // Update ports if provided
+        if (npm_http_port) {
+            envVars.NPM_HTTP_PORT = npm_http_port;
+        }
+        if (npm_https_port) {
+            envVars.NPM_HTTPS_PORT = npm_https_port;
+        }
+        if (npm_admin_port) {
+            envVars.NPM_ADMIN_PORT = npm_admin_port;
+        }
+
+        // Write updated env file
+        await writeEnvFile(envVars);
+
+        // Update setup marker
+        await updateSetupMarker({ npmEnabled: npm_enabled === 'on' });
+
+        logger.info('NPM settings updated', { email: npm_email, enabled: npm_enabled === 'on' });
+
+        req.flash('success', req.t('admin:npm.saved'));
+        res.redirect('/admin/settings/npm');
+    } catch (error) {
+        logger.error('Error saving NPM settings', { error: error.message });
+        req.flash('error', req.t('common:errors.saveError'));
+        res.redirect('/admin/settings/npm');
+    }
+});
+
+// Test NPM connection
+router.post('/settings/npm/test', async (req, res) => {
+    try {
+        const isEnabled = await proxyService.isEnabled();
+        if (!isEnabled) {
+            return res.json({ success: false, error: req.t('admin:npm.notEnabled') });
+        }
+
+        // Try to get token (this tests the connection)
+        const token = await proxyService.getToken();
+        if (token) {
+            res.json({ success: true, message: req.t('admin:npm.connectionSuccess') });
+        } else {
+            res.json({ success: false, error: req.t('admin:npm.connectionFailed') });
+        }
+    } catch (error) {
+        res.json({ success: false, error: error.message });
     }
 });
 

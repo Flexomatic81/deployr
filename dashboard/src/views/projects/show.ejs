@@ -665,6 +665,100 @@
 </div>
 <% } %>
 
+<!-- Domain Management (only if NPM enabled and owner/full permission) -->
+<% if (npmEnabled && (projectAccess.isOwner || projectAccess.permission === 'full')) { %>
+<div class="card mb-4">
+    <div class="card-header collapsed" role="button" data-bs-toggle="collapse" data-bs-target="#collapseDomains" aria-expanded="false" aria-controls="collapseDomains">
+        <h5 class="mb-0 d-flex justify-content-between align-items-center">
+            <span>
+                <i class="bi bi-globe2"></i> <%= t('proxy:title') %>
+                <% if (projectDomains && projectDomains.length > 0) { %>
+                    <span class="badge bg-success ms-2"><%= projectDomains.length %></span>
+                <% } %>
+            </span>
+            <i class="bi bi-chevron-down collapse-icon"></i>
+        </h5>
+    </div>
+    <div class="collapse" id="collapseDomains">
+    <div class="card-body">
+        <% if (projectDomains && projectDomains.length > 0) { %>
+        <div class="table-responsive mb-3">
+            <table class="table table-sm table-hover mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th><%= t('proxy:domain') %></th>
+                        <th><%= t('proxy:ssl') %></th>
+                        <th class="text-end"><%= t('common:labels.actions') %></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <% projectDomains.forEach(domain => { %>
+                    <tr>
+                        <td>
+                            <a href="<%= domain.ssl_enabled ? 'https' : 'http' %>://<%= domain.domain %>" target="_blank" class="text-decoration-none">
+                                <i class="bi bi-box-arrow-up-right"></i> <%= domain.domain %>
+                            </a>
+                        </td>
+                        <td>
+                            <% if (domain.ssl_enabled) { %>
+                                <span class="badge bg-success">
+                                    <i class="bi bi-lock-fill"></i> <%= t('proxy:sslActive') %>
+                                </span>
+                            <% } else { %>
+                                <form action="/proxy/<%= project.name %>/domains/<%= domain.domain %>/ssl" method="POST" class="d-inline">
+                                    <button type="submit" class="btn btn-outline-warning btn-sm">
+                                        <i class="bi bi-shield-lock"></i> <%= t('proxy:enableSsl') %>
+                                    </button>
+                                </form>
+                            <% } %>
+                        </td>
+                        <td class="text-end">
+                            <form action="/proxy/<%= project.name %>/domains/<%= domain.domain %>?_method=DELETE" method="POST" class="d-inline">
+                                <button type="submit" class="btn btn-outline-danger btn-sm" onclick="return confirm('<%= t('proxy:confirmDelete') %>')">
+                                    <i class="bi bi-x-lg"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+        <% } else { %>
+        <p class="text-muted mb-3">
+            <i class="bi bi-info-circle"></i> <%= t('proxy:noDomains') %>
+        </p>
+        <% } %>
+
+        <hr>
+        <h6 class="mb-3"><%= t('proxy:addDomain') %></h6>
+        <form action="/proxy/<%= project.name %>/domains" method="POST" class="row g-2 align-items-end">
+            <div class="col-md-5">
+                <label for="domain" class="form-label"><%= t('proxy:domainLabel') %></label>
+                <input type="text" class="form-control" id="domain" name="domain"
+                       placeholder="example.com" required
+                       pattern="[a-zA-Z0-9][a-zA-Z0-9-_.]*\.[a-zA-Z]{2,}">
+                <div class="form-text"><%= t('proxy:domainHelp') %></div>
+            </div>
+            <div class="col-md-4">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="enableSsl" name="enableSsl" value="true" checked>
+                    <label class="form-check-label" for="enableSsl">
+                        <i class="bi bi-shield-lock"></i> <%= t('proxy:requestSsl') %>
+                    </label>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="bi bi-plus-lg"></i> <%= t('common:buttons.add') %>
+                </button>
+            </div>
+        </form>
+    </div>
+    </div><!-- End collapse -->
+</div>
+<% } %>
+
 <!-- Danger zone (only for owner) -->
 <% if (projectAccess.isOwner) { %>
 <div class="card border-danger">

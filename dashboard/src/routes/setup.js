@@ -65,7 +65,17 @@ router.get('/', async (req, res) => {
 
 // Execute setup
 router.post('/run', async (req, res) => {
-    const { server_ip, admin_username, admin_password, system_username, mysql_root_password, language } = req.body;
+    const {
+        server_ip,
+        admin_username,
+        admin_password,
+        system_username,
+        mysql_root_password,
+        language,
+        npm_enabled,
+        npm_email,
+        npm_password
+    } = req.body;
 
     try {
         const steps = [];
@@ -91,8 +101,15 @@ router.post('/run', async (req, res) => {
         await createAdminUser(admin_username, admin_password, system_username, selectedLanguage);
         steps[3].status = 'done';
 
-        // Step 5: Mark setup as complete (include selected language)
-        await markSetupComplete(server_ip, system_username, selectedLanguage);
+        // Step 5: Configure NPM if enabled
+        if (npm_enabled && npm_email && npm_password) {
+            steps.push({ step: 'npm', status: 'running', message: 'Configuring Nginx Proxy Manager...' });
+            await configureNpm(npm_email, npm_password);
+            steps[4].status = 'done';
+        }
+
+        // Final: Mark setup as complete (include selected language and NPM status)
+        await markSetupComplete(server_ip, system_username, selectedLanguage, npm_enabled);
 
         res.json({ success: true, steps });
     } catch (error) {
@@ -121,15 +138,59 @@ async function isInfrastructureRunning() {
     }
 }
 
-async function markSetupComplete(serverIp, defaultUser, language = 'de') {
-    // Create setup marker with metadata including default language
+async function markSetupComplete(serverIp, defaultUser, language = 'de', npmEnabled = false) {
+    // Create setup marker with metadata including default language and NPM status
     const markerContent = JSON.stringify({
         completedAt: new Date().toISOString(),
         serverIp,
         defaultUser,
-        defaultLanguage: language
+        defaultLanguage: language,
+        npmEnabled: npmEnabled || false
     }, null, 2);
     await fs.writeFile(SETUP_MARKER_PATH, markerContent);
+}
+
+async function configureNpm(email, password) {
+    // Write NPM configuration to .env file
+    // This updates the root .env file with NPM settings
+    const envPath = '/app/infrastructure/.env';
+
+    try {
+        // Read existing .env content
+        let envContent = '';
+        try {
+            envContent = await fs.readFile(envPath, 'utf-8');
+        } catch {
+            // File doesn't exist, will create new
+        }
+
+        // Parse existing env vars
+        const envLines = envContent.split('\n');
+        const envVars = {};
+        envLines.forEach(line => {
+            const match = line.match(/^([^#=]+)=(.*)$/);
+            if (match) {
+                envVars[match[1].trim()] = match[2].trim();
+            }
+        });
+
+        // Update NPM variables
+        envVars['NPM_ENABLED'] = 'true';
+        envVars['NPM_API_EMAIL'] = email;
+        envVars['NPM_API_PASSWORD'] = password;
+
+        // Rebuild .env content
+        const newEnvContent = Object.entries(envVars)
+            .map(([key, value]) => `${key}=${value}`)
+            .join('\n');
+
+        await fs.writeFile(envPath, newEnvContent + '\n');
+
+        logger.info('NPM configuration saved', { email });
+    } catch (error) {
+        logger.error('Failed to configure NPM', { error: error.message });
+        throw new Error('Failed to save NPM configuration');
+    }
 }
 
 async function createDockerNetwork() {

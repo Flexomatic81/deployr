@@ -173,6 +173,24 @@ async function initDatabase() {
             // Column already exists - ignore
         }
 
+        // Project domains table for NPM integration
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS project_domains (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                project_name VARCHAR(100) NOT NULL,
+                domain VARCHAR(255) NOT NULL,
+                proxy_host_id INT NULL,
+                certificate_id INT NULL,
+                ssl_enabled BOOLEAN DEFAULT FALSE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES dashboard_users(id) ON DELETE CASCADE,
+                UNIQUE KEY unique_domain (domain),
+                INDEX idx_project (user_id, project_name)
+            )
+        `);
+
         connection.release();
         logger.info('Database schema initialized');
     } catch (error) {

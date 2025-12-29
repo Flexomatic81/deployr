@@ -1,0 +1,28 @@
+{
+  "title": "Domains & SSL",
+  "domain": "Domain",
+  "ssl": "SSL Certificate",
+  "sslActive": "SSL active",
+  "enableSsl": "Enable SSL",
+  "noDomains": "No domains configured yet.",
+  "addDomain": "Add Domain",
+  "domainLabel": "Domain Name",
+  "domainHelp": "Enter the domain that should point to this project.",
+  "requestSsl": "Request SSL certificate",
+  "confirmDelete": "Are you sure you want to remove this domain?",
+
+  "flash": {
+    "domainAdded": "Domain {{domain}} was successfully added.",
+    "domainAddedNoSsl": "Domain added, but SSL certificate could not be created. Make sure the domain points to this server.",
+    "domainRemoved": "Domain was removed.",
+    "sslEnabled": "SSL certificate for {{domain}} was enabled.",
+    "sslAlreadyEnabled": "SSL is already enabled for this domain."
+  },
+
+  "errors": {
+    "notEnabled": "Nginx Proxy Manager is not enabled.",
+    "invalidDomain": "Invalid domain format.",
+    "domainNotFound": "Domain not found.",
+    "containerNotFound": "Container for this project not found. Is the project running?"
+  }
+}

@@ -71,5 +71,24 @@
     "next": "Weiter",
     "back": "Zurück",
     "startInstall": "Installation starten"
+  },
+  "npm": {
+    "title": "Nginx Proxy Manager",
+    "optional": "Optional",
+    "description": "Der Nginx Proxy Manager ermöglicht die einfache Verwaltung von Domains und automatischen SSL-Zertifikaten (Let's Encrypt) für deine Projekte.",
+    "enable": "Nginx Proxy Manager aktivieren",
+    "info": "Nach der Aktivierung kannst du jedem Projekt eine eigene Domain zuweisen und kostenlose SSL-Zertifikate anfordern.",
+    "email": {
+      "label": "Admin E-Mail",
+      "help": "Diese E-Mail wird für Let's Encrypt Zertifikate und als NPM-Login verwendet.",
+      "description": "Wird für Let's Encrypt und NPM-Login verwendet"
+    },
+    "password": {
+      "label": "Admin Passwort",
+      "placeholder": "Sicheres Passwort",
+      "description": "Mindestens 8 Zeichen. Wird für den NPM Admin-Login verwendet."
+    },
+    "fieldsRequired": "Bitte E-Mail und Passwort für NPM ausfüllen.",
+    "passwordLength": "Das NPM-Passwort muss mindestens 8 Zeichen lang sein."
   }
 }

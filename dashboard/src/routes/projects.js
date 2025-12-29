@@ -8,6 +8,7 @@ const gitService = require('../services/git');
 const zipService = require('../services/zip');
 const autoDeployService = require('../services/autodeploy');
 const sharingService = require('../services/sharing');
+const proxyService = require('../services/proxy');
 const upload = require('../middleware/upload');
 const { validateZipMiddleware } = require('../middleware/upload');
 const { logger } = require('../config/logger');
@@ -255,6 +256,14 @@ router.get('/:name', requireAuth, getProjectAccess(), async (req, res) => {
             availableUsers = availableUsers.filter(u => !sharedUserIds.includes(u.id));
         }
 
+        // Load NPM domains (only for owner or full permission)
+        const npmEnabled = proxyService.isEnabled();
+        let projectDomains = [];
+        if (npmEnabled && (access.isOwner || access.permission === 'full')) {
+            const ownerId = access.isOwner ? req.session.user.id : access.ownerId;
+            projectDomains = await proxyService.getProjectDomains(ownerId, req.params.name);
+        }
+
         res.render('projects/show', {
             title: project.name,
             project,
@@ -275,7 +284,10 @@ router.get('/:name', requireAuth, getProjectAccess(), async (req, res) => {
                 read: 'View',
                 manage: 'Manage',
                 full: 'Full Access'
-            }
+            },
+            // NPM data
+            npmEnabled,
+            projectDomains
         });
     } catch (error) {
         logger.error('Error loading project', { error: error.message });

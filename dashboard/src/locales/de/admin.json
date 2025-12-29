@@ -17,7 +17,9 @@
     "logsDescription": "Application-Logs des Dashboards einsehen und filtern.",
     "showLogs": "Logs anzeigen",
     "errorsOnly": "Nur Fehler",
-    "deploymentsDescription": "Alle Deployments aller Benutzer überwachen."
+    "deploymentsDescription": "Alle Deployments aller Benutzer überwachen.",
+    "npmDescription": "Domain-Verwaltung und SSL-Zertifikate für Projekte konfigurieren.",
+    "configureNpm": "NPM konfigurieren"
   },
 
   "users": {
@@ -152,5 +154,47 @@
     "userNotFound": "Benutzer nicht gefunden",
     "cannotDeleteSelf": "Sie können sich nicht selbst löschen",
     "cannotDeleteLastAdmin": "Der letzte Administrator kann nicht gelöscht werden"
+  },
+
+  "npm": {
+    "title": "Nginx Proxy Manager",
+    "status": {
+      "title": "Status",
+      "running": "Läuft",
+      "configured": "Konfiguriert (nicht gestartet)",
+      "disabled": "Deaktiviert"
+    },
+    "quickActions": "Schnellaktionen",
+    "testConnection": "Verbindung testen",
+    "openPanel": "NPM Panel öffnen",
+    "testing": "Teste...",
+    "configuration": "Konfiguration",
+    "enable": "Nginx Proxy Manager aktivieren",
+    "enableHelp": "Aktiviert die Domain- und SSL-Verwaltung für Projekte.",
+    "credentials": "Zugangsdaten",
+    "email": "Admin E-Mail",
+    "emailHelp": "Wird für Let's Encrypt und als NPM-Login verwendet.",
+    "password": "Admin Passwort",
+    "passwordPlaceholder": "Passwort eingeben",
+    "passwordUnchanged": "••••••••",
+    "passwordHelp": "Mindestens 8 Zeichen. Leer lassen um nicht zu ändern.",
+    "passwordLength": "Das Passwort muss mindestens 8 Zeichen lang sein.",
+    "ports": "Ports",
+    "httpPort": "HTTP Port",
+    "httpPortHelp": "Standard: 80",
+    "httpsPort": "HTTPS Port",
+    "httpsPortHelp": "Standard: 443",
+    "adminPort": "Admin Port",
+    "adminPortHelp": "Standard: 81",
+    "restartHint": "Nach Änderungen an der Port-Konfiguration muss der NPM-Container neu gestartet werden.",
+    "dockerCommands": "Docker-Befehle",
+    "dockerCommandsHelp": "Mit diesen Befehlen können Sie den Nginx Proxy Manager starten, stoppen und die Logs einsehen.",
+    "startCommand": "NPM starten",
+    "stopCommand": "NPM stoppen",
+    "logsCommand": "NPM Logs anzeigen",
+    "saved": "NPM-Einstellungen wurden gespeichert.",
+    "notEnabled": "NPM ist nicht aktiviert.",
+    "connectionSuccess": "Verbindung erfolgreich!",
+    "connectionFailed": "Verbindung fehlgeschlagen."
   }
 }

@@ -1,0 +1,228 @@
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/dashboard"><%= t('common:nav.dashboard') %></a></li>
+        <li class="breadcrumb-item"><a href="/admin"><%= t('common:nav.admin') %></a></li>
+        <li class="breadcrumb-item active"><%= t('admin:npm.title') %></li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-hdd-network"></i> <%= t('admin:npm.title') %></h1>
+</div>
+
+<!-- Status Card -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card <%= npmStatus ? 'border-success' : 'border-secondary' %>">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1"><%= t('admin:npm.status.title') %></h6>
+                        <% if (npmStatus) { %>
+                            <span class="badge bg-success fs-6"><i class="bi bi-check-circle"></i> <%= t('admin:npm.status.running') %></span>
+                        <% } else if (npm.enabled) { %>
+                            <span class="badge bg-warning text-dark fs-6"><i class="bi bi-exclamation-circle"></i> <%= t('admin:npm.status.configured') %></span>
+                        <% } else { %>
+                            <span class="badge bg-secondary fs-6"><i class="bi bi-x-circle"></i> <%= t('admin:npm.status.disabled') %></span>
+                        <% } %>
+                    </div>
+                    <i class="bi bi-hdd-network fs-1 <%= npmStatus ? 'text-success' : 'text-secondary' %> opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted mb-2"><%= t('admin:npm.quickActions') %></h6>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="testConnectionBtn" <%= !npm.enabled ? 'disabled' : '' %>>
+                    <i class="bi bi-plug"></i> <%= t('admin:npm.testConnection') %>
+                </button>
+                <% if (npmStatus) { %>
+                    <a href="http://<%= setupMarker.serverIp || 'localhost' %>:<%= npm.adminPort %>" target="_blank" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-box-arrow-up-right"></i> <%= t('admin:npm.openPanel') %>
+                    </a>
+                <% } %>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration Form -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-gear"></i> <%= t('admin:npm.configuration') %>
+    </div>
+    <div class="card-body">
+        <form action="/admin/settings/npm" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <!-- Enable/Disable -->
+            <div class="mb-4">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="npm_enabled" name="npm_enabled" <%= npm.enabled ? 'checked' : '' %>>
+                    <label class="form-check-label" for="npm_enabled">
+                        <strong><%= t('admin:npm.enable') %></strong>
+                    </label>
+                </div>
+                <small class="text-muted"><%= t('admin:npm.enableHelp') %></small>
+            </div>
+
+            <div id="npmSettings" class="<%= npm.enabled ? '' : 'd-none' %>">
+                <hr>
+
+                <!-- Credentials -->
+                <h5 class="mb-3"><i class="bi bi-key"></i> <%= t('admin:npm.credentials') %></h5>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="npm_email" class="form-label"><%= t('admin:npm.email') %></label>
+                        <input type="email" class="form-control" id="npm_email" name="npm_email" value="<%= npm.email %>" placeholder="admin@example.com">
+                        <small class="text-muted"><%= t('admin:npm.emailHelp') %></small>
+                    </div>
+                    <div class="col-md-6">
+                        <label for="npm_password" class="form-label"><%= t('admin:npm.password') %></label>
+                        <input type="password" class="form-control" id="npm_password" name="npm_password" placeholder="<%= npm.hasPassword ? t('admin:npm.passwordUnchanged') : t('admin:npm.passwordPlaceholder') %>">
+                        <small class="text-muted"><%= t('admin:npm.passwordHelp') %></small>
+                    </div>
+                </div>
+
+                <hr>
+
+                <!-- Ports -->
+                <h5 class="mb-3"><i class="bi bi-diagram-3"></i> <%= t('admin:npm.ports') %></h5>
+
+                <div class="row mb-3">
+                    <div class="col-md-4">
+                        <label for="npm_http_port" class="form-label"><%= t('admin:npm.httpPort') %></label>
+                        <input type="number" class="form-control" id="npm_http_port" name="npm_http_port" value="<%= npm.httpPort %>" min="1" max="65535">
+                        <small class="text-muted"><%= t('admin:npm.httpPortHelp') %></small>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="npm_https_port" class="form-label"><%= t('admin:npm.httpsPort') %></label>
+                        <input type="number" class="form-control" id="npm_https_port" name="npm_https_port" value="<%= npm.httpsPort %>" min="1" max="65535">
+                        <small class="text-muted"><%= t('admin:npm.httpsPortHelp') %></small>
+                    </div>
+                    <div class="col-md-4">
+                        <label for="npm_admin_port" class="form-label"><%= t('admin:npm.adminPort') %></label>
+                        <input type="number" class="form-control" id="npm_admin_port" name="npm_admin_port" value="<%= npm.adminPort %>" min="1" max="65535">
+                        <small class="text-muted"><%= t('admin:npm.adminPortHelp') %></small>
+                    </div>
+                </div>
+
+                <div class="alert alert-info">
+                    <i class="bi bi-info-circle"></i> <%= t('admin:npm.restartHint') %>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="d-flex justify-content-between">
+                <a href="/admin" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> <%= t('common:buttons.back') %>
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> <%= t('common:buttons.save') %>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Docker Command Info -->
+<div class="card mt-4">
+    <div class="card-header">
+        <i class="bi bi-terminal"></i> <%= t('admin:npm.dockerCommands') %>
+    </div>
+    <div class="card-body">
+        <p class="text-muted mb-3"><%= t('admin:npm.dockerCommandsHelp') %></p>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold"><%= t('admin:npm.startCommand') %></label>
+            <div class="input-group">
+                <code class="form-control bg-dark text-light font-monospace">docker compose --profile proxy up -d</code>
+                <button class="btn btn-outline-secondary" type="button" onclick="copyCommand(this, 'docker compose --profile proxy up -d')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label fw-bold"><%= t('admin:npm.stopCommand') %></label>
+            <div class="input-group">
+                <code class="form-control bg-dark text-light font-monospace">docker compose --profile proxy down</code>
+                <button class="btn btn-outline-secondary" type="button" onclick="copyCommand(this, 'docker compose --profile proxy down')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+            </div>
+        </div>
+
+        <div>
+            <label class="form-label fw-bold"><%= t('admin:npm.logsCommand') %></label>
+            <div class="input-group">
+                <code class="form-control bg-dark text-light font-monospace">docker compose logs -f npm</code>
+                <button class="btn btn-outline-secondary" type="button" onclick="copyCommand(this, 'docker compose logs -f npm')">
+                    <i class="bi bi-clipboard"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Toggle settings visibility based on enable checkbox
+document.getElementById('npm_enabled').addEventListener('change', function() {
+    document.getElementById('npmSettings').classList.toggle('d-none', !this.checked);
+});
+
+// Test connection button
+document.getElementById('testConnectionBtn').addEventListener('click', async function() {
+    const btn = this;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> <%= t("admin:npm.testing") %>';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/admin/settings/npm/test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '<%= csrfToken %>'
+            }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            btn.innerHTML = '<i class="bi bi-check-circle text-success"></i> ' + data.message;
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-outline-success');
+        } else {
+            btn.innerHTML = '<i class="bi bi-x-circle text-danger"></i> ' + data.error;
+            btn.classList.remove('btn-outline-primary');
+            btn.classList.add('btn-outline-danger');
+        }
+    } catch (error) {
+        btn.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Error';
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-outline-danger');
+    }
+
+    setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+        btn.classList.remove('btn-outline-success', 'btn-outline-danger');
+        btn.classList.add('btn-outline-primary');
+    }, 3000);
+});
+
+// Copy command to clipboard
+function copyCommand(btn, command) {
+    navigator.clipboard.writeText(command).then(() => {
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check"></i>';
+        setTimeout(() => {
+            btn.innerHTML = originalHtml;
+        }, 1500);
+    });
+}
+</script>
