@@ -229,6 +229,9 @@
     "dashboardDomainError": "Error configuring dashboard domain.",
     "dashboardDomainInvalid": "Invalid domain format.",
     "dashboardDomainConfirmRemove": "Really remove dashboard domain? The dashboard will then only be accessible via port 3000.",
-    "configuring": "Configuring..."
+    "configuring": "Configuring...",
+    "operationLogs": "Operation Logs",
+    "operationLogsHelp": "Domain and SSL operations from the dashboard log.",
+    "noOperationLogs": "No operations logged"
   }
 }

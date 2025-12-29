@@ -229,6 +229,9 @@
     "dashboardDomainError": "Fehler beim Konfigurieren der Dashboard Domain.",
     "dashboardDomainInvalid": "Ungültiges Domain-Format.",
     "dashboardDomainConfirmRemove": "Dashboard Domain wirklich entfernen? Das Dashboard ist dann nur noch über Port 3000 erreichbar.",
-    "configuring": "Konfiguriere..."
+    "configuring": "Konfiguriere...",
+    "operationLogs": "Operationen-Log",
+    "operationLogsHelp": "Domain- und SSL-Operationen aus dem Dashboard-Log.",
+    "noOperationLogs": "Keine Operationen protokolliert"
   }
 }

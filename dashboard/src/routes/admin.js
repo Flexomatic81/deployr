@@ -821,4 +821,47 @@ router.delete('/settings/npm/dashboard-domain', async (req, res) => {
     }
 });
 
+// Get NPM operation logs from dashboard logs (proxy, certificate, domain operations)
+router.get('/settings/npm/operation-logs', async (req, res) => {
+    try {
+        const fs = require('fs').promises;
+        const path = require('path');
+        const lines = parseInt(req.query.lines) || 50;
+
+        const logFile = path.join(__dirname, '..', '..', 'logs', 'combined.log');
+
+        try {
+            const content = await fs.readFile(logFile, 'utf8');
+            const allLines = content.split('\n').filter(line => line.trim());
+
+            // Filter for NPM-related operations
+            const npmKeywords = [
+                'proxy host', 'Proxy host',
+                'certificate', 'Certificate',
+                'SSL', 'ssl',
+                'Dashboard domain', 'dashboard domain',
+                'NPM API', 'npm api',
+                'domain configured', 'domain removed'
+            ];
+
+            const npmLines = allLines.filter(line => {
+                return npmKeywords.some(keyword => line.includes(keyword));
+            });
+
+            // Get last N lines, newest first
+            const recentLines = npmLines.slice(-lines).reverse();
+
+            res.json({ success: true, logs: recentLines.join('\n') });
+        } catch (readError) {
+            if (readError.code === 'ENOENT') {
+                res.json({ success: true, logs: '' });
+            } else {
+                throw readError;
+            }
+        }
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
 module.exports = router;

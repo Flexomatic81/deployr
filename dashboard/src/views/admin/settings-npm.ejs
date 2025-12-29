@@ -1,3 +1,9 @@
+<style>
+.collapse-chevron {
+    transition: transform 0.3s ease;
+}
+</style>
+
 <nav aria-label="breadcrumb">
     <ol class="breadcrumb">
         <li class="breadcrumb-item"><a href="/dashboard"><%= t('common:nav.dashboard') %></a></li>
@@ -186,16 +192,49 @@
     </div>
 </div>
 
-<!-- Container Logs -->
-<div class="card mt-4" id="logsCard">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-terminal"></i> <%= t('admin:npm.containerLogs') %></span>
-        <button type="button" class="btn btn-outline-secondary btn-sm" id="refreshLogsBtn" <%= !npm.enabled ? 'disabled' : '' %>>
+<!-- Operation Logs (Domain/SSL operations from dashboard) -->
+<div class="card mt-4" id="operationLogsCard">
+    <div class="card-header d-flex justify-content-between align-items-center"
+         style="cursor: pointer;"
+         data-bs-toggle="collapse"
+         data-bs-target="#operationLogsBody"
+         aria-expanded="true">
+        <span>
+            <i class="bi bi-journal-text"></i> <%= t('admin:npm.operationLogs') %>
+            <i class="bi bi-chevron-down ms-2 collapse-chevron"></i>
+        </span>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="refreshOperationLogsBtn" <%= !npm.enabled ? 'disabled' : '' %> onclick="event.stopPropagation();">
             <i class="bi bi-arrow-clockwise"></i> <%= t('admin:npm.refreshLogs') %>
         </button>
     </div>
-    <div class="card-body p-0">
-        <pre id="logsContent" class="bg-dark text-light p-3 mb-0" style="max-height: 400px; overflow-y: auto; font-size: 0.85rem; white-space: pre-wrap; word-wrap: break-word;"><span class="text-muted"><%= t('common:loading') %>...</span></pre>
+    <div class="collapse show" id="operationLogsBody">
+        <div class="card-body p-0">
+            <small class="text-muted d-block px-3 pt-2"><%= t('admin:npm.operationLogsHelp') %></small>
+            <pre id="operationLogsContent" class="bg-dark text-light p-3 mb-0" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; white-space: pre-wrap; word-wrap: break-word;"><span class="text-muted"><%= t('common:loading') %>...</span></pre>
+        </div>
+    </div>
+</div>
+
+<!-- Container Logs -->
+<div class="card mt-4" id="logsCard">
+    <div class="card-header d-flex justify-content-between align-items-center"
+         style="cursor: pointer;"
+         data-bs-toggle="collapse"
+         data-bs-target="#containerLogsBody"
+         aria-expanded="false">
+        <span>
+            <i class="bi bi-terminal"></i> <%= t('admin:npm.containerLogs') %>
+            <i class="bi bi-chevron-down ms-2 collapse-chevron"></i>
+        </span>
+        <button type="button" class="btn btn-outline-secondary btn-sm" id="refreshLogsBtn" <%= !npm.enabled ? 'disabled' : '' %> onclick="event.stopPropagation();">
+            <i class="bi bi-arrow-clockwise"></i> <%= t('admin:npm.refreshLogs') %>
+        </button>
+    </div>
+    <div class="collapse" id="containerLogsBody">
+        <div class="card-body p-0">
+            <small class="text-muted d-block px-3 pt-2"><%= t('admin:npm.containerLogsHelp') %></small>
+            <pre id="logsContent" class="bg-dark text-light p-3 mb-0" style="max-height: 400px; overflow-y: auto; font-size: 0.85rem; white-space: pre-wrap; word-wrap: break-word;"><span class="text-muted"><%= t('common:loading') %>...</span></pre>
+        </div>
     </div>
 </div>
 
@@ -481,9 +520,68 @@ async function fetchLogs() {
 // Refresh logs button
 document.getElementById('refreshLogsBtn').addEventListener('click', fetchLogs);
 
+// Fetch and display NPM operation logs (domain/SSL operations from dashboard)
+async function fetchOperationLogs() {
+    const logsContent = document.getElementById('operationLogsContent');
+    const refreshBtn = document.getElementById('refreshOperationLogsBtn');
+
+    if (!npmEnabled) {
+        logsContent.innerHTML = '<span class="text-muted"><%= t("admin:npm.noOperationLogs") %></span>';
+        return;
+    }
+
+    try {
+        refreshBtn.disabled = true;
+        refreshBtn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+
+        const response = await fetch('/admin/settings/npm/operation-logs?lines=50');
+        const data = await response.json();
+
+        if (data.success && data.logs) {
+            // Escape HTML and format logs
+            const escapedLogs = data.logs
+                .replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+            logsContent.innerHTML = escapedLogs || '<span class="text-muted"><%= t("admin:npm.noOperationLogs") %></span>';
+        } else {
+            logsContent.innerHTML = '<span class="text-muted"><%= t("admin:npm.noOperationLogs") %></span>';
+        }
+    } catch (error) {
+        logsContent.innerHTML = '<span class="text-danger">Error: ' + error.message + '</span>';
+    } finally {
+        refreshBtn.disabled = false;
+        refreshBtn.innerHTML = '<i class="bi bi-arrow-clockwise"></i> <%= t("admin:npm.refreshLogs") %>';
+    }
+}
+
+// Refresh operation logs button
+document.getElementById('refreshOperationLogsBtn').addEventListener('click', fetchOperationLogs);
+
+// Chevron animation for collapsible cards
+document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(header => {
+    const target = document.querySelector(header.dataset.bsTarget);
+    const chevron = header.querySelector('.collapse-chevron');
+    if (target && chevron) {
+        // Set initial state
+        if (target.classList.contains('show')) {
+            chevron.style.transform = 'rotate(180deg)';
+        }
+        // Listen for collapse events
+        target.addEventListener('show.bs.collapse', () => {
+            chevron.style.transform = 'rotate(180deg)';
+        });
+        target.addEventListener('hide.bs.collapse', () => {
+            chevron.style.transform = 'rotate(0deg)';
+        });
+    }
+});
+
 // Load logs on page load (if NPM is enabled)
 if (npmEnabled) {
-    fetchLogs();
+    fetchOperationLogs();
+    // Fetch container logs when its section is expanded
+    document.getElementById('containerLogsBody').addEventListener('shown.bs.collapse', fetchLogs);
 }
 
 // Configure Dashboard Domain button
