@@ -556,3 +556,12 @@ Project-specific skills for development workflow (in `.claude/commands/`):
 | `/dployr-changelog` | Generate changelog from Git commits for releases |
 
 Usage: Type the skill name (e.g., `/dployr-check`) in Claude Code to execute.
+
+## Automatic Translation Workflow
+
+When adding new locale keys to `dashboard/src/locales/`, automatically spawn a `general-purpose` subagent with `model: "sonnet"` to translate between German and English:
+
+- New keys in `de/*.json` → translate to `en/*.json`
+- New keys in `en/*.json` → translate to `de/*.json`
+
+This ensures both language files stay in sync without manual intervention.
