@@ -191,6 +191,7 @@ async function requestCertificate(domain, email) {
 
     const payload = {
         domain_names: [domain],
+        provider: 'letsencrypt',
         meta: {
             letsencrypt_email: email || process.env.NPM_API_EMAIL,
             letsencrypt_agree: true,
@@ -203,9 +204,11 @@ async function requestCertificate(domain, email) {
         logger.info('Certificate requested', { domain, certificateId: response.data.id });
         return response.data;
     } catch (error) {
+        // Log detailed error for debugging
         logger.error('Failed to request certificate', {
             domain,
-            error: error.response?.data?.message || error.message
+            error: error.response?.data?.message || error.message,
+            details: error.response?.data
         });
         throw new Error('Failed to request SSL certificate. Make sure the domain points to this server.');
     }
