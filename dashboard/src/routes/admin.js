@@ -746,7 +746,7 @@ router.get('/settings/npm/logs', async (req, res) => {
 // Configure dashboard domain (creates proxy host in NPM)
 router.post('/settings/npm/dashboard-domain', async (req, res) => {
     try {
-        const { domain, ssl } = req.body;
+        const { domain, enableSsl } = req.body;
 
         // Validate domain format
         const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
@@ -767,7 +767,8 @@ router.post('/settings/npm/dashboard-domain', async (req, res) => {
         }
 
         // Create proxy host for dashboard container
-        const result = await proxyService.createDashboardProxyHost(domain, ssl === 'true' || ssl === true);
+        const withSsl = enableSsl === 'true' || enableSsl === true;
+        const result = await proxyService.createDashboardProxyHost(domain, withSsl);
 
         if (result.success) {
             // Save domain to .env file
@@ -775,7 +776,7 @@ router.post('/settings/npm/dashboard-domain', async (req, res) => {
             envVars.NPM_DASHBOARD_DOMAIN = domain;
             await writeEnvFile(envVars);
 
-            logger.info('Dashboard domain configured', { domain, ssl: !!ssl, userId: req.session.user.id });
+            logger.info('Dashboard domain configured', { domain, ssl: withSsl, userId: req.session.user.id });
             res.json({
                 success: true,
                 message: req.t('admin:npm.dashboardDomainSuccess', { domain })
