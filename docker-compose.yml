@@ -125,6 +125,8 @@ services:
       - ./scripts:/app/scripts:ro
       - ./templates:/app/templates:ro
       - ./infrastructure:/app/infrastructure
+      # Root .env file for dynamic config updates
+      - ./.env:/app/.env
     environment:
       - NODE_ENV=production
       - DB_HOST=mariadb

@@ -151,9 +151,9 @@ async function markSetupComplete(serverIp, defaultUser, language = 'de', npmEnab
 }
 
 async function configureNpm(email, password) {
-    // Write NPM configuration to .env file
-    // This updates the root .env file with NPM settings
-    const envPath = '/app/infrastructure/.env';
+    // Write NPM configuration to root .env file
+    // This is read by docker-compose for environment variables
+    const envPath = '/app/.env';
 
     try {
         // Read existing .env content

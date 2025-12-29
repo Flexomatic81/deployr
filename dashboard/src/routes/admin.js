@@ -12,7 +12,7 @@ const { logger } = require('../config/logger');
 const { pool } = require('../config/database');
 
 const LOG_DIR = process.env.LOG_DIR || '/app/logs';
-const ENV_PATH = '/app/infrastructure/.env';
+const ENV_PATH = '/app/.env';
 const SETUP_MARKER_PATH = '/app/infrastructure/.setup-complete';
 
 // All admin routes require admin privileges
