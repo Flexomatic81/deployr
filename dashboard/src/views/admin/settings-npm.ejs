@@ -191,11 +191,11 @@
 <!-- Operation Logs (Domain/SSL operations from dashboard) -->
 <div class="card mt-4" id="operationLogsCard">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span class="d-flex align-items-center" style="cursor: pointer; flex-grow: 1;"
+        <span class="d-flex align-items-center collapsed" style="cursor: pointer; flex-grow: 1;"
               role="button"
               data-bs-toggle="collapse"
               data-bs-target="#operationLogsBody"
-              aria-expanded="true">
+              aria-expanded="false">
             <i class="bi bi-journal-text me-2"></i> <%= t('admin:npm.operationLogs') %>
             <i class="bi bi-chevron-down ms-2 collapse-icon"></i>
         </span>
@@ -203,10 +203,10 @@
             <i class="bi bi-arrow-clockwise"></i> <%= t('admin:npm.refreshLogs') %>
         </button>
     </div>
-    <div class="collapse show" id="operationLogsBody">
+    <div class="collapse" id="operationLogsBody">
         <div class="card-body p-0">
             <small class="text-muted d-block px-3 pt-2"><%= t('admin:npm.operationLogsHelp') %></small>
-            <pre id="operationLogsContent" class="bg-dark text-light p-3 mb-0" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; white-space: pre-wrap; word-wrap: break-word;"><span class="text-muted"><%= t('common:loading') %>...</span></pre>
+            <pre id="operationLogsContent" class="bg-dark text-light p-3 mb-0" style="max-height: 300px; overflow-y: auto; font-size: 0.85rem; white-space: pre-wrap; word-wrap: break-word;"><span class="text-muted"><%= t('admin:npm.noOperationLogs') %></span></pre>
         </div>
     </div>
 </div>
@@ -229,7 +229,7 @@
     <div class="collapse" id="containerLogsBody">
         <div class="card-body p-0">
             <small class="text-muted d-block px-3 pt-2"><%= t('admin:npm.containerLogsHelp') %></small>
-            <pre id="logsContent" class="bg-dark text-light p-3 mb-0" style="max-height: 400px; overflow-y: auto; font-size: 0.85rem; white-space: pre-wrap; word-wrap: break-word;"><span class="text-muted"><%= t('common:loading') %>...</span></pre>
+            <pre id="logsContent" class="bg-dark text-light p-3 mb-0" style="max-height: 400px; overflow-y: auto; font-size: 0.85rem; white-space: pre-wrap; word-wrap: break-word;"><span class="text-muted"><%= t('admin:npm.noLogs') %></span></pre>
         </div>
     </div>
 </div>
@@ -557,9 +557,10 @@ document.getElementById('refreshOperationLogsBtn').addEventListener('click', fet
 // Chevron animation is handled by CSS using aria-expanded attribute
 // Bootstrap automatically updates aria-expanded on the toggle element
 
-// Load logs on page load (if NPM is enabled)
+// Load logs when sections are expanded (if NPM is enabled)
 if (npmEnabled) {
-    fetchOperationLogs();
+    // Fetch operation logs when its section is expanded
+    document.getElementById('operationLogsBody').addEventListener('shown.bs.collapse', fetchOperationLogs);
     // Fetch container logs when its section is expanded
     document.getElementById('containerLogsBody').addEventListener('shown.bs.collapse', fetchLogs);
 }
