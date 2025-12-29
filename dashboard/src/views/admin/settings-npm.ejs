@@ -2,6 +2,13 @@
 .collapse-chevron {
     transition: transform 0.3s ease;
 }
+/* Rotate chevron when collapse is shown */
+[aria-expanded="true"] .collapse-chevron {
+    transform: rotate(180deg);
+}
+[aria-expanded="false"] .collapse-chevron {
+    transform: rotate(0deg);
+}
 </style>
 
 <nav aria-label="breadcrumb">
@@ -556,24 +563,8 @@ async function fetchOperationLogs() {
 // Refresh operation logs button
 document.getElementById('refreshOperationLogsBtn').addEventListener('click', fetchOperationLogs);
 
-// Chevron animation for collapsible cards
-document.querySelectorAll('[data-bs-toggle="collapse"]').forEach(header => {
-    const target = document.querySelector(header.dataset.bsTarget);
-    const chevron = header.querySelector('.collapse-chevron');
-    if (target && chevron) {
-        // Set initial state
-        if (target.classList.contains('show')) {
-            chevron.style.transform = 'rotate(180deg)';
-        }
-        // Listen for collapse events
-        target.addEventListener('show.bs.collapse', () => {
-            chevron.style.transform = 'rotate(180deg)';
-        });
-        target.addEventListener('hide.bs.collapse', () => {
-            chevron.style.transform = 'rotate(0deg)';
-        });
-    }
-});
+// Chevron animation is handled by CSS using aria-expanded attribute
+// Bootstrap automatically updates aria-expanded on the toggle element
 
 // Load logs on page load (if NPM is enabled)
 if (npmEnabled) {
