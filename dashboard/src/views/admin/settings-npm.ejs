@@ -124,6 +124,52 @@
                 <div class="alert alert-info">
                     <i class="bi bi-info-circle"></i> <%= t('admin:npm.restartHint') %>
                 </div>
+
+                <hr>
+
+                <!-- Dashboard Domain -->
+                <h5 class="mb-3"><i class="bi bi-globe2"></i> <%= t('admin:npm.dashboardDomain') %></h5>
+
+                <% if (npm.dashboardDomain) { %>
+                <!-- Domain is configured -->
+                <div class="alert alert-success d-flex justify-content-between align-items-center">
+                    <div>
+                        <i class="bi bi-check-circle"></i>
+                        <strong><%= t('admin:npm.dashboardDomainConfigured') %></strong>
+                        <a href="https://<%= npm.dashboardDomain %>" target="_blank" class="ms-2">
+                            https://<%= npm.dashboardDomain %>
+                            <i class="bi bi-box-arrow-up-right"></i>
+                        </a>
+                    </div>
+                    <button type="button" class="btn btn-outline-danger btn-sm" id="removeDashboardDomainBtn">
+                        <i class="bi bi-trash"></i> <%= t('admin:npm.dashboardDomainRemove') %>
+                    </button>
+                </div>
+                <% } else { %>
+                <!-- Domain not configured -->
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label for="dashboard_domain" class="form-label"><%= t('admin:npm.dashboardDomain') %></label>
+                        <input type="text" class="form-control" id="dashboard_domain" placeholder="<%= t('admin:npm.dashboardDomainPlaceholder') %>">
+                        <small class="text-muted"><%= t('admin:npm.dashboardDomainHelp') %></small>
+                    </div>
+                    <div class="col-md-4 d-flex align-items-end">
+                        <button type="button" class="btn btn-outline-primary" id="configureDashboardDomainBtn">
+                            <i class="bi bi-globe2"></i> <%= t('admin:npm.dashboardDomainConfigure') %>
+                        </button>
+                    </div>
+                </div>
+                <div class="form-check mb-3">
+                    <input class="form-check-input" type="checkbox" id="dashboard_domain_ssl" checked>
+                    <label class="form-check-label" for="dashboard_domain_ssl">
+                        <%= t('admin:npm.dashboardDomainSsl') %>
+                    </label>
+                </div>
+                <% } %>
+
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle"></i> <%= t('admin:npm.dashboardDomainNote') %>
+                </div>
             </div>
 
             <hr>
@@ -438,5 +484,88 @@ document.getElementById('refreshLogsBtn').addEventListener('click', fetchLogs);
 // Load logs on page load (if NPM is enabled)
 if (npmEnabled) {
     fetchLogs();
+}
+
+// Configure Dashboard Domain button
+const configureDashboardDomainBtn = document.getElementById('configureDashboardDomainBtn');
+if (configureDashboardDomainBtn) {
+    configureDashboardDomainBtn.addEventListener('click', async function() {
+        const domain = document.getElementById('dashboard_domain').value.trim();
+        const enableSsl = document.getElementById('dashboard_domain_ssl').checked;
+
+        if (!domain) {
+            alert('<%= t("admin:npm.dashboardDomainInvalid") %>');
+            return;
+        }
+
+        const btn = this;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> <%= t("admin:npm.configuring") %>';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/admin/settings/npm/dashboard-domain', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                },
+                body: JSON.stringify({ domain, enableSsl })
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                // Reload page to show configured domain
+                window.location.reload();
+            } else {
+                alert(data.error || '<%= t("admin:npm.dashboardDomainError") %>');
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        } catch (error) {
+            alert('<%= t("admin:npm.dashboardDomainError") %>: ' + error.message);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    });
+}
+
+// Remove Dashboard Domain button
+const removeDashboardDomainBtn = document.getElementById('removeDashboardDomainBtn');
+if (removeDashboardDomainBtn) {
+    removeDashboardDomainBtn.addEventListener('click', async function() {
+        if (!confirm('<%= t("admin:npm.dashboardDomainConfirmRemove") %>')) {
+            return;
+        }
+
+        const btn = this;
+        const originalHtml = btn.innerHTML;
+        btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+        btn.disabled = true;
+
+        try {
+            const response = await fetch('/admin/settings/npm/dashboard-domain', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'X-CSRF-Token': csrfToken
+                }
+            });
+            const data = await response.json();
+
+            if (data.success) {
+                // Reload page to show input form
+                window.location.reload();
+            } else {
+                alert(data.error || '<%= t("admin:npm.dashboardDomainError") %>');
+                btn.innerHTML = originalHtml;
+                btn.disabled = false;
+            }
+        } catch (error) {
+            alert('<%= t("admin:npm.dashboardDomainError") %>: ' + error.message);
+            btn.innerHTML = originalHtml;
+            btn.disabled = false;
+        }
+    });
 }
 </script>

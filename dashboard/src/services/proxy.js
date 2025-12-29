@@ -716,6 +716,100 @@ async function deleteProjectDomains(userId, projectName) {
     logger.info('All project domains deleted', { userId, projectName });
 }
 
+// ============================================
+// Dashboard Domain functions
+// ============================================
+
+// Use in-memory cache for dashboard proxy host ID to avoid database dependency
+let dashboardProxyHostId = null;
+
+/**
+ * Create proxy host for the dashboard container
+ * Routes traffic from a custom domain to dashboard:3000
+ * @param {string} domain - The domain name (e.g., app.dployr.de)
+ * @param {boolean} withSsl - Whether to request SSL certificate
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function createDashboardProxyHost(domain, withSsl = true) {
+    if (!isEnabled()) {
+        return { success: false, error: 'NPM integration is not enabled' };
+    }
+
+    try {
+        // First check if we already have a proxy host for the dashboard
+        const existingHosts = await listProxyHosts();
+        const dashboardHost = existingHosts.find(h =>
+            h.forward_host === 'dashboard' ||
+            h.forward_host === 'dployr-dashboard'
+        );
+
+        // If a dashboard proxy host exists, delete it first
+        if (dashboardHost) {
+            await deleteProxyHost(dashboardHost.id);
+            logger.info('Removed existing dashboard proxy host', { proxyHostId: dashboardHost.id });
+        }
+
+        // Create new proxy host pointing to dashboard container
+        const proxyHost = await createProxyHost('dashboard', domain, 3000, {
+            http2: true
+        });
+
+        dashboardProxyHostId = proxyHost.id;
+        logger.info('Dashboard proxy host created', { domain, proxyHostId: proxyHost.id });
+
+        // Request SSL certificate if requested
+        if (withSsl) {
+            try {
+                const cert = await requestCertificate(domain);
+                if (cert && cert.id) {
+                    await enableSSL(proxyHost.id, cert.id);
+                    logger.info('SSL enabled for dashboard domain', { domain, certificateId: cert.id });
+                }
+            } catch (sslError) {
+                // SSL request might fail (e.g., DNS not configured yet)
+                // Log the error but don't fail the whole operation
+                logger.warn('SSL certificate request failed for dashboard domain', {
+                    domain,
+                    error: sslError.message
+                });
+            }
+        }
+
+        return { success: true, proxyHostId: proxyHost.id };
+    } catch (error) {
+        logger.error('Failed to create dashboard proxy host', { domain, error: error.message });
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Delete the dashboard proxy host
+ * @param {string} domain - The domain name (used for logging)
+ * @returns {Promise<void>}
+ */
+async function deleteDashboardProxyHost(domain) {
+    if (!isEnabled()) return;
+
+    try {
+        // Find the dashboard proxy host by looking for the one forwarding to dashboard container
+        const existingHosts = await listProxyHosts();
+        const dashboardHost = existingHosts.find(h =>
+            h.forward_host === 'dashboard' ||
+            h.forward_host === 'dployr-dashboard' ||
+            (h.domain_names && h.domain_names.includes(domain))
+        );
+
+        if (dashboardHost) {
+            await deleteProxyHost(dashboardHost.id);
+            dashboardProxyHostId = null;
+            logger.info('Dashboard proxy host deleted', { domain, proxyHostId: dashboardHost.id });
+        }
+    } catch (error) {
+        logger.error('Failed to delete dashboard proxy host', { domain, error: error.message });
+        // Don't throw - cleanup should not fail the operation
+    }
+}
+
 module.exports = {
     // Status
     isEnabled,
@@ -747,5 +841,9 @@ module.exports = {
     getDomainRecord,
     deleteDomainMapping,
     updateDomainSSL,
-    deleteProjectDomains
+    deleteProjectDomains,
+
+    // Dashboard Domain functions
+    createDashboardProxyHost,
+    deleteDashboardProxyHost
 };

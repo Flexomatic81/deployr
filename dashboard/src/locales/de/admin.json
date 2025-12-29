@@ -214,6 +214,21 @@
     "recreateHelp": "Löscht alle NPM-Daten und erstellt den Container neu mit den konfigurierten Zugangsdaten.",
     "recreateConfirm": "Achtung: Dies löscht alle NPM-Konfigurationen (Proxy Hosts, SSL-Zertifikate). Fortfahren?",
     "recreateSuccess": "NPM-Container wurde entfernt. Führen Sie 'docker compose up -d npm' auf dem Server aus.",
-    "recreating": "Erstelle neu..."
+    "recreating": "Erstelle neu...",
+    "dashboardDomain": "Dashboard Domain",
+    "dashboardDomainHelp": "Optional: Domain für das Dashboard (z.B. app.dployr.de). Ermöglicht Zugriff ohne Port über HTTPS.",
+    "dashboardDomainPlaceholder": "z.B. app.example.com",
+    "dashboardDomainSsl": "SSL-Zertifikat anfordern",
+    "dashboardDomainConfigure": "Domain konfigurieren",
+    "dashboardDomainRemove": "Domain entfernen",
+    "dashboardDomainActive": "Aktiv",
+    "dashboardDomainConfigured": "Dashboard ist erreichbar unter:",
+    "dashboardDomainNote": "Nach Konfiguration ist das Dashboard unter dieser Domain erreichbar. Port 3000 bleibt als Fallback verfügbar.",
+    "dashboardDomainSuccess": "Dashboard Domain wurde konfiguriert. Das Dashboard ist jetzt unter https://{{domain}} erreichbar.",
+    "dashboardDomainRemoved": "Dashboard Domain wurde entfernt.",
+    "dashboardDomainError": "Fehler beim Konfigurieren der Dashboard Domain.",
+    "dashboardDomainInvalid": "Ungültiges Domain-Format.",
+    "dashboardDomainConfirmRemove": "Dashboard Domain wirklich entfernen? Das Dashboard ist dann nur noch über Port 3000 erreichbar.",
+    "configuring": "Konfiguriere..."
   }
 }

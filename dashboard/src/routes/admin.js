@@ -528,7 +528,8 @@ router.get('/settings/npm', async (req, res) => {
                 hasPassword: !!envVars.NPM_API_PASSWORD,
                 httpPort: envVars.NPM_HTTP_PORT || '80',
                 httpsPort: envVars.NPM_HTTPS_PORT || '443',
-                adminPort: envVars.NPM_ADMIN_PORT || '81'
+                adminPort: envVars.NPM_ADMIN_PORT || '81',
+                dashboardDomain: envVars.NPM_DASHBOARD_DOMAIN || ''
             },
             setupMarker,
             npmStatus
@@ -738,6 +739,83 @@ router.get('/settings/npm/logs', async (req, res) => {
             res.json({ success: false, error: result.error });
         }
     } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Configure dashboard domain (creates proxy host in NPM)
+router.post('/settings/npm/dashboard-domain', async (req, res) => {
+    try {
+        const { domain, ssl } = req.body;
+
+        // Validate domain format
+        const domainRegex = /^[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?(\.[a-zA-Z0-9]([a-zA-Z0-9-]{0,61}[a-zA-Z0-9])?)*$/;
+        if (!domain || !domainRegex.test(domain)) {
+            return res.json({
+                success: false,
+                error: req.t('admin:npm.dashboardDomainInvalid')
+            });
+        }
+
+        // Check if NPM is enabled
+        const isEnabled = await proxyService.isEnabled();
+        if (!isEnabled) {
+            return res.json({
+                success: false,
+                error: req.t('admin:npm.notEnabled')
+            });
+        }
+
+        // Create proxy host for dashboard container
+        const result = await proxyService.createDashboardProxyHost(domain, ssl === 'true' || ssl === true);
+
+        if (result.success) {
+            // Save domain to .env file
+            const envVars = await readEnvFile();
+            envVars.NPM_DASHBOARD_DOMAIN = domain;
+            await writeEnvFile(envVars);
+
+            logger.info('Dashboard domain configured', { domain, ssl: !!ssl, userId: req.session.user.id });
+            res.json({
+                success: true,
+                message: req.t('admin:npm.dashboardDomainSuccess', { domain })
+            });
+        } else {
+            res.json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        logger.error('Failed to configure dashboard domain', { error: error.message });
+        res.json({
+            success: false,
+            error: req.t('admin:npm.dashboardDomainError')
+        });
+    }
+});
+
+// Remove dashboard domain
+router.delete('/settings/npm/dashboard-domain', async (req, res) => {
+    try {
+        const envVars = await readEnvFile();
+        const domain = envVars.NPM_DASHBOARD_DOMAIN;
+
+        if (!domain) {
+            return res.json({ success: true });
+        }
+
+        // Delete proxy host from NPM
+        await proxyService.deleteDashboardProxyHost(domain);
+
+        // Remove from .env file
+        delete envVars.NPM_DASHBOARD_DOMAIN;
+        await writeEnvFile(envVars);
+
+        logger.info('Dashboard domain removed', { domain, userId: req.session.user.id });
+        res.json({
+            success: true,
+            message: req.t('admin:npm.dashboardDomainRemoved')
+        });
+    } catch (error) {
+        logger.error('Failed to remove dashboard domain', { error: error.message });
         res.json({ success: false, error: error.message });
     }
 });
