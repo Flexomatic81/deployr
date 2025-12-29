@@ -89,6 +89,9 @@ services:
     restart: "no"
     environment:
       DISABLE_IPV6: "true"
+      # Initial admin credentials (only used on first start)
+      INITIAL_ADMIN_EMAIL: ${NPM_API_EMAIL:-}
+      INITIAL_ADMIN_PASSWORD: ${NPM_API_PASSWORD:-}
     ports:
       - "${NPM_HTTP_PORT:-80}:80"
       - "${NPM_HTTPS_PORT:-443}:443"

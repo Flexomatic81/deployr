@@ -301,34 +301,37 @@ async function initializeCredentials(email, password) {
     }
 
     // Check if NPM needs initial setup (newer versions >= 2.9.0)
+    // NPM uses INITIAL_ADMIN_EMAIL and INITIAL_ADMIN_PASSWORD env vars on first start
+    // If setup is still false, we need to restart the container to apply env vars
     const setupStatus = await checkSetupStatus();
     if (setupStatus.needsSetup) {
-        logger.info('NPM needs initial setup, creating admin user');
+        logger.info('NPM needs initial setup, restarting container to apply env vars');
         try {
-            // Create initial admin user via setup endpoint
-            const response = await axios.post(`${NPM_API_URL}/users`, {
-                name: 'Administrator',
-                nickname: 'Admin',
-                email: email,
-                roles: ['admin'],
-                is_disabled: false,
+            // Restart container - NPM will read INITIAL_ADMIN_* env vars on startup
+            const container = docker.getContainer(NPM_CONTAINER_NAME);
+            await container.restart();
+
+            // Wait for API to come back up
+            await new Promise(r => setTimeout(r, 10000));
+
+            // Verify credentials work now
+            const verifyResponse = await axios.post(`${NPM_API_URL}/tokens`, {
+                identity: email,
                 secret: password
             }, { timeout: 10000 });
 
-            if (response.data && response.data.id) {
-                logger.info('NPM admin user created successfully', { email, userId: response.data.id });
-
-                // Clear cached token
+            if (verifyResponse.data.token) {
+                logger.info('NPM initialized with configured credentials after restart', { email });
                 cachedToken = null;
                 tokenExpiry = null;
-
                 return { success: true };
             }
+
+            return { success: false, error: 'Failed to verify credentials after restart' };
         } catch (error) {
-            logger.error('Failed to create NPM admin user', {
+            logger.error('Failed to initialize NPM', {
                 error: error.message,
-                status: error.response?.status,
-                data: error.response?.data
+                status: error.response?.status
             });
             return {
                 success: false,
