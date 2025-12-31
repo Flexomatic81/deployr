@@ -16,6 +16,47 @@ const schemas = {
                 'string.max': 'Username must not exceed 30 characters',
                 'any.required': 'Username is required'
             }),
+        email: Joi.string()
+            .email()
+            .required()
+            .messages({
+                'string.email': 'Please enter a valid email address',
+                'any.required': 'Email is required'
+            }),
+        password: Joi.string()
+            .min(8)
+            .required()
+            .messages({
+                'string.min': 'Password must be at least 8 characters long',
+                'any.required': 'Password is required'
+            }),
+        password_confirm: Joi.string()
+            .valid(Joi.ref('password'))
+            .required()
+            .messages({
+                'any.only': 'Passwords do not match',
+                'any.required': 'Password confirmation is required'
+            })
+    }),
+
+    forgotPassword: Joi.object({
+        email: Joi.string()
+            .email()
+            .required()
+            .messages({
+                'string.email': 'Please enter a valid email address',
+                'any.required': 'Email is required'
+            })
+    }),
+
+    resetPassword: Joi.object({
+        token: Joi.string()
+            .length(64)
+            .required()
+            .messages({
+                'string.length': 'Invalid token',
+                'any.required': 'Token is required'
+            }),
         password: Joi.string()
             .min(8)
             .required()

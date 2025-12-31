@@ -4,6 +4,8 @@ const path = require('path');
 const fs = require('fs');
 const gitService = require('./git');
 const dockerService = require('./docker');
+const userService = require('./user');
+const emailService = require('./email');
 const { VALID_INTERVALS } = require('../config/constants');
 const { logger } = require('../config/logger');
 const { generateWebhookSecret } = require('./utils/webhook');
@@ -12,6 +14,73 @@ const USERS_PATH = process.env.USERS_PATH || '/app/users';
 
 // Lock to prevent parallel deployments
 const deploymentLocks = new Set();
+
+/**
+ * Sends deployment notification email based on user preferences
+ */
+async function sendDeploymentNotification(userId, projectName, triggerType, result) {
+    try {
+        // Skip if email is not enabled
+        if (!emailService.isEnabled()) {
+            return;
+        }
+
+        // Get user preferences
+        const prefs = await userService.getNotificationPreferences(userId);
+        if (!prefs || !prefs.email || !prefs.emailVerified) {
+            return;
+        }
+
+        // Check notification preferences
+        const isAutoDeploy = triggerType === 'auto' || triggerType === 'webhook';
+        if (isAutoDeploy && !prefs.autodeploy) {
+            return; // User disabled auto-deploy notifications
+        }
+
+        if (result.success && !prefs.deploySuccess) {
+            return; // User disabled success notifications
+        }
+
+        if (!result.success && !prefs.deployFailure) {
+            return; // User disabled failure notifications
+        }
+
+        // Get user details and language
+        const user = await userService.getUserById(userId);
+        const language = await userService.getUserLanguage(userId);
+
+        // Format duration
+        let duration = '-';
+        if (result.durationMs) {
+            const seconds = Math.round(result.durationMs / 1000);
+            duration = seconds < 60 ? `${seconds}s` : `${Math.floor(seconds / 60)}m ${seconds % 60}s`;
+        }
+
+        // Send appropriate email
+        if (result.success) {
+            await emailService.sendDeploymentSuccessEmail(prefs.email, {
+                username: user.username,
+                projectName,
+                triggerType,
+                duration,
+                newCommit: result.newCommit,
+                commitMessage: result.commitMessage
+            }, language);
+            logger.debug('[AutoDeploy] Success notification sent', { userId, projectName });
+        } else {
+            await emailService.sendDeploymentFailureEmail(prefs.email, {
+                username: user.username,
+                projectName,
+                triggerType,
+                errorMessage: result.errorMessage
+            }, language);
+            logger.debug('[AutoDeploy] Failure notification sent', { userId, projectName });
+        }
+    } catch (error) {
+        // Don't let notification errors affect the deployment result
+        logger.error('[AutoDeploy] Failed to send notification', { userId, projectName, error: error.message });
+    }
+}
 
 /**
  * Enables auto-deploy for a project
@@ -242,13 +311,23 @@ async function executeDeploy(userId, systemUsername, projectName, triggerType = 
             [newCommitHash, userId, projectName]
         );
 
+        const durationMs = Date.now() - startTime;
+
         // Log success
         await updateDeploymentLog(logId, {
             status: 'success',
-            duration_ms: Date.now() - startTime
+            duration_ms: durationMs
         });
 
         logger.info('[AutoDeploy] Successful deployment', { systemUsername, projectName, oldCommit: oldCommitHash?.substring(0,7), newCommit: newCommitHash?.substring(0,7) });
+
+        // Send success notification email
+        await sendDeploymentNotification(userId, projectName, triggerType, {
+            success: true,
+            newCommit: newCommitHash?.substring(0, 7),
+            commitMessage,
+            durationMs
+        });
 
         return {
             success: true,
@@ -261,13 +340,21 @@ async function executeDeploy(userId, systemUsername, projectName, triggerType = 
     } catch (error) {
         logger.error('[AutoDeploy] Deployment error', { projectName, error: error.message });
 
+        const durationMs = Date.now() - startTime;
+
         if (logId) {
             await updateDeploymentLog(logId, {
                 status: 'failed',
                 error_message: error.message,
-                duration_ms: Date.now() - startTime
+                duration_ms: durationMs
             });
         }
+
+        // Send failure notification email
+        await sendDeploymentNotification(userId, projectName, triggerType, {
+            success: false,
+            errorMessage: error.message
+        });
 
         return { success: false, error: error.message };
     } finally {

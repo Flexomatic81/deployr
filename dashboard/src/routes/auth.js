@@ -1,6 +1,7 @@
 const express = require('express');
 const router = express.Router();
 const userService = require('../services/user');
+const emailService = require('../services/email');
 const { redirectIfAuth, requireAuth } = require('../middleware/auth');
 const { validate } = require('../middleware/validation');
 const { logger } = require('../config/logger');
@@ -64,7 +65,7 @@ router.get('/register', redirectIfAuth, (req, res) => {
 
 // Process registration
 router.post('/register', redirectIfAuth, validate('register'), async (req, res) => {
-    const { username, password } = req.validatedBody || req.body;
+    const { username, password, email } = req.validatedBody || req.body;
     // System username is identical to the username
     const system_username = username;
 
@@ -75,8 +76,20 @@ router.post('/register', redirectIfAuth, validate('register'), async (req, res) 
             return res.redirect('/register');
         }
 
+        // Check if email already exists
+        if (email && await userService.emailExists(email)) {
+            req.flash('error', req.t('auth:errors.emailExists'));
+            return res.redirect('/register');
+        }
+
         // Create user (not yet approved)
-        await userService.createUser(username, password, system_username, false);
+        const user = await userService.createUser(username, password, system_username, false, false, email);
+
+        // Send verification email if email provided and email is enabled
+        if (email && emailService.isEnabled() && user.verificationToken) {
+            await emailService.sendVerificationEmail(email, username, user.verificationToken, req.language || 'de');
+            logger.info('Verification email sent', { userId: user.id, email });
+        }
 
         req.flash('info', req.t('auth:flash.registrationPending'));
         res.redirect('/login');
@@ -135,6 +148,143 @@ router.post('/language', async (req, res) => {
         logger.error('Language change error', { error: error.message });
         const referer = req.get('Referer') || '/';
         res.redirect(referer);
+    }
+});
+
+// ============================================
+// Password Reset Routes
+// ============================================
+
+// Show forgot password page
+router.get('/forgot-password', redirectIfAuth, (req, res) => {
+    res.render('forgot-password', { title: req.t('auth:forgotPassword.title') });
+});
+
+// Process forgot password request
+router.post('/forgot-password', redirectIfAuth, validate('forgotPassword'), async (req, res) => {
+    const { email } = req.validatedBody || req.body;
+
+    try {
+        const user = await userService.getUserByEmail(email);
+
+        // Always show success message to prevent email enumeration
+        if (user && emailService.isEnabled()) {
+            const token = await userService.createResetToken(user.id);
+            const language = await userService.getUserLanguage(user.id);
+            await emailService.sendPasswordResetEmail(email, user.username, token, language);
+            logger.info('Password reset email sent', { email, userId: user.id });
+        }
+
+        req.flash('info', req.t('auth:flash.resetEmailSent'));
+        res.redirect('/login');
+    } catch (error) {
+        logger.error('Forgot password error', { error: error.message, email });
+        req.flash('error', req.t('common:errors.loadError'));
+        res.redirect('/forgot-password');
+    }
+});
+
+// Show reset password page
+router.get('/reset-password', redirectIfAuth, async (req, res) => {
+    const { token } = req.query;
+
+    if (!token) {
+        req.flash('error', req.t('auth:errors.invalidToken'));
+        return res.redirect('/forgot-password');
+    }
+
+    const user = await userService.getUserByResetToken(token);
+    if (!user) {
+        req.flash('error', req.t('auth:errors.tokenExpired'));
+        return res.redirect('/forgot-password');
+    }
+
+    res.render('reset-password', {
+        title: req.t('auth:resetPassword.title'),
+        token
+    });
+});
+
+// Process reset password
+router.post('/reset-password', redirectIfAuth, validate('resetPassword'), async (req, res) => {
+    const { token, password } = req.validatedBody || req.body;
+
+    try {
+        const user = await userService.getUserByResetToken(token);
+
+        if (!user) {
+            req.flash('error', req.t('auth:errors.tokenExpired'));
+            return res.redirect('/forgot-password');
+        }
+
+        await userService.updatePassword(user.id, password);
+        await userService.clearResetToken(user.id);
+
+        logger.info('Password reset successful', { userId: user.id });
+        req.flash('success', req.t('auth:flash.passwordReset'));
+        res.redirect('/login');
+    } catch (error) {
+        logger.error('Reset password error', { error: error.message });
+        req.flash('error', req.t('common:errors.loadError'));
+        res.redirect('/forgot-password');
+    }
+});
+
+// ============================================
+// Email Verification Routes
+// ============================================
+
+// Verify email address
+router.get('/verify-email', async (req, res) => {
+    const { token } = req.query;
+
+    if (!token) {
+        req.flash('error', req.t('auth:errors.invalidToken'));
+        return res.redirect('/login');
+    }
+
+    try {
+        const user = await userService.getUserByVerificationToken(token);
+
+        if (!user) {
+            req.flash('error', req.t('auth:errors.tokenExpired'));
+            return res.redirect('/login');
+        }
+
+        await userService.verifyEmail(user.id);
+
+        logger.info('Email verified', { userId: user.id });
+        req.flash('success', req.t('auth:flash.emailVerified'));
+        res.redirect('/login');
+    } catch (error) {
+        logger.error('Email verification error', { error: error.message });
+        req.flash('error', req.t('common:errors.loadError'));
+        res.redirect('/login');
+    }
+});
+
+// Resend verification email
+router.post('/resend-verification', requireAuth, async (req, res) => {
+    try {
+        const user = await userService.getFullUserById(req.session.user.id);
+
+        if (!user.email) {
+            return res.json({ success: false, error: req.t('auth:errors.noEmail') });
+        }
+
+        if (user.email_verified) {
+            return res.json({ success: false, error: req.t('auth:errors.alreadyVerified') });
+        }
+
+        const token = await userService.updateEmail(user.id, user.email);
+        const language = await userService.getUserLanguage(user.id);
+        await emailService.sendVerificationEmail(user.email, user.username, token, language);
+
+        logger.info('Verification email resent', { userId: user.id, email: user.email });
+        res.json({ success: true, message: req.t('auth:flash.verificationSent') });
+    } catch (error) {
+        logger.error('Resend verification error', { error: error.message });
+        res.json({ success: false, error: error.message });
     }
 });
 

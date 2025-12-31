@@ -19,7 +19,9 @@
     "errorsOnly": "Errors Only",
     "deploymentsDescription": "Monitor all deployments from all users.",
     "npmDescription": "Configure domain management and SSL certificates for projects.",
-    "configureNpm": "Configure NPM"
+    "configureNpm": "Configure NPM",
+    "emailDescription": "Set up SMTP server for email notifications.",
+    "configureEmail": "Configure Email"
   },
 
   "users": {
@@ -44,6 +46,7 @@
     "title": "Create New User",
     "usernameHelp": "Used as the system username for project folders",
     "passwordHelp": "At least 6 characters",
+    "emailHelp": "Optional. Used for password reset and notifications.",
     "makeAdmin": "Make admin",
     "submit": "Create User"
   },
@@ -55,7 +58,9 @@
     "newPasswordHint": "Leave blank to keep the current password",
     "isAdmin": "Administrator",
     "submit": "Save Changes",
-    "systemUsernameWarning": "Changes may make existing projects inaccessible!"
+    "systemUsernameWarning": "Changes may make existing projects inaccessible!",
+    "emailVerified": "Email address is verified",
+    "emailNotVerified": "Email address is not yet verified"
   },
 
   "pending": {
@@ -154,6 +159,39 @@
     "userNotFound": "User not found",
     "cannotDeleteSelf": "You cannot delete yourself",
     "cannotDeleteLastAdmin": "The last administrator cannot be deleted"
+  },
+
+  "email": {
+    "title": "Email Configuration",
+    "status": {
+      "title": "Status",
+      "enabled": "Enabled",
+      "disabled": "Disabled"
+    },
+    "quickActions": "Quick Actions",
+    "testConnection": "Test Connection",
+    "sendTestEmail": "Send Test Email",
+    "testEmailAddress": "Email Address for Test",
+    "testEmailSent": "Test email has been sent.",
+    "noEmailProvided": "Please enter an email address.",
+    "configuration": "Configuration",
+    "enable": "Enable Email Sending",
+    "enableHelp": "Enables email notifications for registration, password reset, and account approval.",
+    "smtpSettings": "SMTP Settings",
+    "host": "SMTP Server",
+    "port": "Port",
+    "user": "Username",
+    "password": "Password",
+    "passwordPlaceholder": "Enter password",
+    "passwordUnchanged": "••••••••",
+    "secure": "Use SSL/TLS",
+    "secureHelp": "Enable this for port 465, disable for port 587 with STARTTLS.",
+    "senderSettings": "Sender Settings",
+    "from": "From Address",
+    "fromHelp": "Format: Name <email@example.com>",
+    "saved": "Email settings saved.",
+    "connectionSuccess": "Connection successful!",
+    "connectionFailed": "Connection failed."
   },
 
   "npm": {

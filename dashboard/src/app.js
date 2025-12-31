@@ -29,6 +29,7 @@ const adminRoutes = require('./routes/admin');
 const helpRoutes = require('./routes/help');
 const proxyRoutes = require('./routes/proxy');
 const webhookRoutes = require('./routes/webhooks');
+const profileRoutes = require('./routes/profile');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -295,6 +296,7 @@ app.use('/databases', databaseRoutes);
 app.use('/admin', adminRoutes);
 app.use('/help', helpRoutes);
 app.use('/proxy', proxyRoutes);
+app.use('/profile', profileRoutes);
 
 // Home Route
 app.get('/', async (req, res) => {

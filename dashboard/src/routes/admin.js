@@ -8,6 +8,7 @@ const { requireAuth, requireAdmin } = require('../middleware/auth');
 const userService = require('../services/user');
 const projectService = require('../services/project');
 const proxyService = require('../services/proxy');
+const emailService = require('../services/email');
 const { logger } = require('../config/logger');
 const { pool } = require('../config/database');
 
@@ -74,6 +75,14 @@ router.post('/users/:id/approve', async (req, res) => {
         const user = await userService.approveUser(req.params.id);
 
         if (user) {
+            // Send approval notification email if enabled and user has email
+            const fullUser = await userService.getFullUserById(user.id);
+            if (emailService.isEnabled() && fullUser.email) {
+                const language = await userService.getUserLanguage(user.id);
+                await emailService.sendApprovalEmail(fullUser.email, user.username, language);
+                logger.info('Approval email sent', { userId: user.id, email: fullUser.email });
+            }
+
             req.flash('success', req.t('admin:flash.userApproved', { username: user.username }));
         } else {
             req.flash('error', req.t('admin:errors.userNotFound'));
@@ -135,7 +144,7 @@ router.get('/users/create', (req, res) => {
 // Create new user - Processing
 router.post('/users', async (req, res) => {
     try {
-        const { username, password, system_username, is_admin } = req.body;
+        const { username, password, system_username, is_admin, email } = req.body;
 
         // Validation
         if (!username || !password || !system_username) {
@@ -159,8 +168,14 @@ router.post('/users', async (req, res) => {
             return res.redirect('/admin/users/create');
         }
 
-        // Admin-created users are automatically approved
-        await userService.createUser(username, password, system_username, is_admin === 'on', true);
+        // Check if email is already in use
+        if (email && await userService.emailExists(email)) {
+            req.flash('error', req.t('auth:errors.emailExists'));
+            return res.redirect('/admin/users/create');
+        }
+
+        // Admin-created users are automatically approved (email is optional)
+        await userService.createUser(username, password, system_username, is_admin === 'on', true, email || null);
 
         req.flash('success', req.t('admin:flash.userCreated', { username }));
         res.redirect('/admin/users');
@@ -174,7 +189,8 @@ router.post('/users', async (req, res) => {
 // Edit user - Form
 router.get('/users/:id/edit', async (req, res) => {
     try {
-        const editUser = await userService.getUserById(req.params.id);
+        // Use getFullUserById to include email fields
+        const editUser = await userService.getFullUserById(req.params.id);
 
         if (!editUser) {
             req.flash('error', req.t('admin:errors.userNotFound'));
@@ -195,7 +211,7 @@ router.get('/users/:id/edit', async (req, res) => {
 // Edit user - Processing
 router.put('/users/:id', async (req, res) => {
     try {
-        const { username, password, system_username, is_admin } = req.body;
+        const { username, password, system_username, is_admin, email } = req.body;
         const userId = req.params.id;
 
         // Validation
@@ -210,11 +226,18 @@ router.put('/users/:id', async (req, res) => {
             return res.redirect(`/admin/users/${userId}/edit`);
         }
 
+        // Check if email is already in use by another user
+        if (email && await userService.emailExists(email, userId)) {
+            req.flash('error', req.t('auth:errors.emailExists'));
+            return res.redirect(`/admin/users/${userId}/edit`);
+        }
+
         await userService.updateUser(userId, {
             username,
             password: password || null,
             systemUsername: system_username,
-            isAdmin: is_admin === 'on'
+            isAdmin: is_admin === 'on',
+            email: email || null
         });
 
         req.flash('success', req.t('admin:flash.userUpdated', { username }));
@@ -511,6 +534,122 @@ async function updateSetupMarker(updates) {
     const updated = { ...current, ...updates };
     await fs.writeFile(SETUP_MARKER_PATH, JSON.stringify(updated, null, 2));
 }
+
+// ============================================
+// Email Settings
+// ============================================
+
+// Show Email settings
+router.get('/settings/email', async (req, res) => {
+    try {
+        const envVars = await readEnvFile();
+
+        res.render('admin/settings-email', {
+            title: req.t('admin:email.title'),
+            email: {
+                enabled: envVars.EMAIL_ENABLED === 'true',
+                host: envVars.EMAIL_HOST || '',
+                port: envVars.EMAIL_PORT || '587',
+                user: envVars.EMAIL_USER || '',
+                hasPassword: !!envVars.EMAIL_PASSWORD,
+                secure: envVars.EMAIL_SECURE === 'true',
+                from: envVars.EMAIL_FROM || ''
+            }
+        });
+    } catch (error) {
+        logger.error('Error loading email settings', { error: error.message });
+        req.flash('error', req.t('common:errors.loadError'));
+        res.redirect('/admin');
+    }
+});
+
+// Save Email settings
+router.post('/settings/email', async (req, res) => {
+    try {
+        const { email_enabled, email_host, email_port, email_user, email_password, email_secure, email_from } = req.body;
+
+        const envVars = await readEnvFile();
+
+        envVars.EMAIL_ENABLED = email_enabled === 'on' ? 'true' : 'false';
+
+        if (email_host) envVars.EMAIL_HOST = email_host;
+        if (email_port) envVars.EMAIL_PORT = email_port;
+        if (email_user) envVars.EMAIL_USER = email_user;
+        if (email_password && email_password.trim()) {
+            envVars.EMAIL_PASSWORD = email_password;
+        }
+        envVars.EMAIL_SECURE = email_secure === 'on' ? 'true' : 'false';
+        if (email_from) envVars.EMAIL_FROM = email_from;
+
+        await writeEnvFile(envVars);
+
+        // Update process.env so changes take effect immediately
+        process.env.EMAIL_ENABLED = envVars.EMAIL_ENABLED;
+        process.env.EMAIL_HOST = envVars.EMAIL_HOST || '';
+        process.env.EMAIL_PORT = envVars.EMAIL_PORT || '587';
+        process.env.EMAIL_USER = envVars.EMAIL_USER || '';
+        if (envVars.EMAIL_PASSWORD) {
+            process.env.EMAIL_PASSWORD = envVars.EMAIL_PASSWORD;
+        }
+        process.env.EMAIL_SECURE = envVars.EMAIL_SECURE;
+        process.env.EMAIL_FROM = envVars.EMAIL_FROM || '';
+
+        // Reset the email transporter to pick up new config
+        emailService.resetTransporter();
+
+        logger.info('Email settings updated', { enabled: email_enabled === 'on' });
+
+        req.flash('success', req.t('admin:email.saved'));
+        res.redirect('/admin/settings/email');
+    } catch (error) {
+        logger.error('Error saving email settings', { error: error.message });
+        req.flash('error', req.t('common:errors.saveError'));
+        res.redirect('/admin/settings/email');
+    }
+});
+
+// Test email connection
+router.post('/settings/email/test', async (req, res) => {
+    logger.info('Testing email connection...');
+    try {
+        const result = await emailService.testConnection();
+        logger.info('Email connection test result', { result });
+        if (result.success) {
+            res.json({ success: true, message: req.t('admin:email.connectionSuccess') });
+        } else {
+            res.json({ success: false, error: result.error });
+        }
+    } catch (error) {
+        logger.error('Email connection test error', { error: error.message });
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Send test email
+router.post('/settings/email/send-test', async (req, res) => {
+    try {
+        const { email } = req.body;
+
+        if (!email) {
+            return res.json({ success: false, error: req.t('admin:email.noEmailProvided') });
+        }
+
+        const language = await userService.getUserLanguage(req.session.user.id);
+        const result = await emailService.sendTestEmail(email, language);
+
+        if (result.success) {
+            res.json({ success: true, message: req.t('admin:email.testEmailSent') });
+        } else {
+            res.json({ success: false, error: result.error || result.reason });
+        }
+    } catch (error) {
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// ============================================
+// NPM Settings
+// ============================================
 
 // Show NPM settings
 router.get('/settings/npm', async (req, res) => {

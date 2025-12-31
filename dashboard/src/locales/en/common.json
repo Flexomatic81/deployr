@@ -5,7 +5,8 @@
     "databases": "Databases",
     "admin": "Admin",
     "help": "Help",
-    "logout": "Logout"
+    "logout": "Logout",
+    "notifications": "Notifications"
   },
   "buttons": {
     "save": "Save",

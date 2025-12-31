@@ -1,0 +1,165 @@
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/dashboard"><%= t('common:nav.dashboard') %></a></li>
+        <li class="breadcrumb-item active"><%= t('profile:notifications.title') %></li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-bell"></i> <%= t('profile:notifications.title') %></h1>
+</div>
+
+<% if (!emailEnabled) { %>
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> <%= t('profile:notifications.emailDisabled') %>
+</div>
+<% } else if (!user.email) { %>
+<div class="alert alert-info">
+    <i class="bi bi-info-circle"></i> <%= t('profile:notifications.noEmail') %>
+</div>
+<% } else if (!user.email_verified) { %>
+<div class="alert alert-warning">
+    <i class="bi bi-exclamation-triangle"></i> <%= t('profile:notifications.emailNotVerified') %>
+    <button type="button" class="btn btn-sm btn-outline-warning ms-2" id="resendVerificationBtn">
+        <i class="bi bi-envelope"></i> <%= t('profile:notifications.resendVerification') %>
+    </button>
+</div>
+<% } %>
+
+<div class="row">
+    <div class="col-md-8">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-gear"></i> <%= t('profile:notifications.settings') %>
+            </div>
+            <div class="card-body">
+                <% if (user.email) { %>
+                <div class="mb-4">
+                    <label class="form-label text-muted"><%= t('common:labels.email') %></label>
+                    <div class="d-flex align-items-center">
+                        <span class="me-2"><%= user.email %></span>
+                        <% if (user.email_verified) { %>
+                        <span class="badge bg-success"><i class="bi bi-check-circle"></i> <%= t('profile:notifications.verified') %></span>
+                        <% } else { %>
+                        <span class="badge bg-warning text-dark"><i class="bi bi-exclamation-triangle"></i> <%= t('profile:notifications.unverified') %></span>
+                        <% } %>
+                    </div>
+                </div>
+                <% } %>
+
+                <form action="/profile/notifications" method="POST">
+                    <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+                    <h6 class="mb-3"><i class="bi bi-rocket"></i> <%= t('profile:notifications.deployments') %></h6>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="notify_deploy_success" name="notify_deploy_success"
+                                   <%= prefs.deploySuccess ? 'checked' : '' %>
+                                   <%= !emailEnabled || !user.email || !user.email_verified ? 'disabled' : '' %>>
+                            <label class="form-check-label" for="notify_deploy_success">
+                                <strong><%= t('profile:notifications.deploySuccess') %></strong>
+                            </label>
+                        </div>
+                        <small class="text-muted ms-4"><%= t('profile:notifications.deploySuccessHelp') %></small>
+                    </div>
+
+                    <div class="mb-3">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="notify_deploy_failure" name="notify_deploy_failure"
+                                   <%= prefs.deployFailure ? 'checked' : '' %>
+                                   <%= !emailEnabled || !user.email || !user.email_verified ? 'disabled' : '' %>>
+                            <label class="form-check-label" for="notify_deploy_failure">
+                                <strong><%= t('profile:notifications.deployFailure') %></strong>
+                            </label>
+                        </div>
+                        <small class="text-muted ms-4"><%= t('profile:notifications.deployFailureHelp') %></small>
+                    </div>
+
+                    <div class="mb-4">
+                        <div class="form-check form-switch">
+                            <input class="form-check-input" type="checkbox" id="notify_autodeploy" name="notify_autodeploy"
+                                   <%= prefs.autodeploy ? 'checked' : '' %>
+                                   <%= !emailEnabled || !user.email || !user.email_verified ? 'disabled' : '' %>>
+                            <label class="form-check-label" for="notify_autodeploy">
+                                <strong><%= t('profile:notifications.autodeploy') %></strong>
+                            </label>
+                        </div>
+                        <small class="text-muted ms-4"><%= t('profile:notifications.autodeployHelp') %></small>
+                    </div>
+
+                    <hr>
+
+                    <div class="d-flex justify-content-between">
+                        <a href="/dashboard" class="btn btn-outline-secondary">
+                            <i class="bi bi-arrow-left"></i> <%= t('common:buttons.back') %>
+                        </a>
+                        <button type="submit" class="btn btn-primary" <%= !emailEnabled || !user.email || !user.email_verified ? 'disabled' : '' %>>
+                            <i class="bi bi-check-lg"></i> <%= t('common:buttons.save') %>
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="col-md-4">
+        <div class="card">
+            <div class="card-header">
+                <i class="bi bi-info-circle"></i> <%= t('profile:notifications.info') %>
+            </div>
+            <div class="card-body">
+                <p class="text-muted small"><%= t('profile:notifications.infoText') %></p>
+                <ul class="text-muted small mb-0">
+                    <li><%= t('profile:notifications.infoItem1') %></li>
+                    <li><%= t('profile:notifications.infoItem2') %></li>
+                    <li><%= t('profile:notifications.infoItem3') %></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const csrfToken = '<%= csrfToken %>';
+
+// Resend verification email
+document.getElementById('resendVerificationBtn')?.addEventListener('click', async function() {
+    const btn = this;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/resend-verification', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': csrfToken
+            }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            btn.innerHTML = '<i class="bi bi-check-circle"></i> ' + data.message;
+            btn.classList.remove('btn-outline-warning');
+            btn.classList.add('btn-success');
+        } else {
+            btn.innerHTML = '<i class="bi bi-x-circle"></i> ' + (data.error || 'Error');
+            btn.classList.remove('btn-outline-warning');
+            btn.classList.add('btn-danger');
+        }
+    } catch (error) {
+        btn.innerHTML = '<i class="bi bi-x-circle"></i> Error';
+        btn.classList.remove('btn-outline-warning');
+        btn.classList.add('btn-danger');
+    }
+
+    setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+        btn.classList.remove('btn-success', 'btn-danger');
+        btn.classList.add('btn-outline-warning');
+    }, 3000);
+});
+</script>

@@ -30,6 +30,18 @@
                     </div>
 
                     <div class="mb-3">
+                        <label for="email" class="form-label">
+                            <%= t('common:labels.email') %>
+                            <%- include('partials/help-icon', { text: t('auth:register.emailHelp') }) %>
+                        </label>
+                        <div class="input-group">
+                            <span class="input-group-text"><i class="bi bi-envelope"></i></span>
+                            <input type="email" class="form-control" id="email" name="email" required
+                                   placeholder="<%= t('auth:register.emailPlaceholder') %>">
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
                         <label for="password" class="form-label"><%= t('common:labels.password') %></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock"></i></span>

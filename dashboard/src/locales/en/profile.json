@@ -1,0 +1,25 @@
+{
+  "notifications": {
+    "title": "Notifications",
+    "settings": "Notification Settings",
+    "emailDisabled": "Email notifications are not enabled on this server.",
+    "noEmail": "You have not set an email address. Add an email address in your profile to receive notifications.",
+    "emailNotVerified": "Your email address is not yet verified. Please verify it to receive notifications.",
+    "resendVerification": "Resend",
+    "verified": "Verified",
+    "unverified": "Not verified",
+    "deployments": "Deployment Notifications",
+    "deploySuccess": "Successful Deployments",
+    "deploySuccessHelp": "Receive an email when a deployment completes successfully.",
+    "deployFailure": "Failed Deployments",
+    "deployFailureHelp": "Receive an email when a deployment fails.",
+    "autodeploy": "Auto-Deploy Notifications",
+    "autodeployHelp": "Receive emails for automatic deployments (polling and webhooks).",
+    "info": "Note",
+    "infoText": "Email notifications are only sent when:",
+    "infoItem1": "Email is enabled on the server",
+    "infoItem2": "You have a verified email address",
+    "infoItem3": "The respective notification is enabled",
+    "saved": "Notification settings saved."
+  }
+}
