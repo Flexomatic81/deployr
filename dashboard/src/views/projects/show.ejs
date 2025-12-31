@@ -480,9 +480,9 @@
 <!-- Environment variables (only for manage or higher) -->
 <% if (canManage) { %>
 <div class="card d-elevated mb-4">
-    <div class="card-header d-collapsible-header collapsed" role="button" data-bs-toggle="collapse" data-bs-target="#collapseEnv" aria-expanded="false" aria-controls="collapseEnv">
+    <div class="card-header d-collapsible-header collapsed">
         <div class="d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
+            <h5 class="mb-0 flex-grow-1" role="button" data-bs-toggle="collapse" data-bs-target="#collapseEnv" aria-expanded="false" aria-controls="collapseEnv">
                 <i class="bi bi-file-earmark-code"></i> <%= t('projects:show.envTitle') %>
                 <%- include('../partials/help-icon', { text: t('projects:show.envHelp') }) %>
                 <% if (userDatabases && userDatabases.length > 0) { %>
@@ -491,8 +491,8 @@
             </h5>
             <div class="d-flex align-items-center">
                 <% if (userDatabases && userDatabases.length > 0) { %>
-                <div class="btn-group btn-group-sm me-2" data-stop-propagation>
-                    <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown"
+                <div class="btn-group btn-group-sm me-2">
+                    <button type="button" class="btn btn-outline-primary dropdown-toggle" data-bs-toggle="dropdown" data-bs-auto-close="true"
                         title="<%= envExample && envExample.exists ? t('projects:show.setupDbHelp', { filename: envExample.filename }) : t('projects:show.setupDbHelpNoExample') %>">
                         <i class="bi bi-database-add"></i> <%= t('projects:show.setupDb') %>
                     </button>
@@ -517,7 +517,7 @@
                     </ul>
                 </div>
                 <% } %>
-                <i class="bi bi-chevron-down collapse-icon"></i>
+                <i class="bi bi-chevron-down collapse-icon" role="button" data-bs-toggle="collapse" data-bs-target="#collapseEnv" aria-expanded="false" aria-controls="collapseEnv"></i>
             </div>
         </div>
     </div>
@@ -868,13 +868,6 @@ document.addEventListener('DOMContentLoaded', function() {
             if (!confirm(this.dataset.confirm)) {
                 e.preventDefault();
             }
-        });
-    });
-
-    // Stop propagation for dropdown buttons in collapsible headers
-    document.querySelectorAll('[data-stop-propagation]').forEach(function(el) {
-        el.addEventListener('click', function(e) {
-            e.stopPropagation();
         });
     });
 });
