@@ -18,12 +18,16 @@
                         </div>
                     </div>
 
-                    <div class="mb-4">
+                    <div class="mb-3">
                         <label for="password" class="form-label"><%= t('common:labels.password') %></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock"></i></span>
                             <input type="password" class="form-control" id="password" name="password" required>
                         </div>
+                    </div>
+
+                    <div class="mb-4 text-end">
+                        <a href="/forgot-password" class="small text-muted"><%= t('auth:login.forgotPassword') %></a>
                     </div>
 
                     <button type="submit" class="btn btn-primary w-100">

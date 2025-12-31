@@ -186,6 +186,49 @@ async function initDatabase() {
             // Column already exists - ignore
         }
 
+        // Migration: Add email columns for email verification and password reset
+        try {
+            await connection.execute(`
+                ALTER TABLE dashboard_users ADD COLUMN email VARCHAR(255) NULL
+            `);
+            logger.info('Migration: Added email column');
+        } catch (e) {
+            // Column already exists - ignore
+        }
+
+        try {
+            await connection.execute(`
+                ALTER TABLE dashboard_users ADD COLUMN email_verified BOOLEAN DEFAULT FALSE
+            `);
+            logger.info('Migration: Added email_verified column');
+        } catch (e) {
+            // Column already exists - ignore
+        }
+
+        try {
+            await connection.execute(`
+                ALTER TABLE dashboard_users ADD COLUMN verification_token VARCHAR(64) NULL
+            `);
+            await connection.execute(`
+                ALTER TABLE dashboard_users ADD COLUMN verification_token_expires DATETIME NULL
+            `);
+            logger.info('Migration: Added verification_token columns');
+        } catch (e) {
+            // Columns already exist - ignore
+        }
+
+        try {
+            await connection.execute(`
+                ALTER TABLE dashboard_users ADD COLUMN reset_token VARCHAR(64) NULL
+            `);
+            await connection.execute(`
+                ALTER TABLE dashboard_users ADD COLUMN reset_token_expires DATETIME NULL
+            `);
+            logger.info('Migration: Added reset_token columns');
+        } catch (e) {
+            // Columns already exist - ignore
+        }
+
         // Project domains table for NPM integration
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS project_domains (

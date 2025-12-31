@@ -1,0 +1,242 @@
+<nav aria-label="breadcrumb">
+    <ol class="breadcrumb">
+        <li class="breadcrumb-item"><a href="/dashboard"><%= t('common:nav.dashboard') %></a></li>
+        <li class="breadcrumb-item"><a href="/admin"><%= t('common:nav.admin') %></a></li>
+        <li class="breadcrumb-item active"><%= t('admin:email.title') %></li>
+    </ol>
+</nav>
+
+<div class="d-flex justify-content-between align-items-center mb-4">
+    <h1><i class="bi bi-envelope"></i> <%= t('admin:email.title') %></h1>
+</div>
+
+<!-- Status Card -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card" id="statusCard">
+            <div class="card-body">
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="text-muted mb-1"><%= t('admin:email.status.title') %></h6>
+                        <span id="statusBadge" class="badge <%= email.enabled ? 'bg-success' : 'bg-secondary' %> fs-6">
+                            <% if (email.enabled) { %>
+                                <i class="bi bi-check-circle"></i> <%= t('admin:email.status.enabled') %>
+                            <% } else { %>
+                                <i class="bi bi-x-circle"></i> <%= t('admin:email.status.disabled') %>
+                            <% } %>
+                        </span>
+                    </div>
+                    <i class="bi bi-envelope fs-1 <%= email.enabled ? 'text-success' : 'text-secondary' %> opacity-50"></i>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h6 class="text-muted mb-2"><%= t('admin:email.quickActions') %></h6>
+                <button type="button" class="btn btn-outline-primary btn-sm" id="testConnectionBtn" <%= !email.enabled ? 'disabled' : '' %>>
+                    <i class="bi bi-plug"></i> <%= t('admin:email.testConnection') %>
+                </button>
+                <button type="button" class="btn btn-outline-secondary btn-sm" id="sendTestEmailBtn" <%= !email.enabled ? 'disabled' : '' %> data-bs-toggle="modal" data-bs-target="#testEmailModal">
+                    <i class="bi bi-send"></i> <%= t('admin:email.sendTestEmail') %>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Configuration Form -->
+<div class="card">
+    <div class="card-header">
+        <i class="bi bi-gear"></i> <%= t('admin:email.configuration') %>
+    </div>
+    <div class="card-body">
+        <form action="/admin/settings/email" method="POST">
+            <input type="hidden" name="_csrf" value="<%= csrfToken %>">
+
+            <!-- Enable/Disable -->
+            <div class="mb-4">
+                <div class="form-check form-switch">
+                    <input class="form-check-input" type="checkbox" id="email_enabled" name="email_enabled" <%= email.enabled ? 'checked' : '' %>>
+                    <label class="form-check-label" for="email_enabled">
+                        <strong><%= t('admin:email.enable') %></strong>
+                    </label>
+                </div>
+                <small class="text-muted"><%= t('admin:email.enableHelp') %></small>
+            </div>
+
+            <div id="emailSettings" class="<%= email.enabled ? '' : 'd-none' %>">
+                <hr>
+
+                <!-- SMTP Settings -->
+                <h5 class="mb-3"><i class="bi bi-server"></i> <%= t('admin:email.smtpSettings') %></h5>
+
+                <div class="row mb-3">
+                    <div class="col-md-8">
+                        <label for="email_host" class="form-label"><%= t('admin:email.host') %></label>
+                        <input type="text" class="form-control" id="email_host" name="email_host" value="<%= email.host %>" placeholder="smtp.example.com">
+                    </div>
+                    <div class="col-md-4">
+                        <label for="email_port" class="form-label"><%= t('admin:email.port') %></label>
+                        <input type="number" class="form-control" id="email_port" name="email_port" value="<%= email.port %>" placeholder="587">
+                    </div>
+                </div>
+
+                <div class="row mb-3">
+                    <div class="col-md-6">
+                        <label for="email_user" class="form-label"><%= t('admin:email.user') %></label>
+                        <input type="text" class="form-control" id="email_user" name="email_user" value="<%= email.user %>" placeholder="noreply@example.com">
+                    </div>
+                    <div class="col-md-6">
+                        <label for="email_password" class="form-label"><%= t('admin:email.password') %></label>
+                        <input type="password" class="form-control" id="email_password" name="email_password" placeholder="<%= email.hasPassword ? t('admin:email.passwordUnchanged') : t('admin:email.passwordPlaceholder') %>">
+                    </div>
+                </div>
+
+                <div class="mb-4">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" id="email_secure" name="email_secure" <%= email.secure ? 'checked' : '' %>>
+                        <label class="form-check-label" for="email_secure">
+                            <%= t('admin:email.secure') %>
+                        </label>
+                    </div>
+                    <small class="text-muted"><%= t('admin:email.secureHelp') %></small>
+                </div>
+
+                <hr>
+
+                <!-- Sender Settings -->
+                <h5 class="mb-3"><i class="bi bi-person-badge"></i> <%= t('admin:email.senderSettings') %></h5>
+
+                <div class="mb-4">
+                    <label for="email_from" class="form-label"><%= t('admin:email.from') %></label>
+                    <input type="text" class="form-control" id="email_from" name="email_from" value="<%= email.from %>" placeholder="Dployr <noreply@example.com>">
+                    <small class="text-muted"><%= t('admin:email.fromHelp') %></small>
+                </div>
+            </div>
+
+            <hr>
+
+            <div class="d-flex justify-content-between">
+                <a href="/admin" class="btn btn-outline-secondary">
+                    <i class="bi bi-arrow-left"></i> <%= t('common:buttons.back') %>
+                </a>
+                <button type="submit" class="btn btn-primary">
+                    <i class="bi bi-check-lg"></i> <%= t('common:buttons.save') %>
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Test Email Modal -->
+<div class="modal fade" id="testEmailModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title"><i class="bi bi-send"></i> <%= t('admin:email.sendTestEmail') %></h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <div class="mb-3">
+                    <label for="testEmailAddress" class="form-label"><%= t('admin:email.testEmailAddress') %></label>
+                    <input type="email" class="form-control" id="testEmailAddress" placeholder="test@example.com">
+                </div>
+                <div id="testEmailResult" class="alert d-none"></div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t('common:buttons.cancel') %></button>
+                <button type="button" class="btn btn-primary" id="sendTestEmailConfirmBtn">
+                    <i class="bi bi-send"></i> <%= t('admin:email.sendTestEmail') %>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+// Toggle settings visibility based on enable checkbox
+document.getElementById('email_enabled').addEventListener('change', function() {
+    document.getElementById('emailSettings').classList.toggle('d-none', !this.checked);
+});
+
+// Test connection button
+document.getElementById('testConnectionBtn').addEventListener('click', async function() {
+    const btn = this;
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span>';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/admin/settings/email/test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '<%= csrfToken %>'
+            }
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            btn.innerHTML = '<i class="bi bi-check-circle text-success"></i> ' + data.message;
+        } else {
+            btn.innerHTML = '<i class="bi bi-x-circle text-danger"></i> ' + (data.error || 'Error');
+        }
+    } catch (error) {
+        btn.innerHTML = '<i class="bi bi-x-circle text-danger"></i> Error';
+    }
+
+    setTimeout(() => {
+        btn.innerHTML = originalHtml;
+        btn.disabled = false;
+    }, 3000);
+});
+
+// Send test email
+document.getElementById('sendTestEmailConfirmBtn').addEventListener('click', async function() {
+    const btn = this;
+    const emailInput = document.getElementById('testEmailAddress');
+    const resultDiv = document.getElementById('testEmailResult');
+    const email = emailInput.value.trim();
+
+    if (!email) {
+        resultDiv.className = 'alert alert-warning';
+        resultDiv.textContent = '<%= t("admin:email.noEmailProvided") %>';
+        resultDiv.classList.remove('d-none');
+        return;
+    }
+
+    const originalHtml = btn.innerHTML;
+    btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Sending...';
+    btn.disabled = true;
+
+    try {
+        const response = await fetch('/admin/settings/email/send-test', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRF-Token': '<%= csrfToken %>'
+            },
+            body: JSON.stringify({ email })
+        });
+        const data = await response.json();
+
+        if (data.success) {
+            resultDiv.className = 'alert alert-success';
+            resultDiv.textContent = data.message;
+        } else {
+            resultDiv.className = 'alert alert-danger';
+            resultDiv.textContent = data.error || 'Error';
+        }
+        resultDiv.classList.remove('d-none');
+    } catch (error) {
+        resultDiv.className = 'alert alert-danger';
+        resultDiv.textContent = 'Error sending email';
+        resultDiv.classList.remove('d-none');
+    }
+
+    btn.innerHTML = originalHtml;
+    btn.disabled = false;
+});
+</script>

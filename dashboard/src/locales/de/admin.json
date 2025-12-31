@@ -19,7 +19,9 @@
     "errorsOnly": "Nur Fehler",
     "deploymentsDescription": "Alle Deployments aller Benutzer überwachen.",
     "npmDescription": "Domain-Verwaltung und SSL-Zertifikate für Projekte konfigurieren.",
-    "configureNpm": "NPM konfigurieren"
+    "configureNpm": "NPM konfigurieren",
+    "emailDescription": "SMTP-Server für E-Mail-Benachrichtigungen einrichten.",
+    "configureEmail": "E-Mail konfigurieren"
   },
 
   "users": {
@@ -154,6 +156,39 @@
     "userNotFound": "Benutzer nicht gefunden",
     "cannotDeleteSelf": "Sie können sich nicht selbst löschen",
     "cannotDeleteLastAdmin": "Der letzte Administrator kann nicht gelöscht werden"
+  },
+
+  "email": {
+    "title": "E-Mail-Konfiguration",
+    "status": {
+      "title": "Status",
+      "enabled": "Aktiviert",
+      "disabled": "Deaktiviert"
+    },
+    "quickActions": "Schnellaktionen",
+    "testConnection": "Verbindung testen",
+    "sendTestEmail": "Test-E-Mail senden",
+    "testEmailAddress": "E-Mail-Adresse für Test",
+    "testEmailSent": "Test-E-Mail wurde gesendet.",
+    "noEmailProvided": "Bitte gib eine E-Mail-Adresse ein.",
+    "configuration": "Konfiguration",
+    "enable": "E-Mail-Versand aktivieren",
+    "enableHelp": "Aktiviert E-Mail-Benachrichtigungen für Registrierung, Passwort-Reset und Kontogenehmigung.",
+    "smtpSettings": "SMTP-Einstellungen",
+    "host": "SMTP-Server",
+    "port": "Port",
+    "user": "Benutzername",
+    "password": "Passwort",
+    "passwordPlaceholder": "Passwort eingeben",
+    "passwordUnchanged": "••••••••",
+    "secure": "SSL/TLS verwenden",
+    "secureHelp": "Aktiviere dies für Port 465, deaktiviere für Port 587 mit STARTTLS.",
+    "senderSettings": "Absender-Einstellungen",
+    "from": "Absender",
+    "fromHelp": "Format: Name <email@example.com>",
+    "saved": "E-Mail-Einstellungen wurden gespeichert.",
+    "connectionSuccess": "Verbindung erfolgreich!",
+    "connectionFailed": "Verbindung fehlgeschlagen."
   },
 
   "npm": {

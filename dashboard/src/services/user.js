@@ -1,7 +1,15 @@
 const bcrypt = require('bcrypt');
+const crypto = require('crypto');
 const { pool } = require('../config/database');
 
 const SALT_ROUNDS = 10;
+
+/**
+ * Generate a secure random token (64 character hex string)
+ */
+function generateToken() {
+    return crypto.randomBytes(32).toString('hex');
+}
 
 /**
  * Get all users
@@ -74,13 +82,20 @@ async function existsUsernameOrSystemUsername(username, systemUsername, excludeI
 /**
  * Create new user
  * @param {boolean} approved - If true, user is immediately approved (admin creation)
+ * @param {string} email - Optional email address
  */
-async function createUser(username, password, systemUsername, isAdmin = false, approved = false) {
+async function createUser(username, password, systemUsername, isAdmin = false, approved = false, email = null) {
     const passwordHash = await bcrypt.hash(password, SALT_ROUNDS);
 
+    // Generate verification token if email provided
+    const verificationToken = email ? generateToken() : null;
+    const verificationExpires = email ? new Date(Date.now() + (parseInt(process.env.EMAIL_VERIFICATION_EXPIRES) || 24) * 60 * 60 * 1000) : null;
+
     const [result] = await pool.query(
-        'INSERT INTO dashboard_users (username, password_hash, system_username, is_admin, approved) VALUES (?, ?, ?, ?, ?)',
-        [username, passwordHash, systemUsername, isAdmin, approved]
+        `INSERT INTO dashboard_users
+         (username, password_hash, system_username, is_admin, approved, email, verification_token, verification_token_expires)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+        [username, passwordHash, systemUsername, isAdmin, approved, email, verificationToken, verificationExpires]
     );
 
     return {
@@ -88,7 +103,9 @@ async function createUser(username, password, systemUsername, isAdmin = false, a
         username,
         system_username: systemUsername,
         is_admin: isAdmin,
-        approved
+        approved,
+        email,
+        verificationToken
     };
 }
 
@@ -237,6 +254,124 @@ async function getUserLanguage(id) {
     return await getDefaultLanguage();
 }
 
+// ============================================
+// Email and Token Functions
+// ============================================
+
+/**
+ * Get user by email address
+ */
+async function getUserByEmail(email) {
+    const [users] = await pool.query(
+        'SELECT * FROM dashboard_users WHERE email = ?',
+        [email]
+    );
+    return users[0] || null;
+}
+
+/**
+ * Check if email already exists
+ * @param {string} email - Email to check
+ * @param {number} excludeId - User ID to exclude from check (for updates)
+ */
+async function emailExists(email, excludeId = null) {
+    let query = 'SELECT id FROM dashboard_users WHERE email = ?';
+    const params = [email];
+
+    if (excludeId) {
+        query += ' AND id != ?';
+        params.push(excludeId);
+    }
+
+    const [existing] = await pool.query(query, params);
+    return existing.length > 0;
+}
+
+/**
+ * Get user by verification token
+ */
+async function getUserByVerificationToken(token) {
+    const [users] = await pool.query(
+        'SELECT * FROM dashboard_users WHERE verification_token = ? AND verification_token_expires > NOW()',
+        [token]
+    );
+    return users[0] || null;
+}
+
+/**
+ * Get user by password reset token
+ */
+async function getUserByResetToken(token) {
+    const [users] = await pool.query(
+        'SELECT * FROM dashboard_users WHERE reset_token = ? AND reset_token_expires > NOW()',
+        [token]
+    );
+    return users[0] || null;
+}
+
+/**
+ * Verify email address (mark as verified and clear token)
+ */
+async function verifyEmail(userId) {
+    await pool.query(
+        'UPDATE dashboard_users SET email_verified = TRUE, verification_token = NULL, verification_token_expires = NULL WHERE id = ?',
+        [userId]
+    );
+}
+
+/**
+ * Create password reset token
+ * @returns {string} The reset token
+ */
+async function createResetToken(userId) {
+    const token = generateToken();
+    const expires = new Date(Date.now() + (parseInt(process.env.EMAIL_RESET_EXPIRES) || 1) * 60 * 60 * 1000);
+
+    await pool.query(
+        'UPDATE dashboard_users SET reset_token = ?, reset_token_expires = ? WHERE id = ?',
+        [token, expires, userId]
+    );
+
+    return token;
+}
+
+/**
+ * Clear password reset token (after use)
+ */
+async function clearResetToken(userId) {
+    await pool.query(
+        'UPDATE dashboard_users SET reset_token = NULL, reset_token_expires = NULL WHERE id = ?',
+        [userId]
+    );
+}
+
+/**
+ * Update user email and generate new verification token
+ * @returns {string} The verification token
+ */
+async function updateEmail(userId, email) {
+    const verificationToken = generateToken();
+    const verificationExpires = new Date(Date.now() + (parseInt(process.env.EMAIL_VERIFICATION_EXPIRES) || 24) * 60 * 60 * 1000);
+
+    await pool.query(
+        'UPDATE dashboard_users SET email = ?, email_verified = FALSE, verification_token = ?, verification_token_expires = ? WHERE id = ?',
+        [email, verificationToken, verificationExpires, userId]
+    );
+
+    return verificationToken;
+}
+
+/**
+ * Get full user by ID (including email fields)
+ */
+async function getFullUserById(id) {
+    const [users] = await pool.query(
+        'SELECT id, username, system_username, is_admin, approved, email, email_verified, created_at FROM dashboard_users WHERE id = ?',
+        [id]
+    );
+    return users[0] || null;
+}
+
 module.exports = {
     getAllUsers,
     getPendingUsers,
@@ -255,5 +390,15 @@ module.exports = {
     approveUser,
     rejectUser,
     updateUserLanguage,
-    getUserLanguage
+    getUserLanguage,
+    // Email and token functions
+    getUserByEmail,
+    emailExists,
+    getUserByVerificationToken,
+    getUserByResetToken,
+    verifyEmail,
+    createResetToken,
+    clearResetToken,
+    updateEmail,
+    getFullUserById
 };
