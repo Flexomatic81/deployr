@@ -96,16 +96,17 @@ app.set('views', path.join(__dirname, 'views'));
 app.use(expressLayouts);
 app.set('layout', 'layout');
 
+// Webhook route - MUST be registered BEFORE express.json() middleware
+// Webhooks need raw body for HMAC signature validation
+// Also registered before session/CSRF (authenticated via signature, not session)
+app.use('/api/webhooks', webhookLimiter, webhookRoutes);
+
 // Middleware
 app.use(express.static(path.join(__dirname, '../public')));
 app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser(process.env.SESSION_SECRET || 'change-this-secret'));
 app.use(methodOverride('_method'));
-
-// Webhook route - registered BEFORE session/CSRF middleware
-// Webhooks are authenticated via HMAC signature, not session
-app.use('/api/webhooks', webhookLimiter, webhookRoutes);
 
 // Session Store - initialized later when DB is available
 let sessionStore = null;
