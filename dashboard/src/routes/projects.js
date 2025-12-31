@@ -13,6 +13,17 @@ const upload = require('../middleware/upload');
 const { validateZipMiddleware } = require('../middleware/upload');
 const { logger } = require('../config/logger');
 
+// Filter out requests for static files that shouldn't reach project routes
+// These are typically browser DevTools or extensions looking for source maps
+router.use('/:name', (req, res, next) => {
+    const name = req.params.name;
+    // Reject requests that look like static file requests (e.g., *.css.map, *.js.map)
+    if (name && /\.(css|js|map|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i.test(name)) {
+        return res.status(404).send('Not found');
+    }
+    next();
+});
+
 // Show all projects
 router.get('/', requireAuth, async (req, res) => {
     try {
