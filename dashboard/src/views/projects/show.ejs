@@ -505,7 +505,7 @@
                         <% } %>
                         <% userDatabases.forEach(db => { %>
                         <li>
-                            <form action="/projects/<%= project.name %>/env/add-db" method="POST">
+                            <form action="/projects/<%= project.name %>/env/add-db" method="POST" class="db-setup-form">
                                 <input type="hidden" name="database" value="<%= db.database %>">
                                 <button type="submit" class="dropdown-item">
                                     <i class="bi bi-database<%= db.type === 'postgresql' ? '-fill text-primary' : ' text-warning' %>"></i>
@@ -870,5 +870,27 @@ document.addEventListener('DOMContentLoaded', function() {
             }
         });
     });
+
+    // DB setup forms - add hash to keep card open after submit
+    document.querySelectorAll('.db-setup-form').forEach(function(form) {
+        form.addEventListener('submit', function() {
+            sessionStorage.setItem('openCollapse', 'collapseEnv');
+        });
+    });
+
+    // Open collapse from sessionStorage (after DB setup redirect)
+    const openCollapse = sessionStorage.getItem('openCollapse');
+    if (openCollapse) {
+        sessionStorage.removeItem('openCollapse');
+        const collapseEl = document.getElementById(openCollapse);
+        if (collapseEl) {
+            const bsCollapse = new bootstrap.Collapse(collapseEl, { show: true });
+            // Update header state
+            const header = collapseEl.closest('.card').querySelector('.d-collapsible-header');
+            if (header) {
+                header.classList.remove('collapsed');
+            }
+        }
+    }
 });
 </script>
