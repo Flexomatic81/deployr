@@ -1,6 +1,7 @@
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-question-circle"></i> <%= t('help:title') %></h1>
-</div>
+<%- include('../partials/pageHeader', {
+    title: t('help:title'),
+    titleIcon: 'bi-question-circle'
+}) %>
 
 <div class="row">
     <!-- Side navigation -->
@@ -46,8 +47,8 @@
         <!-- Getting Started -->
         <section id="getting-started" class="mb-5">
             <div class="card">
-                <div class="card-header bg-primary text-white">
-                    <h4 class="mb-0"><i class="bi bi-rocket-takeoff"></i> <%= t('help:gettingStarted.title') %></h4>
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-rocket-takeoff me-2"></i><%= t('help:gettingStarted.title') %></h5>
                 </div>
                 <div class="card-body">
                     <p><%= t('help:gettingStarted.welcome') %></p>
@@ -72,7 +73,7 @@
         <section id="projects" class="mb-5">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="mb-0"><i class="bi bi-folder"></i> <%= t('help:projects.title') %></h4>
+                    <h5 class="mb-0"><i class="bi bi-folder me-2"></i><%= t('help:projects.title') %></h5>
                 </div>
                 <div class="card-body">
                     <h5><%= t('help:projects.createTitle') %></h5>
@@ -135,7 +136,7 @@
         <section id="project-types" class="mb-5">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="mb-0"><i class="bi bi-code-slash"></i> <%= t('help:projectTypes.title') %></h4>
+                    <h5 class="mb-0"><i class="bi bi-code-slash me-2"></i><%= t('help:projectTypes.title') %></h5>
                 </div>
                 <div class="card-body">
                     <p><%= t('help:projectTypes.intro') %></p>
@@ -209,7 +210,7 @@
         <section id="git" class="mb-5">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="mb-0"><i class="bi bi-git"></i> <%= t('help:git.title') %></h4>
+                    <h5 class="mb-0"><i class="bi bi-git me-2"></i><%= t('help:git.title') %></h5>
                 </div>
                 <div class="card-body">
                     <h5><%= t('help:git.connectTitle') %></h5>
@@ -247,7 +248,7 @@
         <section id="autodeploy" class="mb-5">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="mb-0"><i class="bi bi-arrow-repeat"></i> <%= t('help:autoDeploy.title') %></h4>
+                    <h5 class="mb-0"><i class="bi bi-arrow-repeat me-2"></i><%= t('help:autoDeploy.title') %></h5>
                 </div>
                 <div class="card-body">
                     <p><%= t('help:autoDeploy.intro') %></p>
@@ -275,7 +276,7 @@
         <section id="databases" class="mb-5">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="mb-0"><i class="bi bi-database"></i> <%= t('help:databases.title') %></h4>
+                    <h5 class="mb-0"><i class="bi bi-database me-2"></i><%= t('help:databases.title') %></h5>
                 </div>
                 <div class="card-body">
                     <h5><%= t('help:databases.supportedTitle') %></h5>
@@ -403,7 +404,7 @@ DB_NAME=deine_db</code></pre>
         <section id="sharing" class="mb-5">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="mb-0"><i class="bi bi-share"></i> <%= t('help:sharing.title') %></h4>
+                    <h5 class="mb-0"><i class="bi bi-share me-2"></i><%= t('help:sharing.title') %></h5>
                 </div>
                 <div class="card-body">
                     <p><%= t('help:sharing.intro') %></p>
@@ -448,7 +449,7 @@ DB_NAME=deine_db</code></pre>
         <section id="domains" class="mb-5">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="mb-0"><i class="bi bi-globe2"></i> <%= t('help:domains.title') %></h4>
+                    <h5 class="mb-0"><i class="bi bi-globe2 me-2"></i><%= t('help:domains.title') %></h5>
                 </div>
                 <div class="card-body">
                     <p><%= t('help:domains.intro') %></p>
@@ -488,9 +489,9 @@ DB_NAME=deine_db</code></pre>
         <% if (user && user.is_admin) { %>
         <!-- Administration -->
         <section id="admin" class="mb-5">
-            <div class="card border-danger">
-                <div class="card-header bg-danger text-white">
-                    <h4 class="mb-0"><i class="bi bi-shield-lock"></i> <%= t('help:admin.title') %></h4>
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="mb-0"><i class="bi bi-shield-lock me-2 text-danger"></i><%= t('help:admin.title') %></h5>
                 </div>
                 <div class="card-body">
                     <h5><%= t('help:admin.userManagementTitle') %></h5>
@@ -526,7 +527,7 @@ DB_NAME=deine_db</code></pre>
         <section id="faq" class="mb-5">
             <div class="card">
                 <div class="card-header">
-                    <h4 class="mb-0"><i class="bi bi-chat-dots"></i> <%= t('help:faq.title') %></h4>
+                    <h5 class="mb-0"><i class="bi bi-chat-dots me-2"></i><%= t('help:faq.title') %></h5>
                 </div>
                 <div class="card-body">
                     <div class="accordion" id="faqAccordion">

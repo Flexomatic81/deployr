@@ -1,11 +1,11 @@
-<div class="row justify-content-center">
-    <div class="col-md-6 col-lg-4">
-        <div class="card shadow">
+<div class="row justify-content-center align-items-center min-vh-100 py-4">
+    <div class="col-md-6 col-lg-5 col-xl-4">
+        <div class="card d-elevated">
             <div class="card-body p-4">
                 <div class="text-center mb-4">
                     <i class="bi bi-person-plus display-4 text-primary"></i>
-                    <h2 class="mt-2"><%= t('auth:register.title') %></h2>
-                    <p class="text-muted"><%= t('auth:register.subtitle') %></p>
+                    <h4 class="mt-2 mb-1"><%= t('auth:register.title') %></h4>
+                    <p class="text-muted small"><%= t('auth:register.subtitle') %></p>
                 </div>
 
                 <div class="alert alert-info mb-4">
@@ -14,6 +14,7 @@
                 </div>
 
                 <form method="POST" action="/register">
+                    <%- csrfInput %>
                     <div class="mb-3">
                         <label for="username" class="form-label">
                             <%= t('common:labels.username') %>
@@ -38,7 +39,7 @@
                         <div class="form-text"><%= t('common:validation.minLength', { min: 6 }) %></div>
                     </div>
 
-                    <div class="mb-3">
+                    <div class="mb-4">
                         <label for="password_confirm" class="form-label"><%= t('common:labels.passwordConfirm') %></label>
                         <div class="input-group">
                             <span class="input-group-text"><i class="bi bi-lock-fill"></i></span>
@@ -52,11 +53,11 @@
                     </button>
                 </form>
 
-                <hr class="my-4">
+                <div class="d-divider"></div>
 
                 <div class="text-center">
-                    <p class="mb-0"><%= t('auth:register.hasAccount') %></p>
-                    <a href="/login"><%= t('auth:register.loginLink') %></a>
+                    <p class="text-muted small mb-1"><%= t('auth:register.hasAccount') %></p>
+                    <a href="/login" class="fw-medium"><%= t('auth:register.loginLink') %></a>
                 </div>
             </div>
         </div>

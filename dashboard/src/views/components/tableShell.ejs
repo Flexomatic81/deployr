@@ -1,0 +1,47 @@
+<%#
+  Table Shell Component
+
+  Props:
+  - title: string (required) - Section title
+  - titleIcon: string (optional) - Bootstrap icon class for title
+  - actions: array (optional) - [{ href, label, icon, class }] - Action buttons
+  - showAllLink: object (optional) - { href, label } - "View all" link
+
+  This component wraps content. Use it with <%- include() %> and pass content separately.
+
+  Usage:
+  <div class="d-table-shell">
+      <%- include('../components/tableShellHeader', {
+          title: 'My Projects',
+          titleIcon: 'bi-folder',
+          showAllLink: { href: '/projects', label: 'View all' }
+      }) %>
+      <div class="d-table-shell-body">
+          <!-- Table or empty state goes here -->
+      </div>
+  </div>
+%>
+
+<div class="d-table-shell-header">
+    <h5 class="d-table-shell-title">
+        <% if (typeof titleIcon !== 'undefined' && titleIcon) { %>
+        <i class="bi <%= titleIcon %>"></i>
+        <% } %>
+        <%= title %>
+    </h5>
+    <div class="d-table-shell-actions">
+        <% if (typeof actions !== 'undefined' && actions && actions.length > 0) { %>
+            <% actions.forEach(action => { %>
+            <a href="<%= action.href %>" class="btn btn-sm <%= action.class || 'btn-outline-primary' %>">
+                <% if (action.icon) { %><i class="bi <%= action.icon %>"></i><% } %>
+                <%= action.label %>
+            </a>
+            <% }) %>
+        <% } %>
+        <% if (typeof showAllLink !== 'undefined' && showAllLink) { %>
+        <a href="<%= showAllLink.href %>" class="btn btn-sm btn-link-muted">
+            <%= showAllLink.label %> <i class="bi bi-arrow-right"></i>
+        </a>
+        <% } %>
+    </div>
+</div>

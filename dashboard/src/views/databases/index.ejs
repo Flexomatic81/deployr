@@ -1,26 +1,25 @@
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-database"></i> <%= t('databases:title') %></h1>
-    <a href="/databases/create" class="btn btn-primary">
-        <i class="bi bi-plus-lg"></i> <%= t('databases:newDatabase') %>
-    </a>
-</div>
+<%- include('../partials/pageHeader', {
+    title: t('databases:title'),
+    titleIcon: 'bi-database',
+    primaryAction: { href: '/databases/create', label: t('databases:newDatabase'), icon: 'bi-plus-lg' }
+}) %>
 
-<% if (databases.length === 0) { %>
-    <div class="card">
-        <div class="card-body text-center py-5">
-            <i class="bi bi-database-x display-1 text-muted"></i>
-            <h3 class="mt-3"><%= t('databases:noDatabases') %></h3>
-            <p class="text-muted"><%= t('databases:noProjectsHint', { defaultValue: 'Erstelle deine erste Datenbank.' }) %></p>
-            <a href="/databases/create" class="btn btn-primary btn-lg">
-                <i class="bi bi-plus-lg"></i> <%= t('databases:createFirst') %>
-            </a>
-        </div>
-    </div>
-<% } else { %>
-    <div class="card">
-        <div class="card-body">
+<div class="d-table-shell d-section">
+    <%- include('../components/tableShell', {
+        title: t('databases:myDatabases'),
+        titleIcon: 'bi-database'
+    }) %>
+    <div class="d-table-shell-body">
+        <% if (databases.length === 0) { %>
+            <%- include('../components/emptyState', {
+                title: t('databases:noDatabases'),
+                description: t('databases:noProjectsHint', { defaultValue: 'Erstelle deine erste Datenbank.' }),
+                icon: 'bi-database-x',
+                primaryAction: { href: '/databases/create', label: t('databases:createFirst'), icon: 'bi-plus-lg' }
+            }) %>
+        <% } else { %>
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover mb-0">
                     <thead>
                         <tr>
                             <th><%= t('databases:info.database') %></th>
@@ -28,7 +27,7 @@
                             <th><%= t('databases:info.user') %></th>
                             <th><%= t('databases:info.password') %></th>
                             <th><%= t('databases:info.host') %></th>
-                            <th><%= t('common:labels.actions') %></th>
+                            <th class="text-end"><%= t('common:labels.actions') %></th>
                         </tr>
                     </thead>
                     <tbody>
@@ -36,45 +35,42 @@
                             const isPostgres = db.type === 'postgresql';
                             const host = db.host || (isPostgres ? 'dployr-postgresql' : 'dployr-mariadb');
                             const port = db.port || (isPostgres ? 5432 : 3306);
+                            const dbId = db.database.replace(/[^a-z0-9]/gi, '_');
                         %>
                             <tr>
                                 <td>
-                                    <i class="bi bi-database-fill <%= isPostgres ? 'text-info' : 'text-primary' %>"></i>
-                                    <strong><%= db.database %></strong>
+                                    <i class="bi bi-database-fill <%= isPostgres ? 'text-info' : 'text-primary' %> me-1"></i>
+                                    <span class="fw-medium"><%= db.database %></span>
                                 </td>
                                 <td>
                                     <% if (isPostgres) { %>
-                                        <span class="badge bg-info">
-                                            <i class="bi bi-database-fill"></i> PostgreSQL
-                                        </span>
+                                        <span class="badge bg-info-subtle">PostgreSQL</span>
                                     <% } else { %>
-                                        <span class="badge bg-primary">
-                                            <i class="bi bi-database"></i> MariaDB
-                                        </span>
+                                        <span class="badge bg-warning-subtle">MariaDB</span>
                                     <% } %>
                                 </td>
                                 <td><code><%= db.username %></code></td>
                                 <td>
-                                    <div class="input-group input-group-sm" style="width: 200px;">
+                                    <div class="input-group input-group-sm" style="max-width: 220px;">
                                         <input type="password" class="form-control form-control-sm"
                                                value="<%= db.password %>" readonly
-                                               id="pw-<%= db.database.replace(/[^a-z0-9]/gi, '_') %>">
-                                        <button class="btn btn-outline-secondary" type="button"
-                                                onclick="togglePassword('pw-<%= db.database.replace(/[^a-z0-9]/gi, '_') %>')"
+                                               id="pw-<%= dbId %>">
+                                        <button class="btn btn-outline-secondary btn-icon" type="button"
+                                                onclick="togglePassword('pw-<%= dbId %>')"
                                                 title="<%= t('databases:credentials.showPassword') %>">
                                             <i class="bi bi-eye"></i>
                                         </button>
-                                        <button class="btn btn-outline-secondary" type="button"
-                                                onclick="copyPassword('pw-<%= db.database.replace(/[^a-z0-9]/gi, '_') %>')"
+                                        <button class="btn btn-outline-secondary btn-icon" type="button"
+                                                onclick="copyPassword('pw-<%= dbId %>')"
                                                 title="<%= t('databases:credentials.copy') %>">
                                             <i class="bi bi-clipboard"></i>
                                         </button>
                                     </div>
                                 </td>
                                 <td><code><%= host %>:<%= port %></code></td>
-                                <td>
-                                    <button type="button" class="btn btn-sm btn-outline-danger"
-                                            data-bs-toggle="modal" data-bs-target="#deleteModal-<%= db.database.replace(/[^a-z0-9]/gi, '_') %>"
+                                <td class="text-end">
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-icon"
+                                            data-bs-toggle="modal" data-bs-target="#deleteModal-<%= dbId %>"
                                             title="<%= t('common:buttons.delete') %>">
                                         <i class="bi bi-trash"></i>
                                     </button>
@@ -82,7 +78,7 @@
                             </tr>
 
                             <!-- Delete Modal -->
-                            <div class="modal fade" id="deleteModal-<%= db.database.replace(/[^a-z0-9]/gi, '_') %>" tabindex="-1">
+                            <div class="modal fade" id="deleteModal-<%= dbId %>" tabindex="-1">
                                 <div class="modal-dialog">
                                     <div class="modal-content">
                                         <div class="modal-header bg-danger text-white">
@@ -93,7 +89,7 @@
                                         </div>
                                         <div class="modal-body">
                                             <p><%= t('common:confirm.delete', { defaultValue: 'Möchtest du die Datenbank wirklich löschen?' }) %> <strong>"<%= db.database %>"</strong></p>
-                                            <div class="alert alert-danger">
+                                            <div class="alert alert-danger mb-0">
                                                 <i class="bi bi-exclamation-triangle"></i>
                                                 <strong><%= t('common:confirm.deleteWarning') %></strong>
                                             </div>
@@ -101,6 +97,7 @@
                                         <div class="modal-footer">
                                             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t('common:buttons.cancel') %></button>
                                             <form action="/databases/<%= db.database %>?_method=DELETE" method="POST" class="d-inline">
+                                                <%- csrfInput %>
                                                 <button type="submit" class="btn btn-danger">
                                                     <i class="bi bi-trash"></i> <%= t('common:buttons.delete') %>
                                                 </button>
@@ -113,50 +110,52 @@
                     </tbody>
                 </table>
             </div>
-        </div>
+        <% } %>
     </div>
+</div>
 
-    <!-- Connection Info -->
-    <div class="row mt-4">
-        <% if (hasMariaDB) { %>
-        <div class="<%= hasPostgreSQL ? 'col-md-6' : 'col-12' %>">
-            <div class="card h-100">
-                <div class="card-header bg-primary text-white">
-                    <h5 class="mb-0"><i class="bi bi-database"></i> MariaDB <%= t('databases:credentials.title', { defaultValue: 'Connection' }) %></h5>
-                </div>
-                <div class="card-body">
-                    <pre class="code-block p-3 rounded mb-0"><code>DB_HOST=dployr-mariadb
+<% if (databases.length > 0) { %>
+<!-- Connection Info -->
+<div class="row g-3">
+    <% if (hasMariaDB) { %>
+    <div class="<%= hasPostgreSQL ? 'col-md-6' : 'col-12' %>">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-database text-warning me-2"></i>MariaDB <%= t('databases:credentials.title', { defaultValue: 'Connection' }) %></h6>
+            </div>
+            <div class="card-body">
+                <pre class="code-block p-3 rounded mb-3"><code>DB_HOST=dployr-mariadb
 DB_PORT=3306
 DB_DATABASE=&lt;database&gt;
 DB_USERNAME=&lt;username&gt;
 DB_PASSWORD=&lt;password&gt;</code></pre>
-                    <p class="text-muted mt-2 mb-0">
-                        <i class="bi bi-tools"></i> Management: <a href="http://<%= serverIp %>:8080" target="_blank">phpMyAdmin</a>
-                    </p>
-                </div>
+                <p class="text-muted mb-0 small">
+                    <i class="bi bi-tools"></i> Management: <a href="http://<%= serverIp %>:8080" target="_blank" class="fw-medium">phpMyAdmin</a>
+                </p>
             </div>
         </div>
-        <% } %>
-        <% if (hasPostgreSQL) { %>
-        <div class="<%= hasMariaDB ? 'col-md-6' : 'col-12' %>">
-            <div class="card h-100">
-                <div class="card-header bg-info text-white">
-                    <h5 class="mb-0"><i class="bi bi-database-fill"></i> PostgreSQL <%= t('databases:credentials.title', { defaultValue: 'Connection' }) %></h5>
-                </div>
-                <div class="card-body">
-                    <pre class="code-block p-3 rounded mb-0"><code>DB_HOST=dployr-postgresql
+    </div>
+    <% } %>
+    <% if (hasPostgreSQL) { %>
+    <div class="<%= hasMariaDB ? 'col-md-6' : 'col-12' %>">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0"><i class="bi bi-database-fill text-info me-2"></i>PostgreSQL <%= t('databases:credentials.title', { defaultValue: 'Connection' }) %></h6>
+            </div>
+            <div class="card-body">
+                <pre class="code-block p-3 rounded mb-3"><code>DB_HOST=dployr-postgresql
 DB_PORT=5432
 DB_DATABASE=&lt;database&gt;
 DB_USERNAME=&lt;username&gt;
 DB_PASSWORD=&lt;password&gt;</code></pre>
-                    <p class="text-muted mt-2 mb-0">
-                        <i class="bi bi-tools"></i> Management: <a href="http://<%= serverIp %>:5050" target="_blank">pgAdmin</a>
-                    </p>
-                </div>
+                <p class="text-muted mb-0 small">
+                    <i class="bi bi-tools"></i> Management: <a href="http://<%= serverIp %>:5050" target="_blank" class="fw-medium">pgAdmin</a>
+                </p>
             </div>
         </div>
-        <% } %>
     </div>
+    <% } %>
+</div>
 <% } %>
 
 <script>

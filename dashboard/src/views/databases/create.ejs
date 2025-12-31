@@ -1,11 +1,15 @@
+<%- include('../partials/pageHeader', {
+    title: t('databases:create.title'),
+    titleIcon: 'bi-database-add',
+    backLink: { href: '/databases', label: t('databases:title') }
+}) %>
+
 <div class="row justify-content-center">
-    <div class="col-md-8 col-lg-6">
+    <div class="col-lg-8 col-xl-6">
         <div class="card">
-            <div class="card-header">
-                <h4 class="mb-0"><i class="bi bi-database-add"></i> <%= t('databases:create.title') %></h4>
-            </div>
             <div class="card-body">
                 <form method="POST" action="/databases">
+                    <%- csrfInput %>
                     <div class="mb-3">
                         <label for="name" class="form-label">
                             <%= t('databases:create.databaseName') %>
@@ -25,14 +29,14 @@
                         <div class="row g-3">
                             <% dbTypes.forEach((dbType, index) => { %>
                                 <div class="col-md-6">
-                                    <div class="form-check card h-100">
+                                    <div class="form-check card h-100 d-db-type-card">
                                         <div class="card-body">
                                             <input class="form-check-input" type="radio"
                                                    name="type" id="type-<%= dbType.id %>"
                                                    value="<%= dbType.id %>"
                                                    <%= index === 0 ? 'checked' : '' %>>
                                             <label class="form-check-label d-block" for="type-<%= dbType.id %>">
-                                                <span class="badge bg-<%= dbType.color %> mb-2">
+                                                <span class="badge <%= dbType.id === 'postgresql' ? 'bg-info-subtle' : 'bg-warning-subtle' %> mb-2">
                                                     <i class="<%= dbType.icon %>"></i> <%= dbType.name %>
                                                 </span>
                                                 <p class="text-muted small mb-1"><%= dbType.description %></p>
@@ -47,7 +51,7 @@
                         </div>
                     </div>
 
-                    <div class="alert alert-info">
+                    <div class="alert alert-info mb-4">
                         <i class="bi bi-info-circle"></i>
                         <strong><%= t('common:messages.noData', { defaultValue: 'Note' }) %>:</strong> <%= t('databases:create.autoUserNote', { defaultValue: 'A database user will be created automatically' }) %>:
                         <br>
@@ -59,7 +63,7 @@
                             <i class="bi bi-plus-lg"></i> <%= t('databases:create.submit') %>
                         </button>
                         <a href="/databases" class="btn btn-outline-secondary">
-                            <i class="bi bi-x-lg"></i> <%= t('common:buttons.cancel') %>
+                            <%= t('common:buttons.cancel') %>
                         </a>
                     </div>
                 </form>
@@ -69,18 +73,18 @@
 </div>
 
 <style>
-.form-check.card {
+.d-db-type-card {
     cursor: pointer;
     transition: border-color 0.2s, box-shadow 0.2s;
 }
-.form-check.card:hover {
-    border-color: var(--bs-primary);
+.d-db-type-card:hover {
+    border-color: var(--d-primary);
 }
-.form-check.card:has(input:checked) {
-    border-color: var(--bs-primary);
-    box-shadow: 0 0 0 0.2rem rgba(var(--bs-primary-rgb), 0.25);
+.d-db-type-card:has(input:checked) {
+    border-color: var(--d-primary);
+    box-shadow: 0 0 0 3px var(--d-primary-subtle);
 }
-.form-check.card .form-check-input {
+.d-db-type-card .form-check-input {
     position: absolute;
     top: 1rem;
     right: 1rem;

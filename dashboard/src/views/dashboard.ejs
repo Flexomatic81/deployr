@@ -1,116 +1,92 @@
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-speedometer2"></i> <%= t('common:nav.dashboard') %></h1>
-    <a href="/projects/create" class="btn btn-primary">
-        <i class="bi bi-plus-lg"></i> <%= t('projects:newProject') %>
-    </a>
-</div>
+<%- include('partials/pageHeader', {
+    title: t('common:nav.dashboard'),
+    titleIcon: 'bi-speedometer2',
+    primaryAction: { href: '/projects/create', label: t('projects:newProject'), icon: 'bi-plus-lg' }
+}) %>
 
 <% if (pendingUsersCount > 0) { %>
 <!-- Admin notification: Pending registrations -->
-<div class="alert alert-warning alert-dismissible fade show mb-4" role="alert">
-    <div class="d-flex align-items-center">
-        <i class="bi bi-person-exclamation me-2 fs-4"></i>
-        <div class="flex-grow-1">
-            <strong><%= pendingUsersCount === 1 ? t('admin:pending.pendingCount', { count: pendingUsersCount }) : t('admin:pending.pendingCountPlural', { count: pendingUsersCount }) %></strong>
-            <p class="mb-0 small"><%= t('admin:pending.pendingHint') %></p>
-        </div>
-        <a href="/admin/users/pending" class="btn btn-warning btn-sm ms-3">
-            <i class="bi bi-person-check"></i> <%= t('common:buttons.checkNow') %>
-        </a>
+<div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-person-exclamation me-3 fs-4"></i>
+    <div class="flex-grow-1">
+        <strong><%= pendingUsersCount === 1 ? t('admin:pending.pendingCount', { count: pendingUsersCount }) : t('admin:pending.pendingCountPlural', { count: pendingUsersCount }) %></strong>
+        <div class="small text-muted"><%= t('admin:pending.pendingHint') %></div>
     </div>
-    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="<%= t('common:buttons.close') %>"></button>
+    <a href="/admin/users/pending" class="btn btn-warning btn-sm ms-3">
+        <i class="bi bi-person-check"></i> <%= t('common:buttons.checkNow') %>
+    </a>
 </div>
 <% } %>
 
 <!-- Statistics cards -->
-<div class="row mb-4">
-    <div class="col-md-3">
-        <div class="card bg-primary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title"><%= t('projects:stats.myProjects') %></h6>
-                        <h2 class="mb-0"><%= stats.totalProjects %></h2>
-                    </div>
-                    <i class="bi bi-folder display-4 opacity-50"></i>
-                </div>
-            </div>
-        </div>
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <%- include('components/statCard', {
+            label: t('projects:stats.myProjects'),
+            value: stats.totalProjects,
+            variant: 'primary',
+            icon: 'bi-folder'
+        }) %>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-success text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title"><%= t('projects:stats.running') %></h6>
-                        <h2 class="mb-0"><%= stats.runningProjects %></h2>
-                    </div>
-                    <i class="bi bi-play-circle display-4 opacity-50"></i>
-                </div>
-            </div>
-        </div>
+    <div class="col-6 col-lg-3">
+        <%- include('components/statCard', {
+            label: t('projects:stats.running'),
+            value: stats.runningProjects,
+            variant: 'success',
+            icon: 'bi-play-circle'
+        }) %>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-secondary text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title"><%= t('projects:stats.stopped') %></h6>
-                        <h2 class="mb-0"><%= stats.stoppedProjects %></h2>
-                    </div>
-                    <i class="bi bi-stop-circle display-4 opacity-50"></i>
-                </div>
-            </div>
-        </div>
+    <div class="col-6 col-lg-3">
+        <%- include('components/statCard', {
+            label: t('projects:stats.stopped'),
+            value: stats.stoppedProjects,
+            variant: 'secondary',
+            icon: 'bi-stop-circle'
+        }) %>
     </div>
-    <div class="col-md-3">
-        <div class="card bg-info text-white">
-            <div class="card-body">
-                <div class="d-flex justify-content-between">
-                    <div>
-                        <h6 class="card-title"><%= t('projects:stats.shared') %></h6>
-                        <h2 class="mb-0"><%= stats.sharedProjects %></h2>
-                    </div>
-                    <i class="bi bi-share display-4 opacity-50"></i>
-                </div>
-            </div>
-        </div>
+    <div class="col-6 col-lg-3">
+        <%- include('components/statCard', {
+            label: t('projects:stats.shared'),
+            value: stats.sharedProjects,
+            variant: 'info',
+            icon: 'bi-share'
+        }) %>
     </div>
 </div>
 
-<!-- Projects -->
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-folder"></i> <%= t('projects:myProjects') %></h5>
-        <a href="/projects" class="btn btn-sm btn-outline-primary"><%= t('common:buttons.showAll') %></a>
-    </div>
-    <div class="card-body">
+<!-- Projects Table Shell -->
+<div class="d-table-shell d-section">
+    <%- include('components/tableShell', {
+        title: t('projects:myProjects'),
+        titleIcon: 'bi-folder',
+        showAllLink: { href: '/projects', label: t('common:buttons.showAll') }
+    }) %>
+    <div class="d-table-shell-body">
         <% if (projects.length === 0) { %>
-            <div class="text-center py-4 text-muted">
-                <i class="bi bi-folder-x display-4"></i>
-                <p class="mt-2"><%= t('projects:noProjects') %></p>
-                <a href="/projects/create" class="btn btn-primary">
-                    <i class="bi bi-plus-lg"></i> <%= t('projects:createFirst') %>
-                </a>
-            </div>
+            <%- include('components/emptyState', {
+                title: t('projects:noProjects'),
+                icon: 'bi-folder-x',
+                primaryAction: { href: '/projects/create', label: t('projects:createFirst'), icon: 'bi-plus-lg' },
+                compact: true
+            }) %>
         <% } else { %>
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover mb-0">
                     <thead>
                         <tr>
                             <th><%= t('common:labels.name') %></th>
                             <th><%= t('common:labels.type') %></th>
                             <th><%= t('common:labels.port') %></th>
                             <th><%= t('common:labels.status') %></th>
-                            <th><%= t('common:labels.actions') %></th>
+                            <th class="text-end"><%= t('common:labels.actions') %></th>
                         </tr>
                     </thead>
                     <tbody>
                         <% projects.forEach(project => { %>
                             <tr>
                                 <td>
-                                    <a href="/projects/<%= project.name %>">
-                                        <i class="bi bi-folder-fill text-warning"></i>
+                                    <a href="/projects/<%= project.name %>" class="fw-medium">
+                                        <i class="bi bi-folder-fill text-warning me-1"></i>
                                         <%= project.name %>
                                     </a>
                                 </td>
@@ -118,15 +94,19 @@
                                     <% if (project.templateType === 'php-website') { %>
                                         <span class="badge bg-purple">PHP</span>
                                     <% } else if (project.templateType === 'nodejs-app') { %>
-                                        <span class="badge bg-success">Node.js</span>
+                                        <span class="badge bg-success-subtle">Node.js</span>
+                                    <% } else if (project.templateType === 'laravel') { %>
+                                        <span class="badge bg-danger-subtle">Laravel</span>
+                                    <% } else if (project.templateType === 'python-flask' || project.templateType === 'python-django') { %>
+                                        <span class="badge bg-warning-subtle">Python</span>
                                     <% } else { %>
                                         <span class="badge bg-secondary">Static</span>
                                     <% } %>
                                 </td>
-                                <td><%= project.port %></td>
+                                <td><code><%= project.port %></code></td>
                                 <td>
                                     <% if (project.status === 'running') { %>
-                                        <span class="badge bg-success">
+                                        <span class="badge bg-success-subtle">
                                             <i class="bi bi-check-circle"></i> <%= t('common:status.running') %>
                                             (<%= project.runningContainers %>/<%= project.totalContainers %>)
                                         </span>
@@ -136,26 +116,29 @@
                                         </span>
                                     <% } %>
                                 </td>
-                                <td>
+                                <td class="text-end">
                                     <% if (project.status === 'running') { %>
                                         <form action="/projects/<%= project.name %>/stop" method="POST" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="<%= t('common:buttons.stop') %>">
+                                            <%- csrfInput %>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger btn-icon" title="<%= t('common:buttons.stop') %>">
                                                 <i class="bi bi-stop-fill"></i>
                                             </button>
                                         </form>
                                         <form action="/projects/<%= project.name %>/restart" method="POST" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-outline-warning" title="<%= t('common:buttons.restart') %>">
+                                            <%- csrfInput %>
+                                            <button type="submit" class="btn btn-sm btn-outline-warning btn-icon" title="<%= t('common:buttons.restart') %>">
                                                 <i class="bi bi-arrow-clockwise"></i>
                                             </button>
                                         </form>
                                     <% } else { %>
                                         <form action="/projects/<%= project.name %>/start" method="POST" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-outline-success" title="<%= t('common:buttons.start') %>">
+                                            <%- csrfInput %>
+                                            <button type="submit" class="btn btn-sm btn-outline-success btn-icon" title="<%= t('common:buttons.start') %>">
                                                 <i class="bi bi-play-fill"></i>
                                             </button>
                                         </form>
                                     <% } %>
-                                    <a href="/logs/<%= project.name %>" class="btn btn-sm btn-outline-info" title="<%= t('common:buttons.logs') %>">
+                                    <a href="/logs/<%= project.name %>" class="btn btn-sm btn-outline-secondary btn-icon" title="<%= t('common:buttons.logs') %>">
                                         <i class="bi bi-terminal"></i>
                                     </a>
                                 </td>
@@ -169,43 +152,44 @@
 </div>
 
 <% if (sharedProjects && sharedProjects.length > 0) { %>
-<!-- Shared Projects -->
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-share"></i> <%= t('projects:sharedProjects') %></h5>
-        <a href="/projects" class="btn btn-sm btn-outline-info"><%= t('common:buttons.showAll') %></a>
-    </div>
-    <div class="card-body">
+<!-- Shared Projects Table Shell -->
+<div class="d-table-shell d-section">
+    <%- include('components/tableShell', {
+        title: t('projects:sharedProjects'),
+        titleIcon: 'bi-share',
+        showAllLink: { href: '/projects', label: t('common:buttons.showAll') }
+    }) %>
+    <div class="d-table-shell-body">
         <div class="table-responsive">
-            <table class="table table-hover">
+            <table class="table table-hover mb-0">
                 <thead>
                     <tr>
                         <th><%= t('common:labels.name') %></th>
                         <th><%= t('common:labels.owner') %></th>
                         <th><%= t('common:labels.permission') %></th>
                         <th><%= t('common:labels.status') %></th>
-                        <th><%= t('common:labels.actions') %></th>
+                        <th class="text-end"><%= t('common:labels.actions') %></th>
                     </tr>
                 </thead>
                 <tbody>
                     <% sharedProjects.forEach(project => { %>
                         <tr>
                             <td>
-                                <a href="/projects/<%= project.name %>">
-                                    <i class="bi bi-folder-fill text-info"></i>
+                                <a href="/projects/<%= project.name %>" class="fw-medium">
+                                    <i class="bi bi-folder-fill text-info me-1"></i>
                                     <%= project.name %>
                                 </a>
                             </td>
                             <td><%= project.shareInfo.ownerUsername %></td>
                             <td>
-                                <span class="badge <%= project.shareInfo.permission === 'full' ? 'bg-success' : project.shareInfo.permission === 'manage' ? 'bg-primary' : 'bg-secondary' %>">
+                                <span class="badge <%= project.shareInfo.permission === 'full' ? 'bg-success-subtle' : project.shareInfo.permission === 'manage' ? 'bg-primary-subtle' : 'bg-secondary' %>">
                                     <i class="bi <%= project.shareInfo.permissionIcon %>"></i>
                                     <%= project.shareInfo.permissionLabel %>
                                 </span>
                             </td>
                             <td>
                                 <% if (project.status === 'running') { %>
-                                    <span class="badge bg-success">
+                                    <span class="badge bg-success-subtle">
                                         <i class="bi bi-check-circle"></i> <%= t('common:status.running') %>
                                     </span>
                                 <% } else { %>
@@ -214,24 +198,26 @@
                                     </span>
                                 <% } %>
                             </td>
-                            <td>
+                            <td class="text-end">
                                 <% const canManage = project.shareInfo.permission === 'manage' || project.shareInfo.permission === 'full'; %>
                                 <% if (canManage) { %>
                                     <% if (project.status === 'running') { %>
                                         <form action="/projects/<%= project.name %>/stop" method="POST" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-outline-danger" title="<%= t('common:buttons.stop') %>">
+                                            <%- csrfInput %>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger btn-icon" title="<%= t('common:buttons.stop') %>">
                                                 <i class="bi bi-stop-fill"></i>
                                             </button>
                                         </form>
                                     <% } else { %>
                                         <form action="/projects/<%= project.name %>/start" method="POST" class="d-inline">
-                                            <button type="submit" class="btn btn-sm btn-outline-success" title="<%= t('common:buttons.start') %>">
+                                            <%- csrfInput %>
+                                            <button type="submit" class="btn btn-sm btn-outline-success btn-icon" title="<%= t('common:buttons.start') %>">
                                                 <i class="bi bi-play-fill"></i>
                                             </button>
                                         </form>
                                     <% } %>
                                 <% } %>
-                                <a href="/logs/<%= project.name %>" class="btn btn-sm btn-outline-info" title="<%= t('common:buttons.logs') %>">
+                                <a href="/logs/<%= project.name %>" class="btn btn-sm btn-outline-secondary btn-icon" title="<%= t('common:buttons.logs') %>">
                                     <i class="bi bi-terminal"></i>
                                 </a>
                             </td>
@@ -244,35 +230,46 @@
 </div>
 <% } %>
 
-<!-- Databases -->
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h5 class="mb-0"><i class="bi bi-database"></i> <%= t('databases:myDatabases') %></h5>
-        <a href="/databases" class="btn btn-sm btn-outline-primary"><%= t('common:buttons.showAll') %></a>
-    </div>
-    <div class="card-body">
+<!-- Databases Table Shell -->
+<div class="d-table-shell">
+    <%- include('components/tableShell', {
+        title: t('databases:myDatabases'),
+        titleIcon: 'bi-database',
+        showAllLink: { href: '/databases', label: t('common:buttons.showAll') }
+    }) %>
+    <div class="d-table-shell-body">
         <% if (databases.length === 0) { %>
-            <div class="text-center py-4 text-muted">
-                <i class="bi bi-database-x display-4"></i>
-                <p class="mt-2"><%= t('databases:noDatabases') %></p>
-                <a href="/databases/create" class="btn btn-primary">
-                    <i class="bi bi-plus-lg"></i> <%= t('databases:createFirst') %>
-                </a>
-            </div>
+            <%- include('components/emptyState', {
+                title: t('databases:noDatabases'),
+                icon: 'bi-database-x',
+                primaryAction: { href: '/databases/create', label: t('databases:createFirst'), icon: 'bi-plus-lg' },
+                compact: true
+            }) %>
         <% } else { %>
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover mb-0">
                     <thead>
                         <tr>
                             <th><%= t('databases:info.database') %></th>
                             <th><%= t('databases:info.user') %></th>
+                            <th><%= t('common:labels.type') %></th>
                         </tr>
                     </thead>
                     <tbody>
                         <% databases.forEach(db => { %>
                             <tr>
-                                <td><i class="bi bi-database-fill text-info"></i> <%= db.database %></td>
+                                <td>
+                                    <i class="bi bi-database-fill text-info me-1"></i>
+                                    <span class="fw-medium"><%= db.database %></span>
+                                </td>
                                 <td><code><%= db.username %></code></td>
+                                <td>
+                                    <% if (db.type === 'postgresql') { %>
+                                        <span class="badge bg-info-subtle">PostgreSQL</span>
+                                    <% } else { %>
+                                        <span class="badge bg-warning-subtle">MariaDB</span>
+                                    <% } %>
+                                </td>
                             </tr>
                         <% }) %>
                     </tbody>

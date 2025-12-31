@@ -1,0 +1,35 @@
+<%#
+  Stat Card Component
+
+  Props:
+  - label: string (required) - Card label (small uppercase text)
+  - value: string|number (required) - Main value to display
+  - variant: string (optional) - 'primary' (default), 'success', 'warning', 'danger', 'info'
+  - icon: string (optional) - Bootstrap icon class (e.g., "bi-folder")
+
+  Usage:
+  <%- include('../components/statCard', {
+      label: 'Total Projects',
+      value: 12,
+      variant: 'primary',
+      icon: 'bi-folder'
+  }) %>
+%>
+
+<% const variantClass = typeof variant !== 'undefined' ? `d-stat-${variant}` : 'd-stat-primary'; %>
+
+<div class="card d-stat <%= variantClass %>">
+    <div class="card-body">
+        <div class="d-stat-content">
+            <div class="d-stat-info">
+                <div class="d-stat-label"><%= label %></div>
+                <div class="d-stat-value"><%= value %></div>
+            </div>
+            <% if (typeof icon !== 'undefined' && icon) { %>
+            <div class="d-stat-icon">
+                <i class="bi <%= icon %>"></i>
+            </div>
+            <% } %>
+        </div>
+    </div>
+</div>

@@ -1,0 +1,49 @@
+<%#
+  Empty State Component
+
+  Props:
+  - title: string (required) - Main empty state message
+  - description: string (optional) - Additional descriptive text
+  - icon: string (optional) - Bootstrap icon class (e.g., "bi-folder-x")
+  - primaryAction: object (optional) - { href, label, icon }
+  - secondaryAction: object (optional) - { href, label, icon }
+  - compact: boolean (optional) - Use compact variant (less padding)
+
+  Usage:
+  <%- include('../components/emptyState', {
+      title: 'No projects yet',
+      description: 'Create your first project to get started',
+      icon: 'bi-folder-x',
+      primaryAction: { href: '/projects/create', label: 'Create Project', icon: 'bi-plus-lg' }
+  }) %>
+%>
+
+<% const compactClass = typeof compact !== 'undefined' && compact ? 'd-empty-state-compact' : ''; %>
+
+<div class="d-empty-state <%= compactClass %>">
+    <% if (typeof icon !== 'undefined' && icon) { %>
+    <div class="d-empty-state-icon">
+        <i class="bi <%= icon %>"></i>
+    </div>
+    <% } %>
+    <div class="d-empty-state-title"><%= title %></div>
+    <% if (typeof description !== 'undefined' && description) { %>
+    <p class="d-empty-state-description"><%= description %></p>
+    <% } %>
+    <% if ((typeof primaryAction !== 'undefined' && primaryAction) || (typeof secondaryAction !== 'undefined' && secondaryAction)) { %>
+    <div class="d-empty-state-actions">
+        <% if (typeof primaryAction !== 'undefined' && primaryAction) { %>
+        <a href="<%= primaryAction.href %>" class="btn btn-primary">
+            <% if (primaryAction.icon) { %><i class="bi <%= primaryAction.icon %>"></i><% } %>
+            <%= primaryAction.label %>
+        </a>
+        <% } %>
+        <% if (typeof secondaryAction !== 'undefined' && secondaryAction) { %>
+        <a href="<%= secondaryAction.href %>" class="btn btn-outline-secondary">
+            <% if (secondaryAction.icon) { %><i class="bi <%= secondaryAction.icon %>"></i><% } %>
+            <%= secondaryAction.label %>
+        </a>
+        <% } %>
+    </div>
+    <% } %>
+</div>

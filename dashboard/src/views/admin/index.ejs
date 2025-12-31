@@ -1,103 +1,78 @@
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/dashboard"><%= t('common:nav.dashboard') %></a></li>
-        <li class="breadcrumb-item active"><%= t('common:nav.admin') %></li>
-    </ol>
-</nav>
+<%- include('../partials/pageHeader', {
+    title: t('admin:title'),
+    titleIcon: 'bi-shield-lock',
+    backLink: { href: '/dashboard', label: t('common:nav.dashboard') }
+}) %>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-shield-lock"></i> <%= t('admin:title') %></h1>
-</div>
-
-<div class="row g-4 mb-4">
-    <div class="col-md-4">
-        <div class="card bg-primary text-white h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-white-50"><%= t('admin:nav.users') %></h6>
-                        <h2 class="mb-0"><%= stats.users %></h2>
-                    </div>
-                    <i class="bi bi-people fs-1 opacity-50"></i>
-                </div>
-            </div>
-            <div class="card-footer bg-transparent border-0">
-                <a href="/admin/users" class="text-white text-decoration-none">
-                    <%= t('admin:index.manage') %> <i class="bi bi-arrow-right"></i>
-                </a>
-            </div>
-        </div>
+<!-- Stats Cards -->
+<div class="row g-3 mb-4">
+    <div class="col-6 col-lg-3">
+        <%- include('../components/statCard', {
+            label: t('admin:nav.users'),
+            value: stats.users,
+            variant: 'primary',
+            icon: 'bi-people'
+        }) %>
     </div>
-
-    <div class="col-md-4">
-        <div class="card bg-success text-white h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-white-50"><%= t('common:roles.admin') %>s</h6>
-                        <h2 class="mb-0"><%= stats.admins %></h2>
-                    </div>
-                    <i class="bi bi-person-badge fs-1 opacity-50"></i>
-                </div>
-            </div>
-        </div>
+    <div class="col-6 col-lg-3">
+        <%- include('../components/statCard', {
+            label: t('common:roles.admin') + 's',
+            value: stats.admins,
+            variant: 'success',
+            icon: 'bi-person-badge'
+        }) %>
     </div>
-
-    <div class="col-md-4">
-        <div class="card bg-info text-white h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-white-50"><%= t('admin:index.totalProjects') %></h6>
-                        <h2 class="mb-0"><%= stats.projects %></h2>
-                    </div>
-                    <i class="bi bi-folder fs-1 opacity-50"></i>
-                </div>
-            </div>
-            <div class="card-footer bg-transparent border-0">
-                <a href="/admin/projects" class="text-white text-decoration-none">
-                    <%= t('common:buttons.showAll') %> <i class="bi bi-arrow-right"></i>
-                </a>
-            </div>
-        </div>
+    <div class="col-6 col-lg-3">
+        <%- include('../components/statCard', {
+            label: t('admin:index.totalProjects'),
+            value: stats.projects,
+            variant: 'info',
+            icon: 'bi-folder'
+        }) %>
     </div>
-
     <% if (stats.pending > 0) { %>
-    <div class="col-md-4">
-        <div class="card bg-warning text-dark h-100">
-            <div class="card-body">
-                <div class="d-flex justify-content-between align-items-center">
-                    <div>
-                        <h6 class="text-dark opacity-75"><%= t('admin:pending.title') %></h6>
-                        <h2 class="mb-0"><%= stats.pending %></h2>
-                    </div>
-                    <i class="bi bi-person-exclamation fs-1 opacity-50"></i>
-                </div>
-            </div>
-            <div class="card-footer bg-transparent border-0">
-                <a href="/admin/pending" class="text-dark text-decoration-none">
-                    <%= t('common:buttons.checkNow') %> <i class="bi bi-arrow-right"></i>
-                </a>
-            </div>
-        </div>
+    <div class="col-6 col-lg-3">
+        <%- include('../components/statCard', {
+            label: t('admin:pending.title'),
+            value: stats.pending,
+            variant: 'warning',
+            icon: 'bi-person-exclamation'
+        }) %>
     </div>
     <% } %>
 </div>
 
-<div class="row g-4">
+<% if (stats.pending > 0) { %>
+<!-- Pending Users Alert -->
+<div class="alert alert-warning d-flex align-items-center mb-4" role="alert">
+    <i class="bi bi-person-exclamation me-3 fs-4"></i>
+    <div class="flex-grow-1">
+        <strong><%= t('admin:pending.title') %></strong>
+        <div class="small"><%= stats.pending %> <%= t('admin:pending.pendingHint') %></div>
+    </div>
+    <a href="/admin/users/pending" class="btn btn-warning btn-sm ms-3">
+        <i class="bi bi-person-check"></i> <%= t('common:buttons.checkNow') %>
+    </a>
+</div>
+<% } %>
+
+<!-- Quick Actions Grid -->
+<div class="row g-3">
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-people"></i> <%= t('admin:users.title') %>
+                <h6 class="mb-0"><i class="bi bi-people me-2"></i><%= t('admin:users.title') %></h6>
             </div>
             <div class="card-body">
-                <p class="text-muted"><%= t('admin:index.usersDescription') %></p>
-                <a href="/admin/users" class="btn btn-primary">
-                    <i class="bi bi-people"></i> <%= t('admin:index.manageUsers') %>
-                </a>
-                <a href="/admin/users/create" class="btn btn-outline-success">
-                    <i class="bi bi-person-plus"></i> <%= t('admin:users.newUser') %>
-                </a>
+                <p class="text-muted small mb-3"><%= t('admin:index.usersDescription') %></p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="/admin/users" class="btn btn-primary btn-sm">
+                        <i class="bi bi-people"></i> <%= t('admin:index.manageUsers') %>
+                    </a>
+                    <a href="/admin/users/create" class="btn btn-outline-success btn-sm">
+                        <i class="bi bi-person-plus"></i> <%= t('admin:users.newUser') %>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -105,11 +80,11 @@
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-folder"></i> <%= t('admin:projects.title') %>
+                <h6 class="mb-0"><i class="bi bi-folder me-2"></i><%= t('admin:projects.title') %></h6>
             </div>
             <div class="card-body">
-                <p class="text-muted"><%= t('admin:index.projectsDescription') %></p>
-                <a href="/admin/projects" class="btn btn-primary">
+                <p class="text-muted small mb-3"><%= t('admin:index.projectsDescription') %></p>
+                <a href="/admin/projects" class="btn btn-primary btn-sm">
                     <i class="bi bi-folder"></i> <%= t('admin:projects.allProjects') %>
                 </a>
             </div>
@@ -119,16 +94,18 @@
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-file-text"></i> <%= t('admin:logs.title') %>
+                <h6 class="mb-0"><i class="bi bi-file-text me-2"></i><%= t('admin:logs.title') %></h6>
             </div>
             <div class="card-body">
-                <p class="text-muted"><%= t('admin:index.logsDescription') %></p>
-                <a href="/admin/logs" class="btn btn-primary">
-                    <i class="bi bi-file-text"></i> <%= t('admin:index.showLogs') %>
-                </a>
-                <a href="/admin/logs?type=error" class="btn btn-outline-danger">
-                    <i class="bi bi-exclamation-triangle"></i> <%= t('admin:index.errorsOnly') %>
-                </a>
+                <p class="text-muted small mb-3"><%= t('admin:index.logsDescription') %></p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="/admin/logs" class="btn btn-primary btn-sm">
+                        <i class="bi bi-file-text"></i> <%= t('admin:index.showLogs') %>
+                    </a>
+                    <a href="/admin/logs?type=error" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-exclamation-triangle"></i> <%= t('admin:index.errorsOnly') %>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -136,16 +113,18 @@
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-rocket-takeoff"></i> <%= t('admin:deployments.title') %>
+                <h6 class="mb-0"><i class="bi bi-rocket-takeoff me-2"></i><%= t('admin:deployments.title') %></h6>
             </div>
             <div class="card-body">
-                <p class="text-muted"><%= t('admin:index.deploymentsDescription') %></p>
-                <a href="/admin/deployments" class="btn btn-primary">
-                    <i class="bi bi-rocket-takeoff"></i> <%= t('admin:nav.deployments') %>
-                </a>
-                <a href="/admin/deployments?status=failed" class="btn btn-outline-danger">
-                    <i class="bi bi-x-circle"></i> <%= t('common:status.failed') %>
-                </a>
+                <p class="text-muted small mb-3"><%= t('admin:index.deploymentsDescription') %></p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <a href="/admin/deployments" class="btn btn-primary btn-sm">
+                        <i class="bi bi-rocket-takeoff"></i> <%= t('admin:nav.deployments') %>
+                    </a>
+                    <a href="/admin/deployments?status=failed" class="btn btn-outline-danger btn-sm">
+                        <i class="bi bi-x-circle"></i> <%= t('common:status.failed') %>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -153,11 +132,11 @@
     <div class="col-md-6">
         <div class="card h-100">
             <div class="card-header">
-                <i class="bi bi-hdd-network"></i> <%= t('admin:npm.title') %>
+                <h6 class="mb-0"><i class="bi bi-hdd-network me-2"></i><%= t('admin:npm.title') %></h6>
             </div>
             <div class="card-body">
-                <p class="text-muted"><%= t('admin:index.npmDescription') %></p>
-                <a href="/admin/settings/npm" class="btn btn-primary">
+                <p class="text-muted small mb-3"><%= t('admin:index.npmDescription') %></p>
+                <a href="/admin/settings/npm" class="btn btn-primary btn-sm">
                     <i class="bi bi-gear"></i> <%= t('admin:index.configureNpm') %>
                 </a>
             </div>

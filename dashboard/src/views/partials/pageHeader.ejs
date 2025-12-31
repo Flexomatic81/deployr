@@ -1,0 +1,55 @@
+<%#
+  Page Header Partial
+
+  Props:
+  - title: string (required) - Page title text
+  - titleIcon: string (optional) - Bootstrap icon class (e.g., "bi-speedometer2")
+  - subtitle: string (optional) - Subtitle text below title
+  - primaryAction: object (optional) - { href, label, icon }
+  - secondaryAction: object (optional) - { href, label, icon }
+  - backLink: object (optional) - { href, label } - Back navigation link
+
+  Usage:
+  <%- include('../partials/pageHeader', {
+      title: 'Dashboard',
+      titleIcon: 'bi-speedometer2',
+      subtitle: 'Overview of your projects',
+      primaryAction: { href: '/projects/create', label: 'New Project', icon: 'bi-plus-lg' }
+  }) %>
+%>
+
+<div class="d-page-header">
+    <div class="d-page-header-left">
+        <% if (typeof backLink !== 'undefined' && backLink) { %>
+        <a href="<%= backLink.href %>" class="btn btn-sm btn-subtle mb-2">
+            <i class="bi bi-arrow-left"></i>
+            <%= backLink.label %>
+        </a>
+        <% } %>
+        <h1 class="d-page-title">
+            <% if (typeof titleIcon !== 'undefined' && titleIcon) { %>
+            <i class="bi <%= titleIcon %>"></i>
+            <% } %>
+            <%= title %>
+        </h1>
+        <% if (typeof subtitle !== 'undefined' && subtitle) { %>
+        <p class="d-page-subtitle"><%= subtitle %></p>
+        <% } %>
+    </div>
+    <% if ((typeof primaryAction !== 'undefined' && primaryAction) || (typeof secondaryAction !== 'undefined' && secondaryAction)) { %>
+    <div class="d-page-header-actions">
+        <% if (typeof secondaryAction !== 'undefined' && secondaryAction) { %>
+        <a href="<%= secondaryAction.href %>" class="btn btn-outline-secondary">
+            <% if (secondaryAction.icon) { %><i class="bi <%= secondaryAction.icon %>"></i><% } %>
+            <%= secondaryAction.label %>
+        </a>
+        <% } %>
+        <% if (typeof primaryAction !== 'undefined' && primaryAction) { %>
+        <a href="<%= primaryAction.href %>" class="btn btn-primary">
+            <% if (primaryAction.icon) { %><i class="bi <%= primaryAction.icon %>"></i><% } %>
+            <%= primaryAction.label %>
+        </a>
+        <% } %>
+    </div>
+    <% } %>
+</div>

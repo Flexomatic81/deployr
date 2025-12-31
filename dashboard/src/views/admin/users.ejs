@@ -1,25 +1,26 @@
-<nav aria-label="breadcrumb">
-    <ol class="breadcrumb">
-        <li class="breadcrumb-item"><a href="/dashboard"><%= t('common:nav.dashboard') %></a></li>
-        <li class="breadcrumb-item"><a href="/admin"><%= t('common:nav.admin') %></a></li>
-        <li class="breadcrumb-item active"><%= t('admin:users.title') %></li>
-    </ol>
-</nav>
+<%- include('../partials/pageHeader', {
+    title: t('admin:users.title'),
+    titleIcon: 'bi-people',
+    backLink: { href: '/admin', label: t('common:nav.admin') },
+    primaryAction: { href: '/admin/users/create', label: t('admin:users.newUser'), icon: 'bi-person-plus' }
+}) %>
 
-<div class="d-flex justify-content-between align-items-center mb-4">
-    <h1><i class="bi bi-people"></i> <%= t('admin:users.title') %></h1>
-    <a href="/admin/users/create" class="btn btn-success">
-        <i class="bi bi-person-plus"></i> <%= t('admin:users.newUser') %>
-    </a>
-</div>
-
-<div class="card">
-    <div class="card-body">
+<div class="d-table-shell">
+    <%- include('../components/tableShell', {
+        title: t('admin:users.title'),
+        titleIcon: 'bi-people'
+    }) %>
+    <div class="d-table-shell-body">
         <% if (users.length === 0) { %>
-            <p class="text-muted text-center my-4"><%= t('admin:users.noUsers') %></p>
+            <%- include('../components/emptyState', {
+                title: t('admin:users.noUsers'),
+                icon: 'bi-people',
+                primaryAction: { href: '/admin/users/create', label: t('admin:users.newUser'), icon: 'bi-person-plus' },
+                compact: true
+            }) %>
         <% } else { %>
             <div class="table-responsive">
-                <table class="table table-hover">
+                <table class="table table-hover mb-0">
                     <thead>
                         <tr>
                             <th><%= t('admin:users.columns.username') %></th>
@@ -27,49 +28,48 @@
                             <th><%= t('admin:users.columns.role') %></th>
                             <th><%= t('common:nav.projects') %></th>
                             <th><%= t('admin:users.columns.created') %></th>
-                            <th><%= t('admin:users.columns.actions') %></th>
+                            <th class="text-end"><%= t('admin:users.columns.actions') %></th>
                         </tr>
                     </thead>
                     <tbody>
                         <% users.forEach(u => { %>
                             <tr>
                                 <td>
-                                    <i class="bi bi-person"></i>
-                                    <%= u.username %>
+                                    <i class="bi bi-person me-1"></i>
+                                    <span class="fw-medium"><%= u.username %></span>
                                 </td>
                                 <td><code><%= u.system_username %></code></td>
                                 <td>
                                     <% if (u.is_admin) { %>
-                                        <span class="badge bg-danger"><%= t('common:roles.admin') %></span>
+                                        <span class="badge bg-danger-subtle"><%= t('common:roles.admin') %></span>
                                     <% } else { %>
                                         <span class="badge bg-secondary"><%= t('common:roles.user') %></span>
                                     <% } %>
                                     <% if (!u.approved) { %>
-                                        <span class="badge bg-warning text-dark"><%= t('common:status.pending') %></span>
+                                        <span class="badge bg-warning-subtle"><%= t('common:status.pending') %></span>
                                     <% } %>
                                 </td>
                                 <td>
-                                    <span class="badge bg-info"><%= u.projectCount %></span>
+                                    <span class="badge bg-info-subtle"><%= u.projectCount %></span>
                                 </td>
-                                <td><%= new Date(u.created_at).toLocaleDateString(currentLanguage === 'de' ? 'de-DE' : 'en-US') %></td>
-                                <td>
-                                    <div class="btn-group btn-group-sm">
-                                        <a href="/admin/users/<%= u.id %>/edit" class="btn btn-outline-primary" title="<%= t('common:buttons.edit') %>">
-                                            <i class="bi bi-pencil"></i>
-                                        </a>
-                                        <button type="button" class="btn btn-outline-warning" title="<%= t('admin:editUser.resetPassword') %>"
-                                                onclick="resetPassword(<%= u.id %>, '<%= u.username %>')">
-                                            <i class="bi bi-key"></i>
-                                        </button>
-                                        <% if (u.id !== user.id) { %>
-                                            <form action="/admin/users/<%= u.id %>?_method=DELETE" method="POST" class="d-inline"
-                                                  onsubmit="return confirm('<%= t('admin:delete.confirmUser', { username: u.username }) %>')">
-                                                <button type="submit" class="btn btn-outline-danger" title="<%= t('common:buttons.delete') %>">
-                                                    <i class="bi bi-trash"></i>
-                                                </button>
-                                            </form>
-                                        <% } %>
-                                    </div>
+                                <td class="text-muted"><%= new Date(u.created_at).toLocaleDateString(currentLanguage === 'de' ? 'de-DE' : 'en-US') %></td>
+                                <td class="text-end">
+                                    <a href="/admin/users/<%= u.id %>/edit" class="btn btn-sm btn-outline-primary btn-icon" title="<%= t('common:buttons.edit') %>">
+                                        <i class="bi bi-pencil"></i>
+                                    </a>
+                                    <button type="button" class="btn btn-sm btn-outline-warning btn-icon" title="<%= t('admin:editUser.resetPassword') %>"
+                                            onclick="resetPassword(<%= u.id %>, '<%= u.username %>')">
+                                        <i class="bi bi-key"></i>
+                                    </button>
+                                    <% if (u.id !== user.id) { %>
+                                        <form action="/admin/users/<%= u.id %>?_method=DELETE" method="POST" class="d-inline"
+                                              onsubmit="return confirm('<%= t('admin:delete.confirmUser', { username: u.username }) %>')">
+                                            <%- csrfInput %>
+                                            <button type="submit" class="btn btn-sm btn-outline-danger btn-icon" title="<%= t('common:buttons.delete') %>">
+                                                <i class="bi bi-trash"></i>
+                                            </button>
+                                        </form>
+                                    <% } %>
                                 </td>
                             </tr>
                         <% }) %>
@@ -85,10 +85,11 @@
     <div class="modal-dialog">
         <div class="modal-content">
             <div class="modal-header">
-                <h5 class="modal-title"><i class="bi bi-key"></i> <%= t('admin:editUser.resetPassword') %></h5>
+                <h5 class="modal-title"><i class="bi bi-key me-2"></i><%= t('admin:editUser.resetPassword') %></h5>
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <form id="resetPasswordForm" method="POST">
+                <%- csrfInput %>
                 <input type="hidden" name="_method" value="PUT">
                 <div class="modal-body">
                     <p><%= t('admin:editUser.newPassword') %> <strong id="resetUsername"></strong>:</p>
