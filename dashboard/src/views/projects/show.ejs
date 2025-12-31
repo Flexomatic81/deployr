@@ -882,7 +882,7 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // Also handle auto-submit selects (share permissions, interval)
+    // Also handle auto-submit selects - save collapse state before submit
     document.querySelectorAll('.share-permission-select').forEach(function(select) {
         const collapseEl = select.closest('.collapse');
         if (collapseEl) {
@@ -892,7 +892,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    const intervalSelect = document.getElementById('intervalSelect');
+    // Interval select - reuse existing reference
     if (intervalSelect) {
         const collapseEl = intervalSelect.closest('.collapse');
         if (collapseEl) {
