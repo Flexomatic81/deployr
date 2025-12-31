@@ -262,6 +262,7 @@ Admins can view system logs and deployment history via the admin panel:
 - `manual` - Manually triggered deployment (button)
 - `clone` - Initial Git clone when creating project
 - `pull` - Manual Git pull
+- `webhook` - Instant deployment triggered by Git provider webhook
 
 Log files in `dashboard/logs/`:
 - `combined.log` - All logs
@@ -382,7 +383,7 @@ Git projects can be automatically updated when new commits are pushed.
 - Deployment history is stored in the database
 
 **Database Tables:**
-- `project_autodeploy` - Configuration (user_id, project_name, branch, enabled, interval_minutes, last_check)
+- `project_autodeploy` - Configuration (user_id, project_name, branch, enabled, interval_minutes, last_check, webhook_secret, webhook_enabled)
 - `deployment_logs` - History (trigger_type, commit_hashes, status, duration_ms)
 
 **Routes:**
@@ -394,7 +395,38 @@ Git projects can be automatically updated when new commits are pushed.
 
 **Service:** `autodeploy.js` - Polling logic, deployment execution, history logging
 
-**Logging Function:** `logDeployment(userId, projectName, triggerType, data)` - Reusable function for logging all deployment types (auto, manual, clone, pull)
+**Logging Function:** `logDeployment(userId, projectName, triggerType, data)` - Reusable function for logging all deployment types (auto, manual, clone, pull, webhook)
+
+### Webhooks
+
+As an alternative to polling, webhooks enable instant deployments when code is pushed. Supports GitHub, GitLab, and Bitbucket.
+
+**Webhook Routes:**
+- `POST /api/webhooks/:webhookId` - Receives webhook from Git providers (no CSRF, no session)
+- `POST /projects/:name/webhook/enable` - Enable webhook, returns secret (owner only)
+- `POST /projects/:name/webhook/disable` - Disable webhook (owner only)
+- `POST /projects/:name/webhook/regenerate` - Generate new secret (owner only)
+
+**Security:**
+- HMAC-SHA256 signature validation (GitHub, Bitbucket)
+- Plain token comparison (GitLab)
+- Timing-safe comparisons (`crypto.timingSafeEqual`) to prevent timing attacks
+- Rate limiting: 30 requests/minute per IP
+- Branch filtering: Only configured branch triggers deployment
+
+**Webhook URL Format:**
+```
+https://<server>/api/webhooks/<autoDeployId>
+```
+
+**Provider Detection (from headers):**
+| Provider | Event Header | Signature Header | Push Event |
+|----------|--------------|------------------|------------|
+| GitHub | `x-github-event` | `x-hub-signature-256` | `push` |
+| GitLab | `x-gitlab-event` | `x-gitlab-token` | `Push Hook` |
+| Bitbucket | `x-event-key` | `x-hub-signature` | `repo:push` |
+
+**Utility Module:** `services/utils/webhook.js` - Signature validation, provider detection, payload parsing
 
 ## Project Sharing
 

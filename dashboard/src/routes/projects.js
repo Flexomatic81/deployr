@@ -13,6 +13,17 @@ const upload = require('../middleware/upload');
 const { validateZipMiddleware } = require('../middleware/upload');
 const { logger } = require('../config/logger');
 
+// Filter out requests for static files that shouldn't reach project routes
+// These are typically browser DevTools or extensions looking for source maps
+router.use('/:name', (req, res, next) => {
+    const name = req.params.name;
+    // Reject requests that look like static file requests (e.g., *.css.map, *.js.map)
+    if (name && /\.(css|js|map|ico|png|jpg|jpeg|gif|svg|woff|woff2|ttf|eot)$/i.test(name)) {
+        return res.status(404).send('Not found');
+    }
+    next();
+});
+
 // Show all projects
 router.get('/', requireAuth, async (req, res) => {
     try {
@@ -235,13 +246,25 @@ router.get('/:name', requireAuth, getProjectAccess(), async (req, res) => {
             userDatabases = await projectService.getUserDbCredentials(req.session.user.system_username);
         }
 
-        // Load auto-deploy config (only for owner with Git projects)
+        // Load auto-deploy and webhook config (only for owner with Git projects)
         let autoDeployConfig = null;
         let deploymentHistory = [];
+        let webhookConfig = null;
+        let webhookSecret = null;
         if (access.isOwner && gitStatus && gitStatus.connected) {
+            // Auto-deploy (polling) and webhook are independent features
             autoDeployConfig = await autoDeployService.getAutoDeployConfig(req.session.user.id, req.params.name);
-            if (autoDeployConfig) {
+            webhookConfig = await autoDeployService.getWebhookConfig(req.session.user.id, req.params.name);
+
+            // Load deployment history if either auto-deploy or webhook is configured
+            if (autoDeployConfig || webhookConfig) {
                 deploymentHistory = await autoDeployService.getDeploymentHistory(req.session.user.id, req.params.name, 5);
+            }
+
+            // Check for one-time secret display from session
+            if (req.session.webhookSecret && req.session.webhookSecret.projectName === req.params.name) {
+                webhookSecret = req.session.webhookSecret;
+                delete req.session.webhookSecret; // Clear after displaying once
             }
         }
 
@@ -276,6 +299,8 @@ router.get('/:name', requireAuth, getProjectAccess(), async (req, res) => {
             userDatabases,
             autoDeployConfig,
             deploymentHistory,
+            webhookConfig,
+            webhookSecret,
             // Sharing data
             projectAccess: access,
             projectShares,
@@ -682,6 +707,94 @@ router.get('/:name/autodeploy/history', requireAuth, getProjectAccess(), async (
     } catch (error) {
         logger.error('Deployment history error', { error: error.message });
         res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================
+// WEBHOOK ENDPOINTS
+// ============================
+
+// Enable webhook (owner only)
+router.post('/:name/webhook/enable', requireAuth, getProjectAccess(), async (req, res) => {
+    try {
+        if (!req.projectAccess.isOwner) {
+            req.flash('error', req.t('projects:errors.ownerOnly'));
+            return res.redirect(`/projects/${req.params.name}`);
+        }
+
+        const systemUsername = req.projectAccess.systemUsername;
+        const projectPath = gitService.getProjectPath(systemUsername, req.params.name);
+
+        if (!gitService.isGitRepository(projectPath)) {
+            req.flash('error', req.t('projects:errors.noGitRepo'));
+            return res.redirect(`/projects/${req.params.name}`);
+        }
+
+        // Get branch from git status for webhook config
+        const gitStatus = await gitService.getGitStatus(projectPath);
+        const branch = gitStatus?.branch || 'main';
+
+        // Enable webhook (independent of polling auto-deploy)
+        const result = await autoDeployService.enableWebhook(req.session.user.id, req.params.name, branch);
+
+        // Store secret in session temporarily for one-time display
+        req.session.webhookSecret = {
+            projectName: req.params.name,
+            secret: result.secret,
+            webhookId: result.webhookId
+        };
+
+        req.flash('success', req.t('projects:flash.webhookEnabled'));
+        res.redirect(`/projects/${req.params.name}`);
+    } catch (error) {
+        logger.error('Webhook enable error', { error: error.message });
+        req.flash('error', error.message);
+        res.redirect(`/projects/${req.params.name}`);
+    }
+});
+
+// Disable webhook (owner only)
+router.post('/:name/webhook/disable', requireAuth, getProjectAccess(), async (req, res) => {
+    try {
+        if (!req.projectAccess.isOwner) {
+            req.flash('error', req.t('projects:errors.ownerOnly'));
+            return res.redirect(`/projects/${req.params.name}`);
+        }
+
+        await autoDeployService.disableWebhook(req.session.user.id, req.params.name);
+        req.flash('success', req.t('projects:flash.webhookDisabled'));
+        res.redirect(`/projects/${req.params.name}`);
+    } catch (error) {
+        logger.error('Webhook disable error', { error: error.message });
+        req.flash('error', error.message);
+        res.redirect(`/projects/${req.params.name}`);
+    }
+});
+
+// Regenerate webhook secret (owner only)
+router.post('/:name/webhook/regenerate', requireAuth, getProjectAccess(), async (req, res) => {
+    try {
+        if (!req.projectAccess.isOwner) {
+            req.flash('error', req.t('projects:errors.ownerOnly'));
+            return res.redirect(`/projects/${req.params.name}`);
+        }
+
+        const secret = await autoDeployService.regenerateWebhookSecret(req.session.user.id, req.params.name);
+        const webhookConfig = await autoDeployService.getWebhookConfig(req.session.user.id, req.params.name);
+
+        // Store new secret in session for one-time display
+        req.session.webhookSecret = {
+            projectName: req.params.name,
+            secret: secret,
+            webhookId: webhookConfig?.id
+        };
+
+        req.flash('success', req.t('projects:flash.webhookRegenerated'));
+        res.redirect(`/projects/${req.params.name}`);
+    } catch (error) {
+        logger.error('Webhook regenerate error', { error: error.message });
+        req.flash('error', error.message);
+        res.redirect(`/projects/${req.params.name}`);
     }
 });
 

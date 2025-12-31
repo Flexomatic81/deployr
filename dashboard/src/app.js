@@ -28,6 +28,7 @@ const setupRoutes = require('./routes/setup');
 const adminRoutes = require('./routes/admin');
 const helpRoutes = require('./routes/help');
 const proxyRoutes = require('./routes/proxy');
+const webhookRoutes = require('./routes/webhooks');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -75,6 +76,15 @@ const generalLimiter = rateLimit({
     legacyHeaders: false
 });
 
+// Security: Webhook rate limiting (more permissive for CI/CD)
+const webhookLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 30, // 30 requests per minute per IP
+    message: { error: 'Too many webhook requests. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 app.use(generalLimiter);
 
 // Request Logging
@@ -85,6 +95,11 @@ app.set('view engine', 'ejs');
 app.set('views', path.join(__dirname, 'views'));
 app.use(expressLayouts);
 app.set('layout', 'layout');
+
+// Webhook route - MUST be registered BEFORE express.json() middleware
+// Webhooks need raw body for HMAC signature validation
+// Also registered before session/CSRF (authenticated via signature, not session)
+app.use('/api/webhooks', webhookLimiter, webhookRoutes);
 
 // Middleware
 app.use(express.static(path.join(__dirname, '../public')));
@@ -200,6 +215,10 @@ async function getSetupData() {
 }
 
 async function getServerIp() {
+    // Prefer dashboard domain (NPM) over server IP for external URLs
+    if (process.env.NPM_DASHBOARD_DOMAIN) {
+        return process.env.NPM_DASHBOARD_DOMAIN;
+    }
     const data = await getSetupData();
     return data.serverIp || process.env.SERVER_IP || 'localhost';
 }

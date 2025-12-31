@@ -34,9 +34,11 @@
     "repoUrlHint": "HTTPS-URL von GitHub, GitLab oder Bitbucket",
     "accessToken": "Access Token",
     "accessTokenOptional": "(optional)",
-    "accessTokenHelp": "Personal Access Token für private Repositories. Bei GitHub unter Settings → Developer settings → Personal access tokens erstellen.",
+    "accessTokenHelp": "Personal Access Token für private Repositories.",
     "accessTokenHint": "Erforderlich für private Repositories.",
-    "createGitHubToken": "GitHub Token erstellen",
+    "createTokenGithub": "GitHub",
+    "createTokenGitlab": "GitLab",
+    "createTokenBitbucket": "Bitbucket",
     "portHelp": "Der HTTP-Port, unter dem das Projekt erreichbar sein wird. Jedes Projekt benötigt einen eindeutigen Port.",
     "nextFreePort": "Nächster freier Port: {{port}}",
     "zipFile": "ZIP-Datei",
@@ -157,7 +159,7 @@
   },
 
   "git": {
-    "title": "GitHub",
+    "title": "Git",
     "connected": "Verbunden",
     "notConnected": "Nicht verbunden",
     "repository": "Repository",
@@ -180,6 +182,36 @@
     "triggerNow": "Jetzt deployen",
     "history": "Deploy-Historie",
     "noHistory": "Noch keine Deployments"
+  },
+
+  "webhook": {
+    "help": "Webhooks ermöglichen sofortiges Deployment bei Push-Events. Schneller als Polling, da der Git-Provider dein System direkt benachrichtigt.",
+    "enable": "Aktivieren",
+    "disable": "Deaktivieren",
+    "urlLabel": "Webhook-URL",
+    "secretLabel": "Webhook-Secret",
+    "secretWarning": "Dieses Secret wird nur einmal angezeigt! Kopiere es jetzt und speichere es sicher.",
+    "regenerate": "Secret neu generieren",
+    "regenerateConfirm": "Das alte Secret wird ungültig. Der Webhook muss beim Git-Provider aktualisiert werden. Fortfahren?",
+    "branchInfo": "Nur Pushes zum Branch \"{{branch}}\" triggern ein Deployment.",
+    "info": "Aktiviere Webhooks für sofortige Deployments bei Push-Events. Schneller als das Polling-Intervall.",
+    "setupInstructions": "Setup-Anleitung anzeigen",
+    "github": {
+      "step1": "Gehe zu Repository → Settings → Webhooks → Add webhook",
+      "step2": "Trage die Webhook-URL ein",
+      "step3": "Wähle \"application/json\" als Content type",
+      "step4": "Füge das Secret ein und wähle \"Just the push event\""
+    },
+    "gitlab": {
+      "step1": "Gehe zu Repository → Settings → Webhooks",
+      "step2": "Trage die Webhook-URL ein und das Secret als \"Secret token\"",
+      "step3": "Aktiviere \"Push events\" und klicke \"Add webhook\""
+    },
+    "bitbucket": {
+      "step1": "Gehe zu Repository → Settings → Webhooks → Add webhook",
+      "step2": "Trage die Webhook-URL ein",
+      "step3": "Wähle \"Repository push\" als Trigger"
+    }
   },
 
   "env": {
@@ -245,7 +277,10 @@
     "autoDeployDisabled": "Auto-Deploy deaktiviert",
     "autoDeployTriggered": "Deployment wurde gestartet",
     "deploySuccess": "Deployment erfolgreich abgeschlossen",
-    "deployFailed": "Deployment fehlgeschlagen: {{error}}"
+    "deployFailed": "Deployment fehlgeschlagen: {{error}}",
+    "webhookEnabled": "Webhook aktiviert. Kopiere das Secret - es wird nur einmal angezeigt!",
+    "webhookDisabled": "Webhook deaktiviert",
+    "webhookRegenerated": "Neues Webhook-Secret generiert. Aktualisiere den Webhook bei deinem Git-Provider!"
   },
 
   "errors": {

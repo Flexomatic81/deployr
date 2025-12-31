@@ -114,6 +114,19 @@ async function initDatabase() {
             // Column already exists - ignore
         }
 
+        // Migration: Add webhook columns for webhook-based auto-deploy
+        try {
+            await connection.execute(`
+                ALTER TABLE project_autodeploy ADD COLUMN webhook_secret VARCHAR(64) NULL
+            `);
+            await connection.execute(`
+                ALTER TABLE project_autodeploy ADD COLUMN webhook_enabled BOOLEAN DEFAULT FALSE
+            `);
+            logger.info('Migration: Added webhook_secret and webhook_enabled columns');
+        } catch (e) {
+            // Columns already exist - ignore
+        }
+
         // Deployment logs table
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS deployment_logs (
@@ -134,10 +147,10 @@ async function initDatabase() {
             )
         `);
 
-        // Migration: Extend trigger_type ENUM for clone/pull
+        // Migration: Extend trigger_type ENUM for clone/pull/webhook
         try {
             await connection.execute(`
-                ALTER TABLE deployment_logs MODIFY COLUMN trigger_type ENUM('auto', 'manual', 'clone', 'pull') DEFAULT 'auto'
+                ALTER TABLE deployment_logs MODIFY COLUMN trigger_type ENUM('auto', 'manual', 'clone', 'pull', 'webhook') DEFAULT 'auto'
             `);
             await connection.execute(`
                 ALTER TABLE deployment_logs MODIFY COLUMN status ENUM('pending', 'pulling', 'cloning', 'restarting', 'success', 'failed') NOT NULL
