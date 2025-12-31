@@ -1,23 +1,4 @@
-<%#
-  Empty State Component
-
-  Props:
-  - title: string (required) - Main empty state message
-  - description: string (optional) - Additional descriptive text
-  - icon: string (optional) - Bootstrap icon class (e.g., "bi-folder-x")
-  - primaryAction: object (optional) - { href, label, icon }
-  - secondaryAction: object (optional) - { href, label, icon }
-  - compact: boolean (optional) - Use compact variant (less padding)
-
-  Usage:
-  <%- include('../components/emptyState', {
-      title: 'No projects yet',
-      description: 'Create your first project to get started',
-      icon: 'bi-folder-x',
-      primaryAction: { href: '/projects/create', label: 'Create Project', icon: 'bi-plus-lg' }
-  }) %>
-%>
-
+<!-- Empty State: title (required), description, icon, primaryAction, secondaryAction, compact -->
 <% const compactClass = typeof compact !== 'undefined' && compact ? 'd-empty-state-compact' : ''; %>
 
 <div class="d-empty-state <%= compactClass %>">

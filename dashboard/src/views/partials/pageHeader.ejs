@@ -1,23 +1,7 @@
-<%#
+<!--
   Page Header Partial
-
-  Props:
-  - title: string (required) - Page title text
-  - titleIcon: string (optional) - Bootstrap icon class (e.g., "bi-speedometer2")
-  - subtitle: string (optional) - Subtitle text below title
-  - primaryAction: object (optional) - { href, label, icon }
-  - secondaryAction: object (optional) - { href, label, icon }
-  - backLink: object (optional) - { href, label } - Back navigation link
-
-  Usage:
-  <%- include('../partials/pageHeader', {
-      title: 'Dashboard',
-      titleIcon: 'bi-speedometer2',
-      subtitle: 'Overview of your projects',
-      primaryAction: { href: '/projects/create', label: 'New Project', icon: 'bi-plus-lg' }
-  }) %>
-%>
-
+  Props: title (required), titleIcon, subtitle, primaryAction, secondaryAction, backLink
+-->
 <div class="d-page-header">
     <div class="d-page-header-left">
         <% if (typeof backLink !== 'undefined' && backLink) { %>

@@ -1,27 +1,4 @@
-<%#
-  Table Shell Component
-
-  Props:
-  - title: string (required) - Section title
-  - titleIcon: string (optional) - Bootstrap icon class for title
-  - actions: array (optional) - [{ href, label, icon, class }] - Action buttons
-  - showAllLink: object (optional) - { href, label } - "View all" link
-
-  This component wraps content. Use it with <%- include() %> and pass content separately.
-
-  Usage:
-  <div class="d-table-shell">
-      <%- include('../components/tableShellHeader', {
-          title: 'My Projects',
-          titleIcon: 'bi-folder',
-          showAllLink: { href: '/projects', label: 'View all' }
-      }) %>
-      <div class="d-table-shell-body">
-          <!-- Table or empty state goes here -->
-      </div>
-  </div>
-%>
-
+<!-- Table Shell Header: title (required), titleIcon, actions, showAllLink -->
 <div class="d-table-shell-header">
     <h5 class="d-table-shell-title">
         <% if (typeof titleIcon !== 'undefined' && titleIcon) { %>
