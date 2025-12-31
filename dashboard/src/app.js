@@ -214,6 +214,10 @@ async function getSetupData() {
 }
 
 async function getServerIp() {
+    // Prefer dashboard domain (NPM) over server IP for external URLs
+    if (process.env.NPM_DASHBOARD_DOMAIN) {
+        return process.env.NPM_DASHBOARD_DOMAIN;
+    }
     const data = await getSetupData();
     return data.serverIp || process.env.SERVER_IP || 'localhost';
 }
