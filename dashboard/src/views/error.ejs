@@ -1,12 +1,20 @@
-<div class="row justify-content-center">
+<div class="row justify-content-center align-items-center min-vh-50">
     <div class="col-md-6 text-center">
-        <div class="py-5">
-            <i class="bi bi-exclamation-triangle display-1 text-warning"></i>
-            <h1 class="mt-4"><%= title %></h1>
-            <p class="lead text-muted"><%= message %></p>
-            <a href="/dashboard" class="btn btn-primary">
-                <i class="bi bi-house"></i> <%= t('errors:notFound.backToDashboard') %>
-            </a>
+        <div class="card d-elevated py-5 px-4">
+            <div class="card-body">
+                <div class="d-empty-state">
+                    <div class="d-empty-state-icon text-warning">
+                        <i class="bi bi-exclamation-triangle"></i>
+                    </div>
+                    <div class="d-empty-state-title"><%= title %></div>
+                    <p class="d-empty-state-description"><%= message %></p>
+                    <div class="d-empty-state-actions">
+                        <a href="/dashboard" class="btn btn-primary">
+                            <i class="bi bi-house"></i> <%= t('errors:notFound.backToDashboard') %>
+                        </a>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
 </div>

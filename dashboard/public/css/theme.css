@@ -629,6 +629,68 @@ a:hover {
 }
 
 /* ==========================================================================
+   Collapsible Card Headers
+   ========================================================================== */
+
+.d-collapsible-header {
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.d-collapsible-header:hover {
+    background-color: var(--d-border-light);
+}
+
+.d-collapsible-header .collapse-icon {
+    transition: transform 0.2s ease;
+}
+
+.d-collapsible-header:not(.collapsed) .collapse-icon {
+    transform: rotate(180deg);
+}
+
+/* ==========================================================================
+   Danger Zone Card
+   ========================================================================== */
+
+.d-danger-zone {
+    border: 1px solid var(--d-danger);
+    border-left-width: 4px;
+    background-color: var(--d-surface);
+    border-radius: var(--d-radius);
+}
+
+.d-danger-zone .card-header {
+    background-color: var(--d-danger-subtle);
+    color: var(--d-danger);
+    border-bottom-color: var(--d-danger);
+}
+
+.d-danger-zone .card-header h5 {
+    color: var(--d-danger);
+}
+
+[data-bs-theme="dark"] .d-danger-zone {
+    background-color: var(--d-surface);
+}
+
+/* ==========================================================================
+   Purple Badge (for PHP type)
+   ========================================================================== */
+
+.bg-purple-subtle {
+    background-color: rgba(111, 66, 193, 0.1) !important;
+}
+
+.text-purple {
+    color: #6f42c1 !important;
+}
+
+[data-bs-theme="dark"] .bg-purple-subtle {
+    background-color: rgba(111, 66, 193, 0.2) !important;
+}
+
+/* ==========================================================================
    Responsive Utilities
    ========================================================================== */
 
@@ -653,5 +715,16 @@ a:hover {
 
     .d-table-shell-actions {
         width: 100%;
+    }
+
+    .d-page-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+
+    .d-page-header-actions {
+        width: 100%;
+        flex-wrap: wrap;
     }
 }
