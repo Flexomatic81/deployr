@@ -6,6 +6,7 @@ const gitService = require('./git');
 const dockerService = require('./docker');
 const { VALID_INTERVALS } = require('../config/constants');
 const { logger } = require('../config/logger');
+const { generateWebhookSecret } = require('./utils/webhook');
 
 const USERS_PATH = process.env.USERS_PATH || '/app/users';
 
@@ -344,6 +345,90 @@ async function getLastSuccessfulDeployment(userId, projectName) {
 }
 
 /**
+ * Enables webhook for a project and generates a secret
+ * @returns {Promise<{secret: string, webhookId: number}>}
+ */
+async function enableWebhook(userId, projectName) {
+    const secret = generateWebhookSecret();
+
+    // Enable webhook and set secret
+    await pool.execute(
+        `UPDATE project_autodeploy
+         SET webhook_enabled = TRUE, webhook_secret = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = ? AND project_name = ?`,
+        [secret, userId, projectName]
+    );
+
+    // Get the autodeploy ID for webhook URL
+    const [rows] = await pool.execute(
+        `SELECT id FROM project_autodeploy WHERE user_id = ? AND project_name = ?`,
+        [userId, projectName]
+    );
+
+    return {
+        secret,
+        webhookId: rows[0]?.id
+    };
+}
+
+/**
+ * Disables webhook for a project (keeps secret for potential re-enable)
+ */
+async function disableWebhook(userId, projectName) {
+    await pool.execute(
+        `UPDATE project_autodeploy
+         SET webhook_enabled = FALSE, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = ? AND project_name = ?`,
+        [userId, projectName]
+    );
+}
+
+/**
+ * Regenerates webhook secret for a project
+ * @returns {Promise<string>} New secret
+ */
+async function regenerateWebhookSecret(userId, projectName) {
+    const secret = generateWebhookSecret();
+
+    await pool.execute(
+        `UPDATE project_autodeploy
+         SET webhook_secret = ?, updated_at = CURRENT_TIMESTAMP
+         WHERE user_id = ? AND project_name = ?`,
+        [secret, userId, projectName]
+    );
+
+    return secret;
+}
+
+/**
+ * Gets webhook configuration for a project
+ */
+async function getWebhookConfig(userId, projectName) {
+    const [rows] = await pool.execute(
+        `SELECT id, webhook_enabled, webhook_secret, branch
+         FROM project_autodeploy
+         WHERE user_id = ? AND project_name = ?`,
+        [userId, projectName]
+    );
+    return rows[0] || null;
+}
+
+/**
+ * Finds project by webhook/autodeploy ID (for webhook endpoint)
+ * Returns project with user info for deployment
+ */
+async function findProjectByWebhook(webhookId) {
+    const [rows] = await pool.execute(
+        `SELECT pa.*, du.system_username
+         FROM project_autodeploy pa
+         JOIN dashboard_users du ON pa.user_id = du.id
+         WHERE pa.id = ? AND pa.webhook_enabled = TRUE`,
+        [webhookId]
+    );
+    return rows[0] || null;
+}
+
+/**
  * Executes a polling cycle for all active auto-deploy projects
  */
 async function runPollingCycle() {
@@ -421,5 +506,11 @@ module.exports = {
     getDeploymentHistory,
     getLastSuccessfulDeployment,
     runPollingCycle,
+    // Webhook functions
+    enableWebhook,
+    disableWebhook,
+    regenerateWebhookSecret,
+    getWebhookConfig,
+    findProjectByWebhook,
     VALID_INTERVALS
 };

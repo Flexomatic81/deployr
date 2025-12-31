@@ -28,6 +28,7 @@ const setupRoutes = require('./routes/setup');
 const adminRoutes = require('./routes/admin');
 const helpRoutes = require('./routes/help');
 const proxyRoutes = require('./routes/proxy');
+const webhookRoutes = require('./routes/webhooks');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -75,6 +76,15 @@ const generalLimiter = rateLimit({
     legacyHeaders: false
 });
 
+// Security: Webhook rate limiting (more permissive for CI/CD)
+const webhookLimiter = rateLimit({
+    windowMs: 1 * 60 * 1000, // 1 minute
+    max: 30, // 30 requests per minute per IP
+    message: { error: 'Too many webhook requests. Please try again later.' },
+    standardHeaders: true,
+    legacyHeaders: false
+});
+
 app.use(generalLimiter);
 
 // Request Logging
@@ -92,6 +102,10 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 app.use(cookieParser(process.env.SESSION_SECRET || 'change-this-secret'));
 app.use(methodOverride('_method'));
+
+// Webhook route - registered BEFORE session/CSRF middleware
+// Webhooks are authenticated via HMAC signature, not session
+app.use('/api/webhooks', webhookLimiter, webhookRoutes);
 
 // Session Store - initialized later when DB is available
 let sessionStore = null;

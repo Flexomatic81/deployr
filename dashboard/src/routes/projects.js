@@ -238,10 +238,19 @@ router.get('/:name', requireAuth, getProjectAccess(), async (req, res) => {
         // Load auto-deploy config (only for owner with Git projects)
         let autoDeployConfig = null;
         let deploymentHistory = [];
+        let webhookConfig = null;
+        let webhookSecret = null;
         if (access.isOwner && gitStatus && gitStatus.connected) {
             autoDeployConfig = await autoDeployService.getAutoDeployConfig(req.session.user.id, req.params.name);
             if (autoDeployConfig) {
                 deploymentHistory = await autoDeployService.getDeploymentHistory(req.session.user.id, req.params.name, 5);
+                webhookConfig = await autoDeployService.getWebhookConfig(req.session.user.id, req.params.name);
+            }
+
+            // Check for one-time secret display from session
+            if (req.session.webhookSecret && req.session.webhookSecret.projectName === req.params.name) {
+                webhookSecret = req.session.webhookSecret;
+                delete req.session.webhookSecret; // Clear after displaying once
             }
         }
 
@@ -276,6 +285,8 @@ router.get('/:name', requireAuth, getProjectAccess(), async (req, res) => {
             userDatabases,
             autoDeployConfig,
             deploymentHistory,
+            webhookConfig,
+            webhookSecret,
             // Sharing data
             projectAccess: access,
             projectShares,
@@ -682,6 +693,98 @@ router.get('/:name/autodeploy/history', requireAuth, getProjectAccess(), async (
     } catch (error) {
         logger.error('Deployment history error', { error: error.message });
         res.status(500).json({ error: error.message });
+    }
+});
+
+// ============================
+// WEBHOOK ENDPOINTS
+// ============================
+
+// Enable webhook (owner only)
+router.post('/:name/webhook/enable', requireAuth, getProjectAccess(), async (req, res) => {
+    try {
+        if (!req.projectAccess.isOwner) {
+            req.flash('error', req.t('projects:errors.ownerOnly'));
+            return res.redirect(`/projects/${req.params.name}`);
+        }
+
+        const systemUsername = req.projectAccess.systemUsername;
+        const projectPath = gitService.getProjectPath(systemUsername, req.params.name);
+
+        if (!gitService.isGitRepository(projectPath)) {
+            req.flash('error', req.t('projects:errors.noGitRepo'));
+            return res.redirect(`/projects/${req.params.name}`);
+        }
+
+        // Ensure auto-deploy is enabled first
+        const autoDeployConfig = await autoDeployService.getAutoDeployConfig(req.session.user.id, req.params.name);
+        if (!autoDeployConfig) {
+            // Enable auto-deploy first
+            const gitStatus = await gitService.getGitStatus(projectPath);
+            const branch = gitStatus?.branch || 'main';
+            await autoDeployService.enableAutoDeploy(req.session.user.id, req.params.name, branch);
+        }
+
+        const result = await autoDeployService.enableWebhook(req.session.user.id, req.params.name);
+
+        // Store secret in session temporarily for one-time display
+        req.session.webhookSecret = {
+            projectName: req.params.name,
+            secret: result.secret,
+            webhookId: result.webhookId
+        };
+
+        req.flash('success', req.t('projects:flash.webhookEnabled'));
+        res.redirect(`/projects/${req.params.name}`);
+    } catch (error) {
+        logger.error('Webhook enable error', { error: error.message });
+        req.flash('error', error.message);
+        res.redirect(`/projects/${req.params.name}`);
+    }
+});
+
+// Disable webhook (owner only)
+router.post('/:name/webhook/disable', requireAuth, getProjectAccess(), async (req, res) => {
+    try {
+        if (!req.projectAccess.isOwner) {
+            req.flash('error', req.t('projects:errors.ownerOnly'));
+            return res.redirect(`/projects/${req.params.name}`);
+        }
+
+        await autoDeployService.disableWebhook(req.session.user.id, req.params.name);
+        req.flash('success', req.t('projects:flash.webhookDisabled'));
+        res.redirect(`/projects/${req.params.name}`);
+    } catch (error) {
+        logger.error('Webhook disable error', { error: error.message });
+        req.flash('error', error.message);
+        res.redirect(`/projects/${req.params.name}`);
+    }
+});
+
+// Regenerate webhook secret (owner only)
+router.post('/:name/webhook/regenerate', requireAuth, getProjectAccess(), async (req, res) => {
+    try {
+        if (!req.projectAccess.isOwner) {
+            req.flash('error', req.t('projects:errors.ownerOnly'));
+            return res.redirect(`/projects/${req.params.name}`);
+        }
+
+        const secret = await autoDeployService.regenerateWebhookSecret(req.session.user.id, req.params.name);
+        const webhookConfig = await autoDeployService.getWebhookConfig(req.session.user.id, req.params.name);
+
+        // Store new secret in session for one-time display
+        req.session.webhookSecret = {
+            projectName: req.params.name,
+            secret: secret,
+            webhookId: webhookConfig?.id
+        };
+
+        req.flash('success', req.t('projects:flash.webhookRegenerated'));
+        res.redirect(`/projects/${req.params.name}`);
+    } catch (error) {
+        logger.error('Webhook regenerate error', { error: error.message });
+        req.flash('error', error.message);
+        res.redirect(`/projects/${req.params.name}`);
     }
 });
 

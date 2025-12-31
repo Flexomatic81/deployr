@@ -177,6 +177,9 @@
                 <% if (autoDeployConfig && autoDeployConfig.enabled) { %>
                     <span class="badge bg-info-subtle text-info ms-1"><%= t('projects:autoDeploy.title') %></span>
                 <% } %>
+                <% if (webhookConfig && webhookConfig.webhook_enabled) { %>
+                    <span class="badge bg-purple-subtle text-purple ms-1"><i class="bi bi-webhook"></i> Webhook</span>
+                <% } %>
             </span>
             <i class="bi bi-chevron-down collapse-icon"></i>
         </h5>
@@ -367,6 +370,129 @@
                 </p>
             <% } %>
         </div>
+
+        <!-- Webhook section -->
+        <% if (autoDeployConfig && autoDeployConfig.enabled) { %>
+        <div class="border-top pt-3 mt-3">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <div class="d-flex align-items-center gap-2">
+                    <strong><i class="bi bi-webhook"></i> Webhook</strong>
+                    <%- include('../partials/help-icon', { text: t('projects:webhook.help') }) %>
+                    <% if (webhookConfig && webhookConfig.webhook_enabled) { %>
+                        <span class="badge bg-success-subtle text-success"><%= t('common:status.active') %></span>
+                    <% } else { %>
+                        <span class="badge bg-secondary-subtle text-secondary"><%= t('common:status.inactive') %></span>
+                    <% } %>
+                </div>
+                <div>
+                    <% if (webhookConfig && webhookConfig.webhook_enabled) { %>
+                        <form action="/projects/<%= project.name %>/webhook/disable" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-outline-secondary btn-sm">
+                                <i class="bi bi-pause-circle"></i> <%= t('projects:webhook.disable') %>
+                            </button>
+                        </form>
+                    <% } else { %>
+                        <form action="/projects/<%= project.name %>/webhook/enable" method="POST" class="d-inline">
+                            <button type="submit" class="btn btn-success btn-sm">
+                                <i class="bi bi-play-circle"></i> <%= t('projects:webhook.enable') %>
+                            </button>
+                        </form>
+                    <% } %>
+                </div>
+            </div>
+
+            <% if (webhookConfig && webhookConfig.webhook_enabled) { %>
+                <!-- Webhook URL -->
+                <div class="mb-3">
+                    <label class="form-label small text-muted"><%= t('projects:webhook.urlLabel') %></label>
+                    <div class="input-group input-group-sm">
+                        <span class="input-group-text"><i class="bi bi-link-45deg"></i></span>
+                        <input type="text" class="form-control font-monospace" id="webhookUrl"
+                               value="<%= serverIp.includes('localhost') ? 'http' : 'https' %>://<%= serverIp %>/api/webhooks/<%= webhookConfig.id %>"
+                               readonly>
+                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('webhookUrl')" title="<%= t('common:buttons.copy') %>">
+                            <i class="bi bi-clipboard"></i>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- One-time secret display (after enable/regenerate) -->
+                <% if (webhookSecret && webhookSecret.secret) { %>
+                <div class="alert alert-warning mb-3">
+                    <div class="d-flex align-items-start">
+                        <i class="bi bi-key-fill fs-4 me-3"></i>
+                        <div class="flex-grow-1">
+                            <strong><%= t('projects:webhook.secretLabel') %></strong>
+                            <p class="small mb-2"><%= t('projects:webhook.secretWarning') %></p>
+                            <div class="input-group input-group-sm">
+                                <input type="text" class="form-control font-monospace" id="webhookSecret"
+                                       value="<%= webhookSecret.secret %>" readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('webhookSecret')" title="<%= t('common:buttons.copy') %>">
+                                    <i class="bi bi-clipboard"></i>
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <% } %>
+
+                <!-- Regenerate secret button -->
+                <div class="d-flex justify-content-between align-items-center">
+                    <small class="text-muted">
+                        <i class="bi bi-info-circle"></i>
+                        <%= t('projects:webhook.branchInfo', { branch: webhookConfig.branch || 'main' }) %>
+                    </small>
+                    <form action="/projects/<%= project.name %>/webhook/regenerate" method="POST" class="d-inline">
+                        <button type="submit" class="btn btn-outline-warning btn-sm"
+                                data-confirm="<%= t('projects:webhook.regenerateConfirm') %>">
+                            <i class="bi bi-arrow-repeat"></i> <%= t('projects:webhook.regenerate') %>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Setup instructions (collapsible) -->
+                <div class="mt-3">
+                    <a class="text-decoration-none small" data-bs-toggle="collapse" href="#webhookSetup" role="button" aria-expanded="false">
+                        <i class="bi bi-question-circle"></i> <%= t('projects:webhook.setupInstructions') %>
+                    </a>
+                    <div class="collapse mt-2" id="webhookSetup">
+                        <div class="card card-body bg-body-secondary small">
+                            <div class="mb-3">
+                                <strong><i class="bi bi-github"></i> GitHub:</strong>
+                                <ol class="mb-0 ps-3 mt-1">
+                                    <li><%= t('projects:webhook.github.step1') %></li>
+                                    <li><%= t('projects:webhook.github.step2') %></li>
+                                    <li><%= t('projects:webhook.github.step3') %></li>
+                                    <li><%= t('projects:webhook.github.step4') %></li>
+                                </ol>
+                            </div>
+                            <div class="mb-3">
+                                <strong><i class="bi bi-gitlab text-warning"></i> GitLab:</strong>
+                                <ol class="mb-0 ps-3 mt-1">
+                                    <li><%= t('projects:webhook.gitlab.step1') %></li>
+                                    <li><%= t('projects:webhook.gitlab.step2') %></li>
+                                    <li><%= t('projects:webhook.gitlab.step3') %></li>
+                                </ol>
+                            </div>
+                            <div>
+                                <strong><i class="bi bi-bucket text-primary"></i> Bitbucket:</strong>
+                                <ol class="mb-0 ps-3 mt-1">
+                                    <li><%= t('projects:webhook.bitbucket.step1') %></li>
+                                    <li><%= t('projects:webhook.bitbucket.step2') %></li>
+                                    <li><%= t('projects:webhook.bitbucket.step3') %></li>
+                                </ol>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            <% } else { %>
+                <p class="text-muted small mb-0">
+                    <i class="bi bi-info-circle"></i>
+                    <%= t('projects:webhook.info') %>
+                </p>
+            <% } %>
+        </div>
+        <% } %><!-- End webhook section -->
         <% } %><!-- End projectAccess.isOwner for Auto-Deploy -->
     </div>
     </div><!-- End collapse -->
@@ -846,6 +972,26 @@
 <% } %><!-- End projectAccess.isOwner for Git Disconnect Modal -->
 
 <script>
+// Copy to clipboard helper
+function copyToClipboard(elementId) {
+    const input = document.getElementById(elementId);
+    if (input) {
+        input.select();
+        input.setSelectionRange(0, 99999); // For mobile
+        navigator.clipboard.writeText(input.value).then(function() {
+            // Visual feedback
+            const btn = input.nextElementSibling;
+            if (btn) {
+                const icon = btn.querySelector('i');
+                if (icon) {
+                    icon.className = 'bi bi-check';
+                    setTimeout(() => { icon.className = 'bi bi-clipboard'; }, 1500);
+                }
+            }
+        });
+    }
+}
+
 document.addEventListener('DOMContentLoaded', function() {
     // Auto-submit interval form on change
     const intervalSelect = document.getElementById('intervalSelect');
