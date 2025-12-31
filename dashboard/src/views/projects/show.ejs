@@ -167,12 +167,12 @@
 </div>
 
 <% if (gitStatus && gitStatus.connected) { %>
-<!-- GitHub - combined Git integration and Auto-Deploy -->
+<!-- Git - combined Git integration and Auto-Deploy -->
 <div class="card d-elevated mb-4">
-    <div class="card-header d-collapsible-header collapsed" role="button" data-bs-toggle="collapse" data-bs-target="#collapseGithub" aria-expanded="false" aria-controls="collapseGithub">
+    <div class="card-header d-collapsible-header collapsed" role="button" data-bs-toggle="collapse" data-bs-target="#collapseGit" aria-expanded="false" aria-controls="collapseGit">
         <h5 class="mb-0 d-flex justify-content-between align-items-center">
             <span>
-                <i class="bi bi-github"></i> <%= t('projects:git.title') %>
+                <i class="bi bi-git"></i> <%= t('projects:git.title') %>
                 <span class="badge bg-success-subtle text-success ms-2"><%= t('projects:git.connected') %></span>
                 <% if (autoDeployConfig && autoDeployConfig.enabled) { %>
                     <span class="badge bg-info-subtle text-info ms-1"><%= t('projects:autoDeploy.title') %></span>
@@ -184,7 +184,7 @@
             <i class="bi bi-chevron-down collapse-icon"></i>
         </h5>
     </div>
-    <div class="collapse" id="collapseGithub">
+    <div class="collapse" id="collapseGit">
     <div class="card-body">
         <% if (gitStatus.error) { %>
             <div class="alert alert-warning mb-0">

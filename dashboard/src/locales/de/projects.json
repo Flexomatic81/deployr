@@ -157,7 +157,7 @@
   },
 
   "git": {
-    "title": "GitHub",
+    "title": "Git",
     "connected": "Verbunden",
     "notConnected": "Nicht verbunden",
     "repository": "Repository",
