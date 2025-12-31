@@ -610,14 +610,17 @@ router.post('/settings/email', async (req, res) => {
 
 // Test email connection
 router.post('/settings/email/test', async (req, res) => {
+    logger.info('Testing email connection...');
     try {
         const result = await emailService.testConnection();
+        logger.info('Email connection test result', { result });
         if (result.success) {
             res.json({ success: true, message: req.t('admin:email.connectionSuccess') });
         } else {
             res.json({ success: false, error: result.error });
         }
     } catch (error) {
+        logger.error('Email connection test error', { error: error.message });
         res.json({ success: false, error: error.message });
     }
 });
