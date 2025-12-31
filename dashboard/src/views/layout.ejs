@@ -107,6 +107,12 @@
                             </span></li>
                             <li><hr class="dropdown-divider"></li>
                             <li>
+                                <a class="dropdown-item" href="/profile/notifications">
+                                    <i class="bi bi-bell"></i> <%= t('common:nav.notifications') %>
+                                </a>
+                            </li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li>
                                 <form action="/logout" method="POST" class="d-inline">
                                     <%- csrfInput %>
                                     <button type="submit" class="dropdown-item">

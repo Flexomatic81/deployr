@@ -225,6 +225,76 @@ async function sendApprovalEmail(email, username, language = 'de') {
 }
 
 /**
+ * Send deployment success email
+ * @param {string} email - Recipient email
+ * @param {object} data - Deployment data
+ * @param {string} language - User language
+ */
+async function sendDeploymentSuccessEmail(email, data, language = 'de') {
+    const baseUrl = getBaseUrl();
+    const projectUrl = `${baseUrl}/projects/${encodeURIComponent(data.projectName)}`;
+    const settingsUrl = `${baseUrl}/profile/notifications`;
+
+    const triggerLabels = {
+        de: { auto: 'Automatisch', manual: 'Manuell', webhook: 'Webhook', clone: 'Clone', pull: 'Pull' },
+        en: { auto: 'Automatic', manual: 'Manual', webhook: 'Webhook', clone: 'Clone', pull: 'Pull' }
+    };
+
+    const html = await renderTemplate('deployment-success', {
+        username: data.username,
+        projectName: data.projectName,
+        triggerType: triggerLabels[language]?.[data.triggerType] || data.triggerType,
+        duration: data.duration || '-',
+        timestamp: new Date().toLocaleString(language === 'de' ? 'de-DE' : 'en-US'),
+        newCommit: data.newCommit || '',
+        commitMessage: data.commitMessage || '',
+        projectUrl,
+        settingsUrl
+    }, language);
+
+    const subjects = {
+        de: `Dployr - Deployment erfolgreich: ${data.projectName}`,
+        en: `Dployr - Deployment successful: ${data.projectName}`
+    };
+
+    return sendEmail(email, subjects[language] || subjects.de, html);
+}
+
+/**
+ * Send deployment failure email
+ * @param {string} email - Recipient email
+ * @param {object} data - Deployment data
+ * @param {string} language - User language
+ */
+async function sendDeploymentFailureEmail(email, data, language = 'de') {
+    const baseUrl = getBaseUrl();
+    const projectUrl = `${baseUrl}/projects/${encodeURIComponent(data.projectName)}`;
+    const settingsUrl = `${baseUrl}/profile/notifications`;
+
+    const triggerLabels = {
+        de: { auto: 'Automatisch', manual: 'Manuell', webhook: 'Webhook', clone: 'Clone', pull: 'Pull' },
+        en: { auto: 'Automatic', manual: 'Manual', webhook: 'Webhook', clone: 'Clone', pull: 'Pull' }
+    };
+
+    const html = await renderTemplate('deployment-failure', {
+        username: data.username,
+        projectName: data.projectName,
+        triggerType: triggerLabels[language]?.[data.triggerType] || data.triggerType,
+        timestamp: new Date().toLocaleString(language === 'de' ? 'de-DE' : 'en-US'),
+        errorMessage: data.errorMessage || 'Unknown error',
+        projectUrl,
+        settingsUrl
+    }, language);
+
+    const subjects = {
+        de: `Dployr - Deployment fehlgeschlagen: ${data.projectName}`,
+        en: `Dployr - Deployment failed: ${data.projectName}`
+    };
+
+    return sendEmail(email, subjects[language] || subjects.de, html);
+}
+
+/**
  * Send test email
  * @param {string} to - Recipient email
  * @param {string} language - User language
@@ -264,5 +334,7 @@ module.exports = {
     sendVerificationEmail,
     sendPasswordResetEmail,
     sendApprovalEmail,
+    sendDeploymentSuccessEmail,
+    sendDeploymentFailureEmail,
     sendTestEmail
 };

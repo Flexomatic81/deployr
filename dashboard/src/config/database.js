@@ -229,6 +229,22 @@ async function initDatabase() {
             // Columns already exist - ignore
         }
 
+        // Migration: Add notification preferences columns
+        try {
+            await connection.execute(`
+                ALTER TABLE dashboard_users ADD COLUMN notify_deploy_success BOOLEAN DEFAULT TRUE
+            `);
+            await connection.execute(`
+                ALTER TABLE dashboard_users ADD COLUMN notify_deploy_failure BOOLEAN DEFAULT TRUE
+            `);
+            await connection.execute(`
+                ALTER TABLE dashboard_users ADD COLUMN notify_autodeploy BOOLEAN DEFAULT TRUE
+            `);
+            logger.info('Migration: Added notification preference columns');
+        } catch (e) {
+            // Columns already exist - ignore
+        }
+
         // Project domains table for NPM integration
         await connection.execute(`
             CREATE TABLE IF NOT EXISTS project_domains (

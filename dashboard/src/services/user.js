@@ -366,10 +366,40 @@ async function updateEmail(userId, email) {
  */
 async function getFullUserById(id) {
     const [users] = await pool.query(
-        'SELECT id, username, system_username, is_admin, approved, email, email_verified, created_at FROM dashboard_users WHERE id = ?',
+        'SELECT id, username, system_username, is_admin, approved, email, email_verified, notify_deploy_success, notify_deploy_failure, notify_autodeploy, created_at FROM dashboard_users WHERE id = ?',
         [id]
     );
     return users[0] || null;
+}
+
+/**
+ * Get user notification preferences
+ */
+async function getNotificationPreferences(userId) {
+    const [users] = await pool.query(
+        'SELECT email, email_verified, notify_deploy_success, notify_deploy_failure, notify_autodeploy FROM dashboard_users WHERE id = ?',
+        [userId]
+    );
+    if (!users[0]) return null;
+
+    // Default to true if columns don't exist yet (migration not run)
+    return {
+        email: users[0].email,
+        emailVerified: users[0].email_verified,
+        deploySuccess: users[0].notify_deploy_success ?? true,
+        deployFailure: users[0].notify_deploy_failure ?? true,
+        autodeploy: users[0].notify_autodeploy ?? true
+    };
+}
+
+/**
+ * Update user notification preferences
+ */
+async function updateNotificationPreferences(userId, { deploySuccess, deployFailure, autodeploy }) {
+    await pool.query(
+        'UPDATE dashboard_users SET notify_deploy_success = ?, notify_deploy_failure = ?, notify_autodeploy = ? WHERE id = ?',
+        [deploySuccess, deployFailure, autodeploy, userId]
+    );
 }
 
 module.exports = {
@@ -400,5 +430,8 @@ module.exports = {
     createResetToken,
     clearResetToken,
     updateEmail,
-    getFullUserById
+    getFullUserById,
+    // Notification preferences
+    getNotificationPreferences,
+    updateNotificationPreferences
 };

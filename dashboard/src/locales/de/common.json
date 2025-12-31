@@ -5,7 +5,8 @@
     "databases": "Datenbanken",
     "admin": "Admin",
     "help": "Hilfe",
-    "logout": "Logout"
+    "logout": "Logout",
+    "notifications": "Benachrichtigungen"
   },
   "buttons": {
     "save": "Speichern",

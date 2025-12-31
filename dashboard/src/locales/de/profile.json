@@ -1,0 +1,25 @@
+{
+  "notifications": {
+    "title": "Benachrichtigungen",
+    "settings": "Benachrichtigungseinstellungen",
+    "emailDisabled": "E-Mail-Benachrichtigungen sind auf diesem Server nicht aktiviert.",
+    "noEmail": "Du hast keine E-Mail-Adresse hinterlegt. Füge eine E-Mail-Adresse in deinem Profil hinzu, um Benachrichtigungen zu erhalten.",
+    "emailNotVerified": "Deine E-Mail-Adresse ist noch nicht bestätigt. Bitte bestätige sie, um Benachrichtigungen zu erhalten.",
+    "resendVerification": "Erneut senden",
+    "verified": "Bestätigt",
+    "unverified": "Nicht bestätigt",
+    "deployments": "Deployment-Benachrichtigungen",
+    "deploySuccess": "Erfolgreiche Deployments",
+    "deploySuccessHelp": "Erhalte eine E-Mail, wenn ein Deployment erfolgreich abgeschlossen wurde.",
+    "deployFailure": "Fehlgeschlagene Deployments",
+    "deployFailureHelp": "Erhalte eine E-Mail, wenn ein Deployment fehlschlägt.",
+    "autodeploy": "Auto-Deploy-Benachrichtigungen",
+    "autodeployHelp": "Erhalte E-Mails für automatische Deployments (Polling und Webhooks).",
+    "info": "Hinweis",
+    "infoText": "E-Mail-Benachrichtigungen werden nur gesendet, wenn:",
+    "infoItem1": "E-Mail auf dem Server aktiviert ist",
+    "infoItem2": "Du eine verifizierte E-Mail-Adresse hast",
+    "infoItem3": "Die jeweilige Benachrichtigung aktiviert ist",
+    "saved": "Benachrichtigungseinstellungen wurden gespeichert."
+  }
+}
