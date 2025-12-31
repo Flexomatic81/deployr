@@ -871,6 +871,20 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
+    // Sync header 'collapsed' class with Bootstrap collapse state for arrow animation
+    document.querySelectorAll('.collapse').forEach(function(collapseEl) {
+        const card = collapseEl.closest('.card');
+        const header = card ? card.querySelector('.d-collapsible-header') : null;
+        if (header) {
+            collapseEl.addEventListener('show.bs.collapse', function() {
+                header.classList.remove('collapsed');
+            });
+            collapseEl.addEventListener('hide.bs.collapse', function() {
+                header.classList.add('collapsed');
+            });
+        }
+    });
+
     // Keep collapse cards open after form submit
     // Find all forms inside collapse cards and remember which card to reopen
     document.querySelectorAll('.collapse').forEach(function(collapseEl) {
@@ -879,6 +893,19 @@ document.addEventListener('DOMContentLoaded', function() {
             form.addEventListener('submit', function() {
                 sessionStorage.setItem('openCollapse', collapseEl.id);
             });
+        });
+    });
+
+    // Handle db-setup-form in header dropdown (not inside collapse body)
+    // Use mousedown on button to capture before dropdown closes
+    document.querySelectorAll('.db-setup-form button[type="submit"]').forEach(function(btn) {
+        btn.addEventListener('mousedown', function() {
+            // Find the associated collapse for this card
+            const card = btn.closest('.card');
+            const collapseEl = card ? card.querySelector('.collapse') : null;
+            if (collapseEl) {
+                sessionStorage.setItem('openCollapse', collapseEl.id);
+            }
         });
     });
 
@@ -909,11 +936,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const collapseEl = document.getElementById(openCollapse);
         if (collapseEl) {
             const bsCollapse = new bootstrap.Collapse(collapseEl, { show: true });
-            // Update header state
-            const header = collapseEl.closest('.card').querySelector('.d-collapsible-header');
-            if (header) {
-                header.classList.remove('collapsed');
-            }
+            // Header state will be updated by the show.bs.collapse event listener above
         }
     }
 });
