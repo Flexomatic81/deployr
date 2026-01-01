@@ -321,13 +321,52 @@ function isIpAddress(str) {
 }
 
 /**
+ * Wait for NPM API to be fully ready and accepting authentication
+ * This is more thorough than proxyService.waitForApi() because it actually
+ * tests authentication, not just API availability
+ */
+async function waitForNpmAuth(maxAttempts = 60, delayMs = 2000) {
+    const axios = require('axios');
+    const npmApiUrl = process.env.NPM_API_URL || 'http://dployr-npm:81/api';
+    const email = process.env.NPM_API_EMAIL;
+    const password = process.env.NPM_API_PASSWORD;
+
+    for (let i = 0; i < maxAttempts; i++) {
+        try {
+            // Try to authenticate - this is the real test
+            const response = await axios.post(`${npmApiUrl}/tokens`, {
+                identity: email,
+                secret: password
+            }, { timeout: 5000 });
+
+            if (response.data && response.data.token) {
+                logger.info('NPM API ready and authentication successful', { attempt: i + 1 });
+                return true;
+            }
+        } catch (error) {
+            // 502 means NPM is starting but not ready yet
+            // Connection refused means container is starting
+            logger.debug('Waiting for NPM API authentication...', {
+                attempt: i + 1,
+                status: error.response?.status,
+                error: error.message
+            });
+        }
+        await new Promise(r => setTimeout(r, delayMs));
+    }
+    logger.warn('NPM API authentication not ready after maximum attempts');
+    return false;
+}
+
+/**
  * Configure dashboard domain with SSL in NPM
  * Called when a domain (not IP) is provided during setup
  */
 async function configureDashboardDomain(domain) {
     try {
-        // Wait for NPM API to be ready
-        const isReady = await proxyService.waitForApi(30, 2000);
+        // Wait for NPM API to be fully ready (including authentication)
+        // NPM needs time after container start to initialize its database
+        const isReady = await waitForNpmAuth(60, 2000);
         if (!isReady) {
             logger.warn('NPM API not ready for dashboard domain setup');
             return;
@@ -357,8 +396,8 @@ async function configureDashboardDomain(domain) {
  */
 async function configureDefaultHost() {
     try {
-        // Wait for NPM API to be ready
-        const isReady = await proxyService.waitForApi(30, 2000);
+        // Wait for NPM API to be fully ready (including authentication)
+        const isReady = await waitForNpmAuth(60, 2000);
         if (!isReady) {
             logger.warn('NPM API not ready for default host setup');
             return;
