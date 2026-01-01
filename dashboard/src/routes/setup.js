@@ -208,6 +208,11 @@ async function configureNpm(email, password) {
 
         await fs.writeFile(envPath, newEnvContent + '\n');
 
+        // Also update process.env so proxyService.isEnabled() works immediately
+        process.env.NPM_ENABLED = 'true';
+        process.env.NPM_API_EMAIL = email;
+        process.env.NPM_API_PASSWORD = password;
+
         logger.info('NPM configuration saved', { email });
 
         // Start NPM container
