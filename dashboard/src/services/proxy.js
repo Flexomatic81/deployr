@@ -15,6 +15,100 @@ const { logger } = require('../config/logger');
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 const NPM_CONTAINER_NAME = 'dployr-npm';
 
+// Retry configuration
+const RETRY_CONFIG = {
+    maxAttempts: 3,
+    baseDelayMs: 1000,
+    maxDelayMs: 5000
+};
+
+/**
+ * Execute a function with retry logic for handling transient errors
+ * @param {Function} fn - Async function to execute
+ * @param {string} operationName - Name of the operation (for logging)
+ * @param {object} options - Retry options (maxAttempts, baseDelayMs, maxDelayMs)
+ * @returns {Promise<any>}
+ */
+async function withRetry(fn, operationName, options = {}) {
+    const config = { ...RETRY_CONFIG, ...options };
+    let lastError;
+
+    for (let attempt = 1; attempt <= config.maxAttempts; attempt++) {
+        try {
+            return await fn();
+        } catch (error) {
+            lastError = error;
+            const isRetryable = isRetryableError(error);
+
+            if (!isRetryable || attempt === config.maxAttempts) {
+                logger.error(`${operationName} failed after ${attempt} attempt(s)`, {
+                    error: error.message,
+                    attempt,
+                    maxAttempts: config.maxAttempts,
+                    retryable: isRetryable
+                });
+                throw error;
+            }
+
+            // Exponential backoff with jitter
+            const delay = Math.min(
+                config.baseDelayMs * Math.pow(2, attempt - 1) + Math.random() * 500,
+                config.maxDelayMs
+            );
+
+            logger.warn(`${operationName} failed, retrying in ${Math.round(delay)}ms`, {
+                error: error.message,
+                attempt,
+                maxAttempts: config.maxAttempts
+            });
+
+            await new Promise(r => setTimeout(r, delay));
+        }
+    }
+
+    throw lastError;
+}
+
+/**
+ * Check if an error is retryable
+ * @param {Error} error - The error to check
+ * @returns {boolean}
+ */
+function isRetryableError(error) {
+    // Explicitly marked as non-retryable
+    if (error.nonRetryable) {
+        return false;
+    }
+
+    // Socket hang up, connection reset, timeout errors
+    if (error.code === 'ECONNRESET' || error.code === 'ECONNREFUSED' || error.code === 'ETIMEDOUT') {
+        return true;
+    }
+
+    // Axios errors with socket issues
+    if (error.message && (
+        error.message.includes('socket hang up') ||
+        error.message.includes('ECONNRESET') ||
+        error.message.includes('ETIMEDOUT') ||
+        error.message.includes('network') ||
+        error.message.includes('timeout')
+    )) {
+        return true;
+    }
+
+    // HTTP 5xx errors (server errors)
+    if (error.response && error.response.status >= 500) {
+        return true;
+    }
+
+    // HTTP 429 (rate limiting)
+    if (error.response && error.response.status === 429) {
+        return true;
+    }
+
+    return false;
+}
+
 // Default NPM credentials (created on first start)
 const NPM_DEFAULT_EMAIL = 'admin@example.com';
 const NPM_DEFAULT_PASSWORD = 'changeme';
@@ -104,8 +198,6 @@ async function createProxyHost(containerName, domain, port, options = {}) {
         throw new Error('NPM integration is not enabled');
     }
 
-    const client = await getApiClient();
-
     // NPM uses advanced_config for default_server directive
     // When is_default is true, add 'default_server' to the nginx config
     let advancedConfig = options.advancedConfig || '';
@@ -132,24 +224,24 @@ async function createProxyHost(containerName, domain, port, options = {}) {
         advanced_config: advancedConfig
     };
 
-    try {
-        const response = await client.post('/nginx/proxy-hosts', payload);
-        logger.info('Proxy host created', { domain, containerName, proxyHostId: response.data.id });
-        return response.data;
-    } catch (error) {
-        const errorMessage = error.response?.data?.message || error.message;
-        logger.error('Failed to create proxy host', {
-            domain,
-            containerName,
-            error: errorMessage,
-            status: error.response?.status
-        });
+    return withRetry(async () => {
+        const client = await getApiClient();
+        try {
+            const response = await client.post('/nginx/proxy-hosts', payload);
+            logger.info('Proxy host created', { domain, containerName, proxyHostId: response.data.id });
+            return response.data;
+        } catch (error) {
+            const errorMessage = error.response?.data?.message || error.message;
 
-        if (error.response?.status === 400 && errorMessage.includes('already exists')) {
-            throw new Error('Domain is already configured in another proxy host');
+            // Don't retry if domain already exists (not a transient error)
+            if (error.response?.status === 400 && errorMessage.includes('already exists')) {
+                const nonRetryableError = new Error('Domain is already configured in another proxy host');
+                nonRetryableError.nonRetryable = true;
+                throw nonRetryableError;
+            }
+            throw new Error(`Failed to create proxy host: ${errorMessage}`);
         }
-        throw new Error(`Failed to create proxy host: ${errorMessage}`);
-    }
+    }, `Create proxy host for ${domain}`);
 }
 
 /**
@@ -201,27 +293,28 @@ async function requestCertificate(domain, email) {
         throw new Error('NPM integration is not enabled');
     }
 
-    const client = await getApiClient();
-
     // NPM v2+ API format for Let's Encrypt certificates
     const payload = {
         domain_names: [domain],
         provider: 'letsencrypt'
     };
 
-    try {
-        const response = await client.post('/nginx/certificates', payload);
-        logger.info('Certificate requested', { domain, certificateId: response.data.id });
-        return response.data;
-    } catch (error) {
-        // Log detailed error for debugging
-        logger.error('Failed to request certificate', {
-            domain,
-            error: error.response?.data?.message || error.message,
-            details: error.response?.data
-        });
-        throw new Error('Failed to request SSL certificate. Make sure the domain points to this server.');
-    }
+    return withRetry(async () => {
+        const client = await getApiClient();
+        try {
+            const response = await client.post('/nginx/certificates', payload);
+            logger.info('Certificate requested', { domain, certificateId: response.data.id });
+            return response.data;
+        } catch (error) {
+            // Log detailed error for debugging
+            logger.error('Failed to request certificate', {
+                domain,
+                error: error.response?.data?.message || error.message,
+                details: error.response?.data
+            });
+            throw new Error('Failed to request SSL certificate. Make sure the domain points to this server.');
+        }
+    }, `Request SSL certificate for ${domain}`, { maxAttempts: 2 });
 }
 
 /**
@@ -234,43 +327,45 @@ async function enableSSL(proxyHostId, certificateId) {
         throw new Error('NPM integration is not enabled');
     }
 
-    const client = await getApiClient();
+    return withRetry(async () => {
+        const client = await getApiClient();
 
-    try {
-        // First get the current proxy host to preserve settings
-        const current = await client.get(`/nginx/proxy-hosts/${proxyHostId}`);
+        try {
+            // First get the current proxy host to preserve settings
+            const current = await client.get(`/nginx/proxy-hosts/${proxyHostId}`);
 
-        // Only include allowed fields for NPM v2+ API
-        const payload = {
-            domain_names: current.data.domain_names,
-            forward_scheme: current.data.forward_scheme,
-            forward_host: current.data.forward_host,
-            forward_port: current.data.forward_port,
-            certificate_id: certificateId,
-            ssl_forced: true,
-            http2_support: true,
-            block_exploits: current.data.block_exploits || false,
-            caching_enabled: current.data.caching_enabled || false,
-            allow_websocket_upgrade: current.data.allow_websocket_upgrade || false,
-            access_list_id: current.data.access_list_id || 0,
-            advanced_config: current.data.advanced_config || '',
-            enabled: current.data.enabled !== false,
-            meta: current.data.meta || {},
-            locations: current.data.locations || []
-        };
+            // Only include allowed fields for NPM v2+ API
+            const payload = {
+                domain_names: current.data.domain_names,
+                forward_scheme: current.data.forward_scheme,
+                forward_host: current.data.forward_host,
+                forward_port: current.data.forward_port,
+                certificate_id: certificateId,
+                ssl_forced: true,
+                http2_support: true,
+                block_exploits: current.data.block_exploits || false,
+                caching_enabled: current.data.caching_enabled || false,
+                allow_websocket_upgrade: current.data.allow_websocket_upgrade || false,
+                access_list_id: current.data.access_list_id || 0,
+                advanced_config: current.data.advanced_config || '',
+                enabled: current.data.enabled !== false,
+                meta: current.data.meta || {},
+                locations: current.data.locations || []
+            };
 
-        const response = await client.put(`/nginx/proxy-hosts/${proxyHostId}`, payload);
+            const response = await client.put(`/nginx/proxy-hosts/${proxyHostId}`, payload);
 
-        logger.info('SSL enabled for proxy host', { proxyHostId, certificateId });
-        return response.data;
-    } catch (error) {
-        logger.error('Failed to enable SSL', {
-            proxyHostId,
-            error: error.response?.data?.message || error.message,
-            details: error.response?.data
-        });
-        throw new Error('Failed to enable SSL for this domain');
-    }
+            logger.info('SSL enabled for proxy host', { proxyHostId, certificateId });
+            return response.data;
+        } catch (error) {
+            logger.error('Failed to enable SSL', {
+                proxyHostId,
+                error: error.response?.data?.message || error.message,
+                details: error.response?.data
+            });
+            throw new Error('Failed to enable SSL for this domain');
+        }
+    }, `Enable SSL for proxy host ${proxyHostId}`);
 }
 
 /**
@@ -988,8 +1083,6 @@ async function createDashboardIpProxyHost(serverIp) {
     }
 
     try {
-        const client = await getApiClient();
-
         // Check if we already have a proxy host for this IP
         const existingHosts = await listProxyHosts();
         const ipHost = existingHosts.find(h =>
@@ -1020,9 +1113,14 @@ async function createDashboardIpProxyHost(serverIp) {
             advanced_config: ''
         };
 
-        const response = await client.post('/nginx/proxy-hosts', payload);
-        logger.info('IP-based dashboard proxy host created', { serverIp, proxyHostId: response.data.id });
-        return { success: true, proxyHostId: response.data.id };
+        const result = await withRetry(async () => {
+            const client = await getApiClient();
+            const response = await client.post('/nginx/proxy-hosts', payload);
+            return response.data;
+        }, `Create IP-based dashboard proxy host for ${serverIp}`);
+
+        logger.info('IP-based dashboard proxy host created', { serverIp, proxyHostId: result.id });
+        return { success: true, proxyHostId: result.id };
     } catch (error) {
         logger.error('Failed to create IP-based dashboard proxy host', { serverIp, error: error.message });
         return { success: false, error: error.message };
