@@ -173,8 +173,10 @@ async function getToken() {
 
 /**
  * Create authenticated axios instance
+ * @param {object} options - Options for the client
+ * @param {number} options.timeout - Request timeout in ms (default: 30000)
  */
-async function getApiClient() {
+async function getApiClient(options = {}) {
     const token = await getToken();
     return axios.create({
         baseURL: getNpmApiUrl(),
@@ -182,7 +184,7 @@ async function getApiClient() {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
         },
-        timeout: 30000
+        timeout: options.timeout || 30000
     });
 }
 
@@ -300,7 +302,8 @@ async function requestCertificate(domain, email) {
     };
 
     return withRetry(async () => {
-        const client = await getApiClient();
+        // Use longer timeout for certificate requests (Let's Encrypt can be slow)
+        const client = await getApiClient({ timeout: 90000 });
         try {
             const response = await client.post('/nginx/certificates', payload);
             logger.info('Certificate requested', { domain, certificateId: response.data.id });
