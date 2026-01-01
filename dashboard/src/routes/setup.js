@@ -247,45 +247,58 @@ async function startNpmContainer() {
             // Container might not exist - ignore
         }
 
-        // Remove NPM data volumes to force fresh initialization with new credentials
+        // Remove NPM data volume to force fresh initialization with new credentials
         // This is necessary because NPM stores credentials in SQLite on first start
         try {
-            const npmDataVolume = docker.getVolume('dployr_npm-data');
+            const npmDataVolume = docker.getVolume('dployr-npm-data');
             await npmDataVolume.remove();
             logger.info('NPM data volume removed for fresh initialization');
         } catch (volErr) {
             // Volume might not exist - ignore
         }
 
-        // Use docker-compose to recreate the container with fresh settings
-        // The dashboard container has docker-compose available
-        const { exec } = require('child_process');
-        const util = require('util');
-        const execPromise = util.promisify(exec);
+        // Create NPM container via Docker API
+        // We need to replicate the docker-compose.yml settings
+        const npmEmail = process.env.NPM_API_EMAIL || '';
+        const npmPassword = process.env.NPM_API_PASSWORD || '';
+        const npmHttpPort = process.env.NPM_HTTP_PORT || '80';
+        const npmHttpsPort = process.env.NPM_HTTPS_PORT || '443';
+        const npmAdminPort = process.env.NPM_ADMIN_PORT || '81';
 
         try {
-            // Run docker-compose up for npm service
-            await execPromise('docker compose -f /app/docker-compose.yml up -d npm', {
-                timeout: 60000
-            });
-            logger.info('NPM container recreated via docker-compose');
-        } catch (composeErr) {
-            logger.warn('docker-compose up npm failed, trying direct start', { error: composeErr.message });
-
-            // Fallback: try to start existing container
-            try {
-                const newContainer = docker.getContainer('dployr-npm');
-                await newContainer.start();
-                logger.info('NPM container started during setup');
-            } catch (startErr) {
-                if (startErr.statusCode === 404) {
-                    logger.warn('NPM container not found - may need to run docker compose up first');
-                } else if (startErr.statusCode === 304) {
-                    logger.info('NPM container already running');
-                } else {
-                    throw startErr;
+            const newContainer = await docker.createContainer({
+                Image: 'jc21/nginx-proxy-manager:latest',
+                name: 'dployr-npm',
+                Env: [
+                    'DISABLE_IPV6=true',
+                    `INITIAL_ADMIN_EMAIL=${npmEmail}`,
+                    `INITIAL_ADMIN_PASSWORD=${npmPassword}`
+                ],
+                HostConfig: {
+                    RestartPolicy: { Name: 'unless-stopped' },
+                    PortBindings: {
+                        '80/tcp': [{ HostPort: npmHttpPort }],
+                        '443/tcp': [{ HostPort: npmHttpsPort }],
+                        '81/tcp': [{ HostPort: npmAdminPort }]
+                    },
+                    Binds: [
+                        'dployr-npm-data:/data',
+                        'dployr-npm-letsencrypt:/etc/letsencrypt'
+                    ],
+                    NetworkMode: 'dployr-network'
+                },
+                NetworkingConfig: {
+                    EndpointsConfig: {
+                        'dployr-network': {}
+                    }
                 }
-            }
+            });
+
+            await newContainer.start();
+            logger.info('NPM container created and started via Docker API');
+        } catch (createErr) {
+            logger.error('Failed to create NPM container via Docker API', { error: createErr.message });
+            // Don't throw - setup should succeed even if NPM doesn't start
         }
     } catch (error) {
         logger.error('Failed to start NPM container', { error: error.message });
