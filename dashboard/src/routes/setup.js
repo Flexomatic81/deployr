@@ -223,21 +223,73 @@ async function configureNpm(email, password) {
     }
 }
 
+/**
+ * Reset and start NPM container with fresh database
+ * NPM only reads INITIAL_ADMIN_* env vars on first database creation,
+ * so we need to remove the data volume to ensure new credentials are used
+ */
 async function startNpmContainer() {
     try {
         const container = docker.getContainer('dployr-npm');
-        await container.start();
-        logger.info('NPM container started during setup');
-    } catch (error) {
-        // Container might already be running (304) or not exist
-        if (error.statusCode === 304) {
-            logger.info('NPM container already running');
-        } else if (error.statusCode === 404) {
-            logger.warn('NPM container not found - may need to run docker compose up first');
-        } else {
-            logger.error('Failed to start NPM container', { error: error.message });
-            // Don't throw - setup should succeed even if NPM doesn't start
+
+        // Try to stop and remove NPM container first (to reset its database)
+        try {
+            await container.stop();
+            logger.info('NPM container stopped for reset');
+        } catch (stopErr) {
+            // Container might not be running - ignore
         }
+
+        try {
+            await container.remove();
+            logger.info('NPM container removed for reset');
+        } catch (removeErr) {
+            // Container might not exist - ignore
+        }
+
+        // Remove NPM data volumes to force fresh initialization with new credentials
+        // This is necessary because NPM stores credentials in SQLite on first start
+        try {
+            const npmDataVolume = docker.getVolume('dployr_npm-data');
+            await npmDataVolume.remove();
+            logger.info('NPM data volume removed for fresh initialization');
+        } catch (volErr) {
+            // Volume might not exist - ignore
+        }
+
+        // Use docker-compose to recreate the container with fresh settings
+        // The dashboard container has docker-compose available
+        const { exec } = require('child_process');
+        const util = require('util');
+        const execPromise = util.promisify(exec);
+
+        try {
+            // Run docker-compose up for npm service
+            await execPromise('docker compose -f /app/docker-compose.yml up -d npm', {
+                timeout: 60000
+            });
+            logger.info('NPM container recreated via docker-compose');
+        } catch (composeErr) {
+            logger.warn('docker-compose up npm failed, trying direct start', { error: composeErr.message });
+
+            // Fallback: try to start existing container
+            try {
+                const newContainer = docker.getContainer('dployr-npm');
+                await newContainer.start();
+                logger.info('NPM container started during setup');
+            } catch (startErr) {
+                if (startErr.statusCode === 404) {
+                    logger.warn('NPM container not found - may need to run docker compose up first');
+                } else if (startErr.statusCode === 304) {
+                    logger.info('NPM container already running');
+                } else {
+                    throw startErr;
+                }
+            }
+        }
+    } catch (error) {
+        logger.error('Failed to start NPM container', { error: error.message });
+        // Don't throw - setup should succeed even if NPM doesn't start
     }
 }
 
