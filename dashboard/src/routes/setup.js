@@ -64,7 +64,7 @@ router.get('/', async (req, res) => {
     });
 });
 
-// Execute setup
+// Execute setup with Server-Sent Events for real-time progress
 router.post('/run', async (req, res) => {
     const {
         server_ip,
@@ -86,47 +86,62 @@ router.post('/run', async (req, res) => {
         });
     }
 
-    try {
-        const steps = [];
+    // Set up SSE headers
+    res.setHeader('Content-Type', 'text/event-stream');
+    res.setHeader('Cache-Control', 'no-cache');
+    res.setHeader('Connection', 'keep-alive');
+    res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+    res.flushHeaders();
 
+    // Helper to send SSE events
+    const sendEvent = (type, data) => {
+        res.write(`event: ${type}\ndata: ${JSON.stringify(data)}\n\n`);
+    };
+
+    // Helper to send step progress
+    const sendStep = (step, status, message) => {
+        sendEvent('step', { step, status, message });
+    };
+
+    try {
         // Step 1: Create Docker network
-        steps.push({ step: 'network', status: 'running', message: 'Creating Docker network...' });
+        sendStep('network', 'running');
         await createDockerNetwork();
-        steps[0].status = 'done';
+        sendStep('network', 'done');
 
         // Step 2: Wait for MariaDB (already running via docker-compose)
-        steps.push({ step: 'wait_db', status: 'running', message: 'Waiting for database...' });
+        sendStep('wait_db', 'running');
         await waitForMariaDB(mysqlRootPassword);
-        steps[1].status = 'done';
+        sendStep('wait_db', 'done');
 
         // Step 3: Create dashboard database
-        steps.push({ step: 'dashboard_db', status: 'running', message: 'Creating dashboard database...' });
+        sendStep('dashboard_db', 'running');
         await createDashboardDatabase(mysqlRootPassword);
-        steps[2].status = 'done';
+        sendStep('dashboard_db', 'done');
 
         // Step 4: Create admin user with selected language
         const selectedLanguage = language || req.session.language || 'de';
-        steps.push({ step: 'admin', status: 'running', message: 'Creating admin user...' });
+        sendStep('admin', 'running');
         await createAdminUser(admin_username, admin_password, system_username, selectedLanguage);
-        steps[3].status = 'done';
+        sendStep('admin', 'done');
 
         // Step 5: Configure NPM if enabled
         if (npm_enabled && npm_email && npm_password) {
-            steps.push({ step: 'npm', status: 'running', message: 'Configuring Nginx Proxy Manager...' });
+            sendStep('npm', 'running');
             await configureNpm(npm_email, npm_password);
-            steps[steps.length - 1].status = 'done';
+            sendStep('npm', 'done');
 
             // Step 6: Configure dashboard access via NPM
             const isDomain = server_ip && !isIpAddress(server_ip);
             if (isDomain) {
-                steps.push({ step: 'dashboard_domain', status: 'running', message: 'Configuring dashboard domain with SSL...' });
+                sendStep('dashboard_domain', 'running');
                 await configureDashboardDomain(server_ip);
-                steps[steps.length - 1].status = 'done';
+                sendStep('dashboard_domain', 'done');
             } else if (server_ip) {
                 // Configure IP-based access (dashboard on port 80, no SSL)
-                steps.push({ step: 'dashboard_ip', status: 'running', message: 'Configuring dashboard access via port 80...' });
+                sendStep('dashboard_ip', 'running');
                 await configureIpBasedAccess(server_ip);
-                steps[steps.length - 1].status = 'done';
+                sendStep('dashboard_ip', 'done');
             }
         }
 
@@ -146,10 +161,12 @@ router.post('/run', async (req, res) => {
             }
         }
 
-        res.json({ success: true, steps, dashboardUrl });
+        sendEvent('complete', { success: true, dashboardUrl });
+        res.end();
     } catch (error) {
         logger.error('Setup error', { error: error.message });
-        res.status(500).json({ success: false, error: error.message });
+        sendEvent('error', { success: false, error: error.message });
+        res.end();
     }
 });
 
