@@ -274,6 +274,14 @@ async function startNpmContainer() {
                     `INITIAL_ADMIN_EMAIL=${npmEmail}`,
                     `INITIAL_ADMIN_PASSWORD=${npmPassword}`
                 ],
+                Labels: {
+                    // Add docker-compose labels so container is managed by docker compose
+                    'com.docker.compose.project': 'dployr',
+                    'com.docker.compose.service': 'npm',
+                    'com.docker.compose.container-number': '1',
+                    'com.docker.compose.project.working_dir': '/opt/dployr',
+                    'com.docker.compose.project.config_files': '/opt/dployr/docker-compose.yml'
+                },
                 HostConfig: {
                     RestartPolicy: { Name: 'unless-stopped' },
                     PortBindings: {
