@@ -4,6 +4,7 @@ const fs = require('fs').promises;
 const bcrypt = require('bcrypt');
 const Docker = require('dockerode');
 const { logger } = require('../config/logger');
+const proxyService = require('../services/proxy');
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 
@@ -105,7 +106,20 @@ router.post('/run', async (req, res) => {
         if (npm_enabled && npm_email && npm_password) {
             steps.push({ step: 'npm', status: 'running', message: 'Configuring Nginx Proxy Manager...' });
             await configureNpm(npm_email, npm_password);
-            steps[4].status = 'done';
+            steps[steps.length - 1].status = 'done';
+
+            // Step 6: Configure dashboard domain if a domain (not IP) was provided
+            const isDomain = server_ip && !isIpAddress(server_ip);
+            if (isDomain) {
+                steps.push({ step: 'dashboard_domain', status: 'running', message: 'Configuring dashboard domain with SSL...' });
+                await configureDashboardDomain(server_ip);
+                steps[steps.length - 1].status = 'done';
+            } else {
+                // Just create default host for IP-based access
+                steps.push({ step: 'default_host', status: 'running', message: 'Configuring default host...' });
+                await configureDefaultHost();
+                steps[steps.length - 1].status = 'done';
+            }
         }
 
         // Final: Mark setup as complete (include selected language and NPM status)
@@ -211,6 +225,114 @@ async function startNpmContainer() {
             logger.error('Failed to start NPM container', { error: error.message });
             // Don't throw - setup should succeed even if NPM doesn't start
         }
+    }
+}
+
+/**
+ * Check if a string is an IP address (v4 or v6)
+ */
+function isIpAddress(str) {
+    // IPv4 pattern
+    const ipv4Pattern = /^(\d{1,3}\.){3}\d{1,3}$/;
+    // IPv6 pattern (simplified)
+    const ipv6Pattern = /^([0-9a-fA-F]{0,4}:){2,7}[0-9a-fA-F]{0,4}$/;
+    // localhost
+    if (str === 'localhost') return true;
+
+    return ipv4Pattern.test(str) || ipv6Pattern.test(str);
+}
+
+/**
+ * Configure dashboard domain with SSL in NPM
+ * Called when a domain (not IP) is provided during setup
+ */
+async function configureDashboardDomain(domain) {
+    try {
+        // Wait for NPM API to be ready
+        const isReady = await proxyService.waitForApi(30, 2000);
+        if (!isReady) {
+            logger.warn('NPM API not ready for dashboard domain setup');
+            return;
+        }
+
+        // First ensure default host exists (as fallback)
+        await proxyService.ensureDefaultHost();
+
+        // Create dashboard proxy host with SSL
+        const result = await proxyService.createDashboardProxyHost(domain, true);
+
+        if (result.success) {
+            // Save domain to .env for future reference
+            await saveDashboardDomainToEnv(domain);
+            logger.info('Dashboard domain configured with SSL', { domain });
+        } else {
+            logger.warn('Failed to configure dashboard domain', { domain, error: result.error });
+        }
+    } catch (error) {
+        logger.error('Error configuring dashboard domain', { domain, error: error.message });
+        // Don't throw - setup should succeed even if domain config fails
+    }
+}
+
+/**
+ * Configure default host only (for IP-based access)
+ */
+async function configureDefaultHost() {
+    try {
+        // Wait for NPM API to be ready
+        const isReady = await proxyService.waitForApi(30, 2000);
+        if (!isReady) {
+            logger.warn('NPM API not ready for default host setup');
+            return;
+        }
+
+        const result = await proxyService.ensureDefaultHost();
+        if (result.success) {
+            logger.info('Default host configured for IP-based access');
+        } else {
+            logger.warn('Failed to configure default host', { error: result.error });
+        }
+    } catch (error) {
+        logger.error('Error configuring default host', { error: error.message });
+        // Don't throw - setup should succeed
+    }
+}
+
+/**
+ * Save dashboard domain to .env file
+ */
+async function saveDashboardDomainToEnv(domain) {
+    const envPath = '/app/.env';
+
+    try {
+        let envContent = '';
+        try {
+            envContent = await fs.readFile(envPath, 'utf-8');
+        } catch {
+            // File doesn't exist
+        }
+
+        // Parse existing env vars
+        const envLines = envContent.split('\n');
+        const envVars = {};
+        envLines.forEach(line => {
+            const match = line.match(/^([^#=]+)=(.*)$/);
+            if (match) {
+                envVars[match[1].trim()] = match[2].trim();
+            }
+        });
+
+        // Add dashboard domain
+        envVars['NPM_DASHBOARD_DOMAIN'] = domain;
+
+        // Rebuild .env content
+        const newEnvContent = Object.entries(envVars)
+            .map(([key, value]) => `${key}=${value}`)
+            .join('\n');
+
+        await fs.writeFile(envPath, newEnvContent + '\n');
+    } catch (error) {
+        logger.error('Failed to save dashboard domain to .env', { error: error.message });
     }
 }
 

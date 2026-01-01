@@ -91,7 +91,7 @@ async function getApiClient() {
  * @param {string} containerName - The container name to proxy to
  * @param {string} domain - The domain name
  * @param {number} port - The target port
- * @param {object} options - Additional options (sslEnabled, http2)
+ * @param {object} options - Additional options (sslEnabled, http2, isDefault)
  */
 async function createProxyHost(containerName, domain, port, options = {}) {
     if (!isEnabled()) {
@@ -99,6 +99,14 @@ async function createProxyHost(containerName, domain, port, options = {}) {
     }
 
     const client = await getApiClient();
+
+    // NPM uses advanced_config for default_server directive
+    // When is_default is true, add 'default_server' to the nginx config
+    let advancedConfig = options.advancedConfig || '';
+
+    // Note: NPM doesn't have a built-in "default host" flag in the API
+    // The default_server directive needs to be added via advanced config
+    // However, a simpler approach is to use a wildcard domain or catch-all
 
     const payload = {
         domain_names: [domain],
@@ -115,7 +123,7 @@ async function createProxyHost(containerName, domain, port, options = {}) {
             letsencrypt_agree: true,
             dns_challenge: false
         },
-        advanced_config: ''
+        advanced_config: advancedConfig
     };
 
     try {
@@ -731,10 +739,176 @@ async function deleteProjectDomains(userId, projectName) {
 }
 
 // ============================================
+// Default Host functions
+// ============================================
+
+// Special domain name used for default/catch-all host
+const DEFAULT_HOST_DOMAIN = 'default.localhost';
+let defaultHostId = null;
+
+/**
+ * Create or update the default host that catches all unmatched requests
+ * This redirects unknown domains to the dashboard
+ * @returns {Promise<{success: boolean, proxyHostId?: number, error?: string}>}
+ */
+async function ensureDefaultHost() {
+    if (!isEnabled()) {
+        return { success: false, error: 'NPM integration is not enabled' };
+    }
+
+    try {
+        const client = await getApiClient();
+
+        // Check if default host already exists
+        const existingHosts = await listProxyHosts();
+        const existingDefault = existingHosts.find(h =>
+            h.domain_names && h.domain_names.includes(DEFAULT_HOST_DOMAIN)
+        );
+
+        if (existingDefault) {
+            defaultHostId = existingDefault.id;
+            logger.debug('Default host already exists', { proxyHostId: existingDefault.id });
+            return { success: true, proxyHostId: existingDefault.id, existed: true };
+        }
+
+        // Create default host with special nginx config to act as catch-all
+        // The advanced_config adds 'default_server' to make this the fallback
+        const advancedConfig = `
+# Dployr Default Host - Catches all unmatched requests
+# This host uses default_server to handle unknown domains
+`;
+
+        const payload = {
+            domain_names: [DEFAULT_HOST_DOMAIN],
+            forward_scheme: 'http',
+            forward_host: 'dashboard',
+            forward_port: 3000,
+            certificate_id: 0,
+            ssl_forced: false,
+            http2_support: true,
+            block_exploits: true,
+            allow_websocket_upgrade: true,
+            access_list_id: 0,
+            meta: {
+                letsencrypt_agree: false,
+                dns_challenge: false
+            },
+            advanced_config: advancedConfig
+        };
+
+        const response = await client.post('/nginx/proxy-hosts', payload);
+        defaultHostId = response.data.id;
+
+        logger.info('Default host created', { proxyHostId: response.data.id });
+        return { success: true, proxyHostId: response.data.id };
+    } catch (error) {
+        logger.error('Failed to create default host', { error: error.message });
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Update the default host to redirect to a specific target
+ * @param {string} targetHost - Container name to forward to
+ * @param {number} targetPort - Port to forward to
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function updateDefaultHost(targetHost, targetPort) {
+    if (!isEnabled()) {
+        return { success: false, error: 'NPM integration is not enabled' };
+    }
+
+    try {
+        const client = await getApiClient();
+
+        // Find existing default host
+        const existingHosts = await listProxyHosts();
+        const existingDefault = existingHosts.find(h =>
+            h.domain_names && h.domain_names.includes(DEFAULT_HOST_DOMAIN)
+        );
+
+        if (!existingDefault) {
+            // Create it if it doesn't exist
+            return ensureDefaultHost();
+        }
+
+        // Update the existing default host
+        const payload = {
+            domain_names: [DEFAULT_HOST_DOMAIN],
+            forward_scheme: 'http',
+            forward_host: targetHost,
+            forward_port: parseInt(targetPort) || 3000,
+            certificate_id: existingDefault.certificate_id || 0,
+            ssl_forced: existingDefault.ssl_forced || false,
+            http2_support: true,
+            block_exploits: true,
+            allow_websocket_upgrade: true,
+            access_list_id: 0,
+            meta: existingDefault.meta || {},
+            advanced_config: existingDefault.advanced_config || '',
+            enabled: true,
+            locations: existingDefault.locations || []
+        };
+
+        await client.put(`/nginx/proxy-hosts/${existingDefault.id}`, payload);
+        logger.info('Default host updated', { targetHost, targetPort, proxyHostId: existingDefault.id });
+        return { success: true, proxyHostId: existingDefault.id };
+    } catch (error) {
+        logger.error('Failed to update default host', { error: error.message });
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Remove the default host
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function removeDefaultHost() {
+    if (!isEnabled()) {
+        return { success: true };
+    }
+
+    try {
+        const existingHosts = await listProxyHosts();
+        const existingDefault = existingHosts.find(h =>
+            h.domain_names && h.domain_names.includes(DEFAULT_HOST_DOMAIN)
+        );
+
+        if (existingDefault) {
+            await deleteProxyHost(existingDefault.id);
+            defaultHostId = null;
+            logger.info('Default host removed', { proxyHostId: existingDefault.id });
+        }
+
+        return { success: true };
+    } catch (error) {
+        logger.error('Failed to remove default host', { error: error.message });
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Check if default host exists
+ * @returns {Promise<boolean>}
+ */
+async function hasDefaultHost() {
+    if (!isEnabled()) return false;
+
+    try {
+        const existingHosts = await listProxyHosts();
+        return existingHosts.some(h =>
+            h.domain_names && h.domain_names.includes(DEFAULT_HOST_DOMAIN)
+        );
+    } catch (error) {
+        return false;
+    }
+}
+
+// ============================================
 // Dashboard Domain functions
 // ============================================
 
-// Use in-memory cache for dashboard proxy host ID to avoid database dependency
+// Cache for dashboard proxy host ID
 let dashboardProxyHostId = null;
 
 /**
@@ -856,6 +1030,12 @@ module.exports = {
     deleteDomainMapping,
     updateDomainSSL,
     deleteProjectDomains,
+
+    // Default Host functions (catch-all for unknown domains)
+    ensureDefaultHost,
+    updateDefaultHost,
+    removeDefaultHost,
+    hasDefaultHost,
 
     // Dashboard Domain functions
     createDashboardProxyHost,

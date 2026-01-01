@@ -133,7 +133,7 @@
                 <h5 class="mb-3"><i class="bi bi-globe2"></i> <%= t('admin:npm.dashboardDomain') %></h5>
 
                 <% if (npm.dashboardDomain) { %>
-                <!-- Domain is configured -->
+                <!-- Domain is configured (automatically during setup or manually) -->
                 <div class="alert alert-success d-flex justify-content-between align-items-center">
                     <div>
                         <i class="bi bi-check-circle"></i>
@@ -147,31 +147,35 @@
                         <i class="bi bi-trash"></i> <%= t('admin:npm.dashboardDomainRemove') %>
                     </button>
                 </div>
+                <p class="text-muted small">
+                    <i class="bi bi-info-circle"></i> <%= t('admin:npm.dashboardDomainAutomatic') %>
+                </p>
                 <% } else { %>
-                <!-- Domain not configured -->
-                <div class="row mb-3">
-                    <div class="col-md-8">
-                        <label for="dashboard_domain" class="form-label"><%= t('admin:npm.dashboardDomain') %></label>
-                        <input type="text" class="form-control" id="dashboard_domain" placeholder="<%= t('admin:npm.dashboardDomainPlaceholder') %>">
-                        <small class="text-muted"><%= t('admin:npm.dashboardDomainHelp') %></small>
+                <!-- No domain configured - allow manual configuration -->
+                <p class="text-muted small mb-3">
+                    <i class="bi bi-info-circle"></i> <%= t('admin:npm.dashboardDomainHelp') %>
+                </p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="input-group">
+                            <input type="text" class="form-control" id="dashboardDomainInput"
+                                   placeholder="<%= t('admin:npm.dashboardDomainPlaceholder') %>"
+                                   pattern="^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$">
+                            <button type="button" class="btn btn-primary" id="configureDashboardDomainBtn">
+                                <i class="bi bi-globe"></i> <%= t('admin:npm.dashboardDomainConfigure') %>
+                            </button>
+                        </div>
                     </div>
-                    <div class="col-md-4 d-flex align-items-end">
-                        <button type="button" class="btn btn-outline-primary" id="configureDashboardDomainBtn">
-                            <i class="bi bi-globe2"></i> <%= t('admin:npm.dashboardDomainConfigure') %>
-                        </button>
+                    <div class="col-md-6 d-flex align-items-center">
+                        <div class="form-check">
+                            <input class="form-check-input" type="checkbox" id="dashboardDomainSsl" checked>
+                            <label class="form-check-label" for="dashboardDomainSsl">
+                                <i class="bi bi-shield-lock"></i> <%= t('admin:npm.dashboardDomainSsl') %>
+                            </label>
+                        </div>
                     </div>
-                </div>
-                <div class="form-check mb-3">
-                    <input class="form-check-input" type="checkbox" id="dashboard_domain_ssl" checked>
-                    <label class="form-check-label" for="dashboard_domain_ssl">
-                        <%= t('admin:npm.dashboardDomainSsl') %>
-                    </label>
                 </div>
                 <% } %>
-
-                <div class="alert alert-warning">
-                    <i class="bi bi-exclamation-triangle"></i> <%= t('admin:npm.dashboardDomainNote') %>
-                </div>
             </div>
 
             <hr>
@@ -565,15 +569,18 @@ if (npmEnabled) {
     document.getElementById('containerLogsBody').addEventListener('shown.bs.collapse', fetchLogs);
 }
 
-// Configure Dashboard Domain button
+// Configure Dashboard Domain button (for manual configuration)
 const configureDashboardDomainBtn = document.getElementById('configureDashboardDomainBtn');
 if (configureDashboardDomainBtn) {
     configureDashboardDomainBtn.addEventListener('click', async function() {
-        const domain = document.getElementById('dashboard_domain').value.trim();
-        const enableSsl = document.getElementById('dashboard_domain_ssl').checked;
+        const domainInput = document.getElementById('dashboardDomainInput');
+        const sslCheckbox = document.getElementById('dashboardDomainSsl');
+        const domain = domainInput.value.trim();
 
-        if (!domain) {
+        // Validate domain format
+        if (!domain || !/^[a-zA-Z0-9][a-zA-Z0-9.-]*\.[a-zA-Z]{2,}$/.test(domain)) {
             alert('<%= t("admin:npm.dashboardDomainInvalid") %>');
+            domainInput.focus();
             return;
         }
 
@@ -581,6 +588,7 @@ if (configureDashboardDomainBtn) {
         const originalHtml = btn.innerHTML;
         btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> <%= t("admin:npm.configuring") %>';
         btn.disabled = true;
+        domainInput.disabled = true;
 
         try {
             const response = await fetch('/admin/settings/npm/dashboard-domain', {
@@ -589,22 +597,27 @@ if (configureDashboardDomainBtn) {
                     'Content-Type': 'application/json',
                     'X-CSRF-Token': csrfToken
                 },
-                body: JSON.stringify({ domain, enableSsl })
+                body: JSON.stringify({
+                    domain: domain,
+                    ssl: sslCheckbox.checked
+                })
             });
             const data = await response.json();
 
             if (data.success) {
-                // Reload page to show configured domain
+                // Reload page to show success state
                 window.location.reload();
             } else {
                 alert(data.error || '<%= t("admin:npm.dashboardDomainError") %>');
                 btn.innerHTML = originalHtml;
                 btn.disabled = false;
+                domainInput.disabled = false;
             }
         } catch (error) {
             alert('<%= t("admin:npm.dashboardDomainError") %>: ' + error.message);
             btn.innerHTML = originalHtml;
             btn.disabled = false;
+            domainInput.disabled = false;
         }
     });
 }
