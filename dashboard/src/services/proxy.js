@@ -977,6 +977,59 @@ async function createDashboardProxyHost(domain, withSsl = true) {
 }
 
 /**
+ * Create proxy host for IP-based dashboard access (no SSL)
+ * Routes traffic from server IP to dashboard:3000 via port 80
+ * @param {string} serverIp - The server IP address
+ * @returns {Promise<{success: boolean, error?: string}>}
+ */
+async function createDashboardIpProxyHost(serverIp) {
+    if (!isEnabled()) {
+        return { success: false, error: 'NPM integration is not enabled' };
+    }
+
+    try {
+        const client = await getApiClient();
+
+        // Check if we already have a proxy host for this IP
+        const existingHosts = await listProxyHosts();
+        const ipHost = existingHosts.find(h =>
+            h.domain_names && h.domain_names.includes(serverIp)
+        );
+
+        if (ipHost) {
+            logger.debug('IP-based dashboard proxy host already exists', { serverIp, proxyHostId: ipHost.id });
+            return { success: true, proxyHostId: ipHost.id, existed: true };
+        }
+
+        // Create proxy host for IP access (no SSL possible for IPs)
+        const payload = {
+            domain_names: [serverIp],
+            forward_scheme: 'http',
+            forward_host: 'dashboard',
+            forward_port: 3000,
+            certificate_id: 0,
+            ssl_forced: false,
+            http2_support: false,
+            block_exploits: true,
+            allow_websocket_upgrade: true,
+            access_list_id: 0,
+            meta: {
+                letsencrypt_agree: false,
+                dns_challenge: false
+            },
+            advanced_config: ''
+        };
+
+        const response = await client.post('/nginx/proxy-hosts', payload);
+        logger.info('IP-based dashboard proxy host created', { serverIp, proxyHostId: response.data.id });
+        return { success: true, proxyHostId: response.data.id };
+    } catch (error) {
+        logger.error('Failed to create IP-based dashboard proxy host', { serverIp, error: error.message });
+        return { success: false, error: error.message };
+    }
+}
+
+/**
  * Delete the dashboard proxy host
  * @param {string} domain - The domain name (used for logging)
  * @returns {Promise<void>}
@@ -1045,5 +1098,6 @@ module.exports = {
 
     // Dashboard Domain functions
     createDashboardProxyHost,
+    createDashboardIpProxyHost,
     deleteDashboardProxyHost
 };

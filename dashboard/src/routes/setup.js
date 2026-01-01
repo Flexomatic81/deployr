@@ -116,16 +116,16 @@ router.post('/run', async (req, res) => {
             await configureNpm(npm_email, npm_password);
             steps[steps.length - 1].status = 'done';
 
-            // Step 6: Configure dashboard domain if a domain (not IP) was provided
+            // Step 6: Configure dashboard access via NPM
             const isDomain = server_ip && !isIpAddress(server_ip);
             if (isDomain) {
                 steps.push({ step: 'dashboard_domain', status: 'running', message: 'Configuring dashboard domain with SSL...' });
                 await configureDashboardDomain(server_ip);
                 steps[steps.length - 1].status = 'done';
-            } else {
-                // Just create default host for IP-based access
-                steps.push({ step: 'default_host', status: 'running', message: 'Configuring default host...' });
-                await configureDefaultHost();
+            } else if (server_ip) {
+                // Configure IP-based access (dashboard on port 80, no SSL)
+                steps.push({ step: 'dashboard_ip', status: 'running', message: 'Configuring dashboard access via port 80...' });
+                await configureIpBasedAccess(server_ip);
                 steps[steps.length - 1].status = 'done';
             }
         }
@@ -133,7 +133,20 @@ router.post('/run', async (req, res) => {
         // Final: Mark setup as complete (include selected language and NPM status)
         await markSetupComplete(server_ip, system_username, selectedLanguage, npm_enabled);
 
-        res.json({ success: true, steps });
+        // Determine the dashboard URL based on configuration
+        let dashboardUrl = '/login';
+        if (npm_enabled && server_ip) {
+            const isDomain = !isIpAddress(server_ip);
+            if (isDomain) {
+                // Domain with SSL
+                dashboardUrl = `https://${server_ip}/login`;
+            } else {
+                // IP with NPM (port 80)
+                dashboardUrl = `http://${server_ip}/login`;
+            }
+        }
+
+        res.json({ success: true, steps, dashboardUrl });
     } catch (error) {
         logger.error('Setup error', { error: error.message });
         res.status(500).json({ success: false, error: error.message });
@@ -400,25 +413,31 @@ async function configureDashboardDomain(domain) {
 }
 
 /**
- * Configure default host only (for IP-based access)
+ * Configure proxy host for IP-based access (no SSL)
+ * Makes dashboard accessible via http://IP (port 80)
+ * @param {string} serverIp - The server IP address
  */
-async function configureDefaultHost() {
+async function configureIpBasedAccess(serverIp) {
     try {
         // Wait for NPM API to be fully ready (including authentication)
         const isReady = await waitForNpmAuth(60, 2000);
         if (!isReady) {
-            logger.warn('NPM API not ready for default host setup');
+            logger.warn('NPM API not ready for IP-based access setup');
             return;
         }
 
-        const result = await proxyService.ensureDefaultHost();
+        // Create default host as fallback
+        await proxyService.ensureDefaultHost();
+
+        // Create IP-based proxy host for dashboard
+        const result = await proxyService.createDashboardIpProxyHost(serverIp);
         if (result.success) {
-            logger.info('Default host configured for IP-based access');
+            logger.info('IP-based dashboard access configured', { serverIp });
         } else {
-            logger.warn('Failed to configure default host', { error: result.error });
+            logger.warn('Failed to configure IP-based dashboard access', { serverIp, error: result.error });
         }
     } catch (error) {
-        logger.error('Error configuring default host', { error: error.message });
+        logger.error('Error configuring IP-based access', { error: error.message });
         // Don't throw - setup should succeed
     }
 }

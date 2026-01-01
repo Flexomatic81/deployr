@@ -415,6 +415,14 @@
                 document.getElementById('successAlert').classList.remove('d-none');
                 document.getElementById('errorAlert').classList.add('d-none');
                 document.getElementById('completedActions').classList.remove('d-none');
+
+                // Update dashboard link with the correct URL
+                if (result.dashboardUrl) {
+                    const dashboardLink = document.querySelector('#completedActions a.btn-success');
+                    if (dashboardLink) {
+                        dashboardLink.href = result.dashboardUrl;
+                    }
+                }
             } else {
                 throw new Error(result.error);
             }
