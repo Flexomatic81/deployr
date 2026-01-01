@@ -70,12 +70,13 @@ const authLimiter = rateLimit({
     legacyHeaders: false
 });
 
-// Security: General rate limiting
+// Security: General rate limiting (skip for setup routes)
 const generalLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
     max: 100, // 100 requests per minute
     standardHeaders: true,
-    legacyHeaders: false
+    legacyHeaders: false,
+    skip: (req) => req.path.startsWith('/setup')
 });
 
 // Security: Webhook rate limiting (more permissive for CI/CD)
