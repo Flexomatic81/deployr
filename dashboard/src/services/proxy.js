@@ -14,8 +14,6 @@ const { logger } = require('../config/logger');
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
 const NPM_CONTAINER_NAME = 'dployr-npm';
-const NPM_API_URL = process.env.NPM_API_URL || 'http://dployr-npm:81/api';
-const NPM_ENABLED = process.env.NPM_ENABLED === 'true';
 
 // Default NPM credentials (created on first start)
 const NPM_DEFAULT_EMAIL = 'admin@example.com';
@@ -26,10 +24,18 @@ let cachedToken = null;
 let tokenExpiry = null;
 
 /**
+ * Get NPM API URL (read dynamically to support runtime changes)
+ */
+function getNpmApiUrl() {
+    return process.env.NPM_API_URL || 'http://dployr-npm:81/api';
+}
+
+/**
  * Check if NPM integration is enabled
+ * Reads from process.env directly to support runtime changes during setup
  */
 function isEnabled() {
-    return NPM_ENABLED;
+    return process.env.NPM_ENABLED === 'true';
 }
 
 /**
@@ -49,7 +55,7 @@ async function getToken() {
     }
 
     try {
-        const response = await axios.post(`${NPM_API_URL}/tokens`, {
+        const response = await axios.post(`${getNpmApiUrl()}/tokens`, {
             identity: email,
             secret: password
         }, {
@@ -77,7 +83,7 @@ async function getToken() {
 async function getApiClient() {
     const token = await getToken();
     return axios.create({
-        baseURL: NPM_API_URL,
+        baseURL: getNpmApiUrl(),
         headers: {
             'Authorization': `Bearer ${token}`,
             'Content-Type': 'application/json'
@@ -287,7 +293,7 @@ async function testConnection() {
  */
 async function checkSetupStatus() {
     try {
-        const response = await axios.get(`${NPM_API_URL}/`, { timeout: 5000 });
+        const response = await axios.get(`${getNpmApiUrl()}/`, { timeout: 5000 });
         return { needsSetup: response.data.setup === false };
     } catch (error) {
         return { needsSetup: false, error: error.message };
@@ -309,7 +315,7 @@ async function initializeCredentials(email, password) {
 
     // First try to login with the configured credentials (already initialized)
     try {
-        const response = await axios.post(`${NPM_API_URL}/tokens`, {
+        const response = await axios.post(`${getNpmApiUrl()}/tokens`, {
             identity: email,
             secret: password
         }, { timeout: 10000 });
@@ -339,7 +345,7 @@ async function initializeCredentials(email, password) {
     // Try to login with default credentials (legacy NPM versions with changeme password)
     let defaultToken;
     try {
-        const response = await axios.post(`${NPM_API_URL}/tokens`, {
+        const response = await axios.post(`${getNpmApiUrl()}/tokens`, {
             identity: NPM_DEFAULT_EMAIL,
             secret: NPM_DEFAULT_PASSWORD
         }, { timeout: 10000 });
@@ -358,7 +364,7 @@ async function initializeCredentials(email, password) {
     // Update default user to configured credentials
     try {
         const client = axios.create({
-            baseURL: NPM_API_URL,
+            baseURL: getNpmApiUrl(),
             headers: {
                 'Authorization': `Bearer ${defaultToken}`,
                 'Content-Type': 'application/json'
@@ -480,7 +486,7 @@ async function waitForApi(maxAttempts = 30, delayMs = 2000) {
     for (let i = 0; i < maxAttempts; i++) {
         try {
             // Just check if the API responds at all
-            await axios.get(`${NPM_API_URL}/`, { timeout: 5000 });
+            await axios.get(`${getNpmApiUrl()}/`, { timeout: 5000 });
             return true;
         } catch (error) {
             // API might return 401/404, but that means it's running
