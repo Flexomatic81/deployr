@@ -153,15 +153,47 @@
             <div class="modal-header">
                 <h5 class="modal-title"><i class="bi bi-cloud-download"></i> <%= t('admin:updates.updating') %></h5>
             </div>
-            <div class="modal-body text-center">
-                <div class="spinner-border text-primary mb-3" role="status" style="width: 3rem; height: 3rem;">
-                    <span class="visually-hidden">Loading...</span>
+            <div class="modal-body">
+                <!-- Progress Steps -->
+                <div class="mb-4">
+                    <div class="d-flex align-items-center mb-2" id="step-pull">
+                        <span class="step-icon me-2"><i class="bi bi-hourglass text-muted"></i></span>
+                        <span class="step-text">1. <%= t('admin:updates.stepPull') %></span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2" id="step-images">
+                        <span class="step-icon me-2"><i class="bi bi-hourglass text-muted"></i></span>
+                        <span class="step-text">2. <%= t('admin:updates.stepImages') %></span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2" id="step-build">
+                        <span class="step-icon me-2"><i class="bi bi-hourglass text-muted"></i></span>
+                        <span class="step-text">3. <%= t('admin:updates.stepBuild') %></span>
+                    </div>
+                    <div class="d-flex align-items-center mb-2" id="step-restart">
+                        <span class="step-icon me-2"><i class="bi bi-hourglass text-muted"></i></span>
+                        <span class="step-text">4. <%= t('admin:updates.stepRestart') %></span>
+                    </div>
+                    <div class="d-flex align-items-center" id="step-ready">
+                        <span class="step-icon me-2"><i class="bi bi-hourglass text-muted"></i></span>
+                        <span class="step-text">5. <%= t('admin:updates.stepReady') %></span>
+                    </div>
                 </div>
-                <p id="updateStatus"><%= t('admin:updates.pleaseWait') %></p>
-                <div class="progress mb-3" style="height: 5px;">
-                    <div class="progress-bar progress-bar-striped progress-bar-animated" role="progressbar" style="width: 100%"></div>
+
+                <!-- Status Message -->
+                <div class="text-center" id="updateStatusContainer">
+                    <div class="spinner-border text-primary mb-2" role="status" id="updateSpinner" style="width: 2rem; height: 2rem;">
+                        <span class="visually-hidden">Loading...</span>
+                    </div>
+                    <p id="updateStatus" class="mb-0"><%= t('admin:updates.pleaseWait') %></p>
                 </div>
-                <small class="text-muted"><%= t('admin:updates.restartNote') %></small>
+
+                <!-- Success Container (hidden initially) -->
+                <div class="text-center d-none" id="updateSuccessContainer">
+                    <i class="bi bi-check-circle-fill text-success display-4 mb-3"></i>
+                    <p class="mb-3"><%= t('admin:updates.updateComplete') %></p>
+                    <a href="/login" class="btn btn-primary">
+                        <i class="bi bi-box-arrow-in-right"></i> <%= t('admin:updates.toLogin') %>
+                    </a>
+                </div>
             </div>
         </div>
     </div>
@@ -194,7 +226,22 @@ document.getElementById('checkUpdatesBtn')?.addEventListener('click', async func
     }
 });
 
-// Install update
+// Helper function to update step status
+function setStepStatus(stepId, status) {
+    const step = document.getElementById(stepId);
+    if (!step) return;
+
+    const icon = step.querySelector('.step-icon');
+    if (status === 'active') {
+        icon.innerHTML = '<span class="spinner-border spinner-border-sm text-primary"></span>';
+    } else if (status === 'done') {
+        icon.innerHTML = '<i class="bi bi-check-circle-fill text-success"></i>';
+    } else if (status === 'pending') {
+        icon.innerHTML = '<i class="bi bi-hourglass text-muted"></i>';
+    }
+}
+
+// Install update with SSE progress
 document.getElementById('installUpdateBtn')?.addEventListener('click', async function() {
     if (!confirm('<%= t("admin:updates.confirmUpdate") %>')) {
         return;
@@ -203,36 +250,63 @@ document.getElementById('installUpdateBtn')?.addEventListener('click', async fun
     const modal = new bootstrap.Modal(document.getElementById('updateModal'));
     modal.show();
 
-    try {
-        const response = await fetch('/admin/updates/install', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-                'X-CSRF-Token': '<%= csrfToken %>'
+    // Reset all steps to pending
+    ['step-pull', 'step-images', 'step-build', 'step-restart', 'step-ready'].forEach(id => {
+        setStepStatus(id, 'pending');
+    });
+
+    // Start SSE connection for progress updates
+    const eventSource = new EventSource('/admin/updates/install-stream?_csrf=<%= csrfToken %>');
+
+    eventSource.onmessage = function(event) {
+        try {
+            const data = JSON.parse(event.data);
+
+            // Update steps based on status
+            if (data.step === 'pull') {
+                setStepStatus('step-pull', 'active');
+            } else if (data.step === 'pull-images') {
+                setStepStatus('step-pull', 'done');
+                setStepStatus('step-images', 'active');
+            } else if (data.step === 'build') {
+                setStepStatus('step-images', 'done');
+                setStepStatus('step-build', 'active');
+            } else if (data.step === 'restart') {
+                setStepStatus('step-build', 'done');
+                setStepStatus('step-restart', 'active');
+            } else if (data.status === 'complete') {
+                setStepStatus('step-restart', 'done');
+                setStepStatus('step-ready', 'active');
+                document.getElementById('updateStatus').textContent = '<%= t("admin:updates.restartingDashboard") %>';
+                eventSource.close();
+                // Now wait for dashboard to come back online
+                waitForDashboardReady();
             }
-        });
 
-        const result = await response.json();
-
-        if (result.success) {
-            document.getElementById('updateStatus').innerHTML = '<%= t("admin:updates.pleaseWait") %>';
-            // Start waiting for dashboard to go offline, then come back online
-            waitForOfflineThenOnline();
-        } else {
-            modal.hide();
-            alert('<%= t("admin:updates.updateFailed") %>: ' + result.error);
+            if (data.error) {
+                eventSource.close();
+                document.getElementById('updateStatus').textContent = '<%= t("admin:updates.updateFailed") %>: ' + data.error;
+                document.getElementById('updateSpinner').classList.add('d-none');
+            }
+        } catch (e) {
+            console.error('Error parsing SSE data:', e);
         }
-    } catch (error) {
-        modal.hide();
-        alert('<%= t("admin:updates.updateFailed") %>: ' + error.message);
-    }
+    };
+
+    eventSource.onerror = function() {
+        // Connection lost - dashboard probably restarting
+        eventSource.close();
+        setStepStatus('step-restart', 'done');
+        setStepStatus('step-ready', 'active');
+        document.getElementById('updateStatus').textContent = '<%= t("admin:updates.restartingDashboard") %>';
+        waitForDashboardReady();
+    };
 });
 
-// Wait for dashboard to go offline first, then wait for it to come back
-async function waitForOfflineThenOnline() {
-    let offlineDetected = false;
+// Wait for dashboard to come back online after restart
+async function waitForDashboardReady() {
     let attempts = 0;
-    const maxAttempts = 90; // 3 minutes max (90 * 2s)
+    const maxAttempts = 90; // 3 minutes max
 
     const checkInterval = setInterval(async () => {
         attempts++;
@@ -244,28 +318,20 @@ async function waitForOfflineThenOnline() {
             });
 
             if (response.ok) {
-                if (offlineDetected) {
-                    // Dashboard is back online after being offline
-                    clearInterval(checkInterval);
-                    document.getElementById('updateStatus').innerHTML = '<%= t("admin:updates.updateComplete") %>';
-                    setTimeout(() => {
-                        window.location.href = '/login';
-                    }, 1500);
-                }
-                // Still online, waiting for it to go offline...
+                clearInterval(checkInterval);
+                // Show success state
+                setStepStatus('step-ready', 'done');
+                document.getElementById('updateStatusContainer').classList.add('d-none');
+                document.getElementById('updateSuccessContainer').classList.remove('d-none');
             }
         } catch {
-            // Dashboard is offline (connection refused/timeout)
-            if (!offlineDetected) {
-                offlineDetected = true;
-                document.getElementById('updateStatus').innerHTML = '<%= t("admin:updates.restartingDashboard") %>';
-            }
-            // Keep waiting for it to come back online
+            // Dashboard not ready yet
         }
 
         if (attempts >= maxAttempts) {
             clearInterval(checkInterval);
-            document.getElementById('updateStatus').innerHTML = '<%= t("admin:updates.manualRefresh") %>';
+            document.getElementById('updateSpinner').classList.add('d-none');
+            document.getElementById('updateStatus').innerHTML = '<%= t("admin:updates.manualRefresh") %> <a href="/login" class="btn btn-sm btn-primary ms-2"><%= t("admin:updates.toLogin") %></a>';
         }
     }, 2000);
 }

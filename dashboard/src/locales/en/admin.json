@@ -311,6 +311,12 @@
     "channelBeta": "Beta",
     "channelBetaDesc": "Latest features, may be unstable",
     "channelChanged": "Update channel changed",
-    "channelWarning": "Beta updates may be unstable and cause issues."
+    "channelWarning": "Beta updates may be unstable and cause issues.",
+    "stepPull": "Download code (git pull)",
+    "stepImages": "Update Docker images",
+    "stepBuild": "Rebuild dashboard",
+    "stepRestart": "Restart services",
+    "stepReady": "Waiting for dashboard",
+    "toLogin": "Go to Login"
   }
 }

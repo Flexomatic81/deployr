@@ -311,6 +311,12 @@
     "channelBeta": "Beta",
     "channelBetaDesc": "Neueste Features, möglicherweise instabil",
     "channelChanged": "Update-Kanal geändert",
-    "channelWarning": "Beta-Updates können instabil sein und zu Problemen führen."
+    "channelWarning": "Beta-Updates können instabil sein und zu Problemen führen.",
+    "stepPull": "Code herunterladen (git pull)",
+    "stepImages": "Docker Images aktualisieren",
+    "stepBuild": "Dashboard neu bauen",
+    "stepRestart": "Services neu starten",
+    "stepReady": "Warten auf Dashboard",
+    "toLogin": "Zum Login"
   }
 }
