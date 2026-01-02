@@ -129,14 +129,24 @@ async function getCurrentVersion() {
             tag
         };
     } catch (error) {
-        logger.error('Failed to get current version', { error: error.message });
+        logger.error('Failed to get current version from git', { error: error.message });
 
-        // Fallback: Try to read from build args (set during docker build)
-        return {
-            hash: process.env.GIT_HASH || 'unknown',
-            date: process.env.GIT_DATE || 'unknown',
-            tag: null
-        };
+        // Fallback: Try to read from version.json (set during docker build)
+        try {
+            const versionFile = path.join('/app', 'version.json');
+            const versionData = JSON.parse(await fs.readFile(versionFile, 'utf8'));
+            return {
+                hash: versionData.hash || 'unknown',
+                date: versionData.date || 'unknown',
+                tag: versionData.tag || null
+            };
+        } catch {
+            return {
+                hash: process.env.GIT_HASH || 'unknown',
+                date: process.env.GIT_DATE || 'unknown',
+                tag: null
+            };
+        }
     }
 }
 

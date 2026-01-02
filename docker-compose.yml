@@ -114,6 +114,7 @@ services:
       args:
         GIT_HASH: ${GIT_HASH:-unknown}
         GIT_DATE: ${GIT_DATE:-unknown}
+        GIT_TAG: ${GIT_TAG:-}
     container_name: dployr-dashboard
     restart: unless-stopped
     ports:

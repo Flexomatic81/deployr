@@ -120,6 +120,7 @@ do_deploy() {
     # Get version information for build args
     export GIT_HASH=$(git rev-parse --short HEAD)
     export GIT_DATE=$(git log -1 --format=%cd --date=format:'%d.%m.%Y')
+    export GIT_TAG=$(git describe --tags --exact-match 2>/dev/null || echo "")
 
     if [ "$JSON_OUTPUT" = true ]; then
         echo "{\"status\":\"pulling\",\"step\":\"pull-images\",\"version\":\"$GIT_HASH\"}"

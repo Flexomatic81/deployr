@@ -17,7 +17,8 @@ COPY . .
 # Version info as build argument (passed during build)
 ARG GIT_HASH=unknown
 ARG GIT_DATE=unknown
-RUN echo "{\"hash\":\"${GIT_HASH}\",\"date\":\"${GIT_DATE}\"}" > /app/version.json
+ARG GIT_TAG=
+RUN echo "{\"hash\":\"${GIT_HASH}\",\"date\":\"${GIT_DATE}\",\"tag\":\"${GIT_TAG}\"}" > /app/version.json
 
 # Expose port
 EXPOSE 3000
