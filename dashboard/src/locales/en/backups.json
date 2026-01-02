@@ -39,10 +39,31 @@
     "viewAll": "View all backups",
     "creating": "Creating backup..."
   },
+  "detail": {
+    "title": "Backup Details",
+    "info": "Information",
+    "name": "Name",
+    "filename": "Filename",
+    "duration": "Duration",
+    "error": "Error",
+    "fileMissing": "The backup file no longer exists.",
+    "actions": "Actions",
+    "contents": "Contents",
+    "files": "files",
+    "truncated": "Showing {{shown}} of {{total}} files.",
+    "targetNotFound": "The target (project/database) no longer exists."
+  },
   "confirmDelete": {
     "title": "Delete Backup",
     "message": "Are you sure you want to delete this backup? This action cannot be undone.",
     "confirm": "Delete",
+    "cancel": "Cancel"
+  },
+  "confirmRestore": {
+    "title": "Restore Backup",
+    "message": "Are you sure you want to restore this backup?",
+    "warning": "All current data will be overwritten!",
+    "confirm": "Restore",
     "cancel": "Cancel"
   },
   "flash": {

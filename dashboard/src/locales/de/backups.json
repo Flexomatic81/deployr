@@ -39,10 +39,31 @@
     "viewAll": "Alle Backups anzeigen",
     "creating": "Backup wird erstellt..."
   },
+  "detail": {
+    "title": "Backup-Details",
+    "info": "Informationen",
+    "name": "Name",
+    "filename": "Dateiname",
+    "duration": "Dauer",
+    "error": "Fehler",
+    "fileMissing": "Die Backup-Datei existiert nicht mehr.",
+    "actions": "Aktionen",
+    "contents": "Inhalt",
+    "files": "Dateien",
+    "truncated": "Es werden {{shown}} von {{total}} Dateien angezeigt.",
+    "targetNotFound": "Das Ziel (Projekt/Datenbank) existiert nicht mehr."
+  },
   "confirmDelete": {
     "title": "Backup löschen",
     "message": "Möchten Sie dieses Backup wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
     "confirm": "Löschen",
+    "cancel": "Abbrechen"
+  },
+  "confirmRestore": {
+    "title": "Backup wiederherstellen",
+    "message": "Möchten Sie dieses Backup wirklich wiederherstellen?",
+    "warning": "Alle aktuellen Daten werden überschrieben!",
+    "confirm": "Wiederherstellen",
     "cancel": "Abbrechen"
   },
   "flash": {

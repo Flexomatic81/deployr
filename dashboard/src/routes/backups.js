@@ -251,4 +251,143 @@ router.get('/project/:name', getProjectAccess(), async (req, res) => {
     }
 });
 
+/**
+ * GET /backups/:id
+ * View backup details with preview and restore options
+ */
+router.get('/:id', async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const backupId = parseInt(req.params.id);
+
+        // Get backup info
+        const backup = await backupService.getBackupInfo(backupId);
+
+        if (!backup) {
+            req.flash('error', req.t('backups:errors.notFound'));
+            return res.redirect('/backups');
+        }
+
+        // Verify ownership
+        if (backup.user_id !== userId) {
+            req.flash('error', req.t('backups:errors.accessDenied'));
+            return res.redirect('/backups');
+        }
+
+        // Check if file exists
+        const fileExists = await backupService.backupFileExists(
+            backup.system_username,
+            backup.filename
+        );
+
+        // Get preview for project backups
+        let preview = null;
+        if (backup.backup_type === 'project' && fileExists) {
+            try {
+                preview = await backupService.getBackupPreview(
+                    backup.system_username,
+                    backup.filename
+                );
+            } catch (error) {
+                logger.warn('Failed to get backup preview', { error: error.message });
+            }
+        }
+
+        // Check if restore target exists
+        let canRestore = false;
+        if (backup.backup_type === 'project') {
+            try {
+                const projectPath = path.join(
+                    process.env.USERS_PATH || '/app/users',
+                    backup.system_username,
+                    backup.target_name
+                );
+                await require('fs').promises.access(projectPath);
+                canRestore = true;
+            } catch {
+                canRestore = false;
+            }
+        } else if (backup.backup_type === 'database') {
+            const databases = await databaseService.getUserDatabases(backup.system_username);
+            canRestore = databases.some(db => db.database === backup.target_name);
+        }
+
+        res.render('backups/show', {
+            title: req.t('backups:detail.title'),
+            backup,
+            preview,
+            fileExists,
+            canRestore,
+            formatFileSize: backupService.formatFileSize
+        });
+
+    } catch (error) {
+        logger.error('Error loading backup details', {
+            error: error.message,
+            backupId: req.params.id
+        });
+        req.flash('error', req.t('backups:errors.loadFailed'));
+        res.redirect('/backups');
+    }
+});
+
+/**
+ * POST /backups/:id/restore
+ * Restore a backup (project or database)
+ */
+router.post('/:id/restore', async (req, res) => {
+    try {
+        const userId = req.session.user.id;
+        const systemUsername = req.session.user.system_username;
+        const backupId = parseInt(req.params.id);
+
+        // Get backup info
+        const backup = await backupService.getBackupInfo(backupId);
+
+        if (!backup) {
+            req.flash('error', req.t('backups:errors.notFound'));
+            return res.redirect('/backups');
+        }
+
+        // Verify ownership
+        if (backup.user_id !== userId) {
+            req.flash('error', req.t('backups:errors.accessDenied'));
+            return res.redirect('/backups');
+        }
+
+        // Check if file exists
+        const fileExists = await backupService.backupFileExists(
+            systemUsername,
+            backup.filename
+        );
+
+        if (!fileExists) {
+            req.flash('error', req.t('backups:errors.fileNotFound'));
+            return res.redirect('/backups');
+        }
+
+        // Restore based on type
+        if (backup.backup_type === 'project') {
+            await backupService.restoreProjectBackup(systemUsername, backupId);
+            req.flash('success', req.t('backups:flash.restored'));
+            return res.redirect(`/projects/${backup.target_name}`);
+        } else if (backup.backup_type === 'database') {
+            await backupService.restoreDatabaseBackup(systemUsername, backupId);
+            req.flash('success', req.t('backups:flash.restored'));
+            return res.redirect('/databases');
+        }
+
+        req.flash('error', req.t('backups:errors.restoreFailed'));
+        res.redirect('/backups');
+
+    } catch (error) {
+        logger.error('Error restoring backup', {
+            error: error.message,
+            backupId: req.params.id
+        });
+        req.flash('error', req.t('backups:errors.restoreFailed', { error: error.message }));
+        res.redirect(`/backups/${req.params.id}`);
+    }
+});
+
 module.exports = router;

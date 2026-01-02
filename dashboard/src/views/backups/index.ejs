@@ -106,6 +106,9 @@
                                     <small><%= new Date(backup.created_at).toLocaleString(currentLanguage === 'de' ? 'de-DE' : 'en-GB') %></small>
                                 </td>
                                 <td class="text-end">
+                                    <a href="/backups/<%= backup.id %>" class="btn btn-sm btn-outline-secondary btn-icon" title="<%= t('backups:detail.title') %>">
+                                        <i class="bi bi-eye"></i>
+                                    </a>
                                     <% if (backup.status === 'success') { %>
                                         <a href="/backups/<%= backup.id %>/download" class="btn btn-sm btn-outline-primary btn-icon" title="<%= t('backups:download') %>">
                                             <i class="bi bi-download"></i>

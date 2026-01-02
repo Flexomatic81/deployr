@@ -335,4 +335,328 @@ describe('Backup Service', () => {
             expect(updateCall[0]).toContain('status = \'failed\'');
         });
     });
+
+    describe('getBackupPreview', () => {
+        beforeEach(() => {
+            // Ensure backup directory and test files exist
+            fs.mkdirSync(backupDir, { recursive: true });
+            fs.writeFileSync(path.join(backupDir, 'test.tar.gz'), 'mock tar data');
+            fs.writeFileSync(path.join(backupDir, 'invalid.tar.gz'), 'corrupt data');
+        });
+
+        it('should list archive contents', async () => {
+            const mockStdout = {
+                on: jest.fn((event, callback) => {
+                    if (event === 'data') {
+                        callback('file1.txt\nfile2.txt\nfolder/file3.txt\n');
+                    }
+                })
+            };
+            const mockStderr = { on: jest.fn() };
+            const mockProcess = {
+                stdout: mockStdout,
+                stderr: mockStderr,
+                on: jest.fn((event, callback) => {
+                    if (event === 'close') {
+                        callback(0);
+                    }
+                })
+            };
+            mockSpawn.mockReturnValue(mockProcess);
+
+            const result = await backupService.getBackupPreview(testUser, 'test.tar.gz');
+
+            expect(mockSpawn).toHaveBeenCalledWith('tar', ['-tzf', expect.stringContaining('test.tar.gz')]);
+            expect(result.files).toHaveLength(3);
+            expect(result.files).toContain('file1.txt');
+            expect(result.totalFiles).toBe(3);
+            expect(result.truncated).toBe(false);
+        });
+
+        it('should truncate if more than limit files', async () => {
+            const manyFiles = Array.from({ length: 150 }, (_, i) => `file${i}.txt`).join('\n');
+            const mockStdout = {
+                on: jest.fn((event, callback) => {
+                    if (event === 'data') {
+                        callback(manyFiles);
+                    }
+                })
+            };
+            const mockStderr = { on: jest.fn() };
+            const mockProcess = {
+                stdout: mockStdout,
+                stderr: mockStderr,
+                on: jest.fn((event, callback) => {
+                    if (event === 'close') {
+                        callback(0);
+                    }
+                })
+            };
+            mockSpawn.mockReturnValue(mockProcess);
+
+            const result = await backupService.getBackupPreview(testUser, 'test.tar.gz', 100);
+
+            expect(result.files).toHaveLength(100);
+            expect(result.totalFiles).toBe(150);
+            expect(result.truncated).toBe(true);
+        });
+
+        it('should reject on tar error', async () => {
+            const mockStdout = { on: jest.fn() };
+            const mockStderr = {
+                on: jest.fn((event, callback) => {
+                    if (event === 'data') {
+                        callback('tar: Error opening archive');
+                    }
+                })
+            };
+            const mockProcess = {
+                stdout: mockStdout,
+                stderr: mockStderr,
+                on: jest.fn((event, callback) => {
+                    if (event === 'close') {
+                        callback(1);
+                    }
+                })
+            };
+            mockSpawn.mockReturnValue(mockProcess);
+
+            await expect(backupService.getBackupPreview(testUser, 'invalid.tar.gz'))
+                .rejects.toThrow('Failed to read archive');
+        });
+    });
+
+    describe('restoreProjectBackup', () => {
+        it('should throw error if backup not found', async () => {
+            mockExecute.mockResolvedValueOnce([[]]);
+
+            await expect(backupService.restoreProjectBackup(testUser, 999))
+                .rejects.toThrow('Backup not found');
+        });
+
+        it('should throw error if backup is not a project backup', async () => {
+            mockExecute.mockResolvedValueOnce([[{
+                id: 1,
+                backup_type: 'database',
+                target_name: 'testdb',
+                filename: 'database_testdb.sql',
+                system_username: testUser
+            }]]);
+
+            await expect(backupService.restoreProjectBackup(testUser, 1))
+                .rejects.toThrow('Not a project backup');
+        });
+
+        it('should throw error if backup file not found', async () => {
+            mockExecute.mockResolvedValueOnce([[{
+                id: 1,
+                backup_type: 'project',
+                target_name: testProject,
+                filename: 'nonexistent.tar.gz',
+                system_username: testUser
+            }]]);
+
+            await expect(backupService.restoreProjectBackup(testUser, 1))
+                .rejects.toThrow('Backup file not found');
+        });
+
+        it('should restore project backup successfully', async () => {
+            // Create backup file
+            fs.mkdirSync(backupDir, { recursive: true });
+            fs.writeFileSync(path.join(backupDir, 'project_test.tar.gz'), 'mock tar data');
+
+            mockExecute.mockResolvedValueOnce([[{
+                id: 1,
+                backup_type: 'project',
+                target_name: testProject,
+                filename: 'project_test.tar.gz',
+                system_username: testUser
+            }]]);
+
+            const mockProcess = {
+                stdout: { on: jest.fn() },
+                stderr: { on: jest.fn() },
+                on: jest.fn((event, callback) => {
+                    if (event === 'close') {
+                        callback(0);
+                    }
+                })
+            };
+            mockSpawn.mockReturnValue(mockProcess);
+
+            const result = await backupService.restoreProjectBackup(testUser, 1);
+
+            expect(result.success).toBe(true);
+            expect(result.projectName).toBe(testProject);
+            expect(mockSpawn).toHaveBeenCalledWith('tar', expect.arrayContaining(['-xzf', '--overwrite']));
+        });
+
+        it('should reject on tar extraction error', async () => {
+            fs.mkdirSync(backupDir, { recursive: true });
+            fs.writeFileSync(path.join(backupDir, 'corrupt.tar.gz'), 'corrupt data');
+
+            mockExecute.mockResolvedValueOnce([[{
+                id: 1,
+                backup_type: 'project',
+                target_name: testProject,
+                filename: 'corrupt.tar.gz',
+                system_username: testUser
+            }]]);
+
+            const mockProcess = {
+                stdout: { on: jest.fn() },
+                stderr: {
+                    on: jest.fn((event, callback) => {
+                        if (event === 'data') {
+                            callback('tar: This does not look like a tar archive');
+                        }
+                    })
+                },
+                on: jest.fn((event, callback) => {
+                    if (event === 'close') {
+                        callback(1);
+                    }
+                })
+            };
+            mockSpawn.mockReturnValue(mockProcess);
+
+            await expect(backupService.restoreProjectBackup(testUser, 1))
+                .rejects.toThrow('tar: This does not look like a tar archive');
+        });
+    });
+
+    describe('restoreDatabaseBackup', () => {
+        const mockRestoreDatabase = jest.fn();
+
+        beforeEach(() => {
+            mockGetUserDatabases.mockReset();
+            mockGetProvider.mockReset();
+            mockRestoreDatabase.mockReset();
+            mockGetProvider.mockReturnValue({ restoreDatabase: mockRestoreDatabase });
+        });
+
+        it('should throw error if backup not found', async () => {
+            mockExecute.mockResolvedValueOnce([[]]);
+
+            await expect(backupService.restoreDatabaseBackup(testUser, 999))
+                .rejects.toThrow('Backup not found');
+        });
+
+        it('should throw error if backup is not a database backup', async () => {
+            mockExecute.mockResolvedValueOnce([[{
+                id: 1,
+                backup_type: 'project',
+                target_name: testProject,
+                filename: 'project_test.tar.gz',
+                system_username: testUser
+            }]]);
+
+            await expect(backupService.restoreDatabaseBackup(testUser, 1))
+                .rejects.toThrow('Not a database backup');
+        });
+
+        it('should throw error if database not found', async () => {
+            // Create backup file first
+            fs.mkdirSync(backupDir, { recursive: true });
+            fs.writeFileSync(path.join(backupDir, 'database_testdb.sql'), 'SQL DUMP');
+
+            mockExecute.mockResolvedValueOnce([[{
+                id: 1,
+                backup_type: 'database',
+                target_name: 'testdb',
+                filename: 'database_testdb.sql',
+                system_username: testUser
+            }]]);
+            mockGetUserDatabases.mockResolvedValue([]);
+
+            await expect(backupService.restoreDatabaseBackup(testUser, 1))
+                .rejects.toThrow('Database not found');
+        });
+
+        it('should restore MariaDB backup successfully', async () => {
+            fs.mkdirSync(backupDir, { recursive: true });
+            fs.writeFileSync(path.join(backupDir, 'database_testdb.sql'), 'SQL DUMP');
+
+            mockExecute.mockResolvedValueOnce([[{
+                id: 1,
+                backup_type: 'database',
+                target_name: 'testuser_testdb',
+                filename: 'database_testdb.sql',
+                system_username: testUser
+            }]]);
+
+            mockGetUserDatabases.mockResolvedValue([{
+                database: 'testuser_testdb',
+                username: 'testuser_testdb',
+                password: 'secret123',
+                type: 'mariadb'
+            }]);
+
+            mockRestoreDatabase.mockResolvedValue({ success: true });
+
+            const result = await backupService.restoreDatabaseBackup(testUser, 1);
+
+            expect(result.success).toBe(true);
+            expect(result.databaseName).toBe('testuser_testdb');
+            expect(mockGetProvider).toHaveBeenCalledWith('mariadb');
+            expect(mockRestoreDatabase).toHaveBeenCalledWith(
+                'testuser_testdb',
+                'testuser_testdb',
+                'secret123',
+                expect.stringContaining('.sql')
+            );
+        });
+
+        it('should restore PostgreSQL backup successfully', async () => {
+            fs.mkdirSync(backupDir, { recursive: true });
+            fs.writeFileSync(path.join(backupDir, 'database_pgdb.sql'), 'PG SQL DUMP');
+
+            mockExecute.mockResolvedValueOnce([[{
+                id: 1,
+                backup_type: 'database',
+                target_name: 'testuser_pgdb',
+                filename: 'database_pgdb.sql',
+                system_username: testUser
+            }]]);
+
+            mockGetUserDatabases.mockResolvedValue([{
+                database: 'testuser_pgdb',
+                username: 'testuser_pgdb',
+                password: 'secret456',
+                type: 'postgresql'
+            }]);
+
+            mockRestoreDatabase.mockResolvedValue({ success: true });
+
+            const result = await backupService.restoreDatabaseBackup(testUser, 1);
+
+            expect(result.success).toBe(true);
+            expect(mockGetProvider).toHaveBeenCalledWith('postgresql');
+        });
+
+        it('should throw error on restore failure', async () => {
+            fs.mkdirSync(backupDir, { recursive: true });
+            fs.writeFileSync(path.join(backupDir, 'database_faildb.sql'), 'SQL DUMP');
+
+            mockExecute.mockResolvedValueOnce([[{
+                id: 1,
+                backup_type: 'database',
+                target_name: 'testuser_faildb',
+                filename: 'database_faildb.sql',
+                system_username: testUser
+            }]]);
+
+            mockGetUserDatabases.mockResolvedValue([{
+                database: 'testuser_faildb',
+                username: 'testuser_faildb',
+                password: 'secret789',
+                type: 'mariadb'
+            }]);
+
+            mockRestoreDatabase.mockRejectedValue(new Error('mysql restore failed'));
+
+            await expect(backupService.restoreDatabaseBackup(testUser, 1))
+                .rejects.toThrow('mysql restore failed');
+        });
+    });
 });

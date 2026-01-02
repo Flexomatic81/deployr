@@ -1,0 +1,225 @@
+<%- include('../partials/pageHeader', {
+    title: t('backups:detail.title'),
+    titleIcon: 'bi-archive',
+    breadcrumb: [
+        { href: '/backups', label: t('backups:title') },
+        { label: backup.target_name }
+    ]
+}) %>
+
+<div class="row g-4">
+    <!-- Backup Info Card -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi <%= backup.backup_type === 'project' ? 'bi-folder-fill text-primary' : 'bi-database-fill text-info' %> me-2"></i>
+                    <%= t('backups:detail.info') %>
+                </h6>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm mb-0">
+                    <tbody>
+                        <tr>
+                            <th class="text-muted" style="width: 40%"><%= t('backups:detail.name') %></th>
+                            <td><strong><%= backup.target_name %></strong></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted"><%= t('backups:table.type') %></th>
+                            <td>
+                                <% if (backup.backup_type === 'project') { %>
+                                    <span class="badge bg-primary-subtle"><%= t('backups:types.project') %></span>
+                                <% } else { %>
+                                    <span class="badge bg-info-subtle"><%= t('backups:types.database') %></span>
+                                <% } %>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted"><%= t('backups:detail.filename') %></th>
+                            <td><code class="small"><%= backup.filename %></code></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted"><%= t('backups:table.size') %></th>
+                            <td><%= backup.file_size ? formatFileSize(backup.file_size) : '-' %></td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted"><%= t('backups:table.status') %></th>
+                            <td>
+                                <% if (backup.status === 'success') { %>
+                                    <span class="badge bg-success"><i class="bi bi-check-circle"></i> <%= t('backups:status.success') %></span>
+                                <% } else if (backup.status === 'failed') { %>
+                                    <span class="badge bg-danger"><i class="bi bi-x-circle"></i> <%= t('backups:status.failed') %></span>
+                                <% } else { %>
+                                    <span class="badge bg-secondary"><%= backup.status %></span>
+                                <% } %>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th class="text-muted"><%= t('backups:table.date') %></th>
+                            <td><%= new Date(backup.created_at).toLocaleString(currentLanguage === 'de' ? 'de-DE' : 'en-GB') %></td>
+                        </tr>
+                        <% if (backup.duration_ms) { %>
+                        <tr>
+                            <th class="text-muted"><%= t('backups:detail.duration') %></th>
+                            <td><%= (backup.duration_ms / 1000).toFixed(1) %>s</td>
+                        </tr>
+                        <% } %>
+                    </tbody>
+                </table>
+
+                <% if (backup.error_message) { %>
+                <div class="alert alert-danger mt-3 mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong><%= t('backups:detail.error') %>:</strong>
+                    <code><%= backup.error_message %></code>
+                </div>
+                <% } %>
+
+                <% if (!fileExists) { %>
+                <div class="alert alert-warning mt-3 mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <%= t('backups:detail.fileMissing') %>
+                </div>
+                <% } %>
+            </div>
+        </div>
+    </div>
+
+    <!-- Actions Card -->
+    <div class="col-lg-6">
+        <div class="card h-100">
+            <div class="card-header">
+                <h6 class="mb-0">
+                    <i class="bi bi-gear me-2"></i>
+                    <%= t('backups:detail.actions') %>
+                </h6>
+            </div>
+            <div class="card-body">
+                <div class="d-grid gap-2">
+                    <% if (fileExists && backup.status === 'success') { %>
+                        <!-- Download -->
+                        <a href="/backups/<%= backup.id %>/download" class="btn btn-outline-primary">
+                            <i class="bi bi-download me-2"></i>
+                            <%= t('backups:download') %>
+                        </a>
+
+                        <!-- Restore -->
+                        <% if (canRestore) { %>
+                            <button type="button" class="btn btn-warning" data-bs-toggle="modal" data-bs-target="#restoreModal">
+                                <i class="bi bi-arrow-counterclockwise me-2"></i>
+                                <%= t('backups:restore') %>
+                            </button>
+                        <% } else { %>
+                            <button type="button" class="btn btn-warning" disabled title="<%= t('backups:detail.targetNotFound') %>">
+                                <i class="bi bi-arrow-counterclockwise me-2"></i>
+                                <%= t('backups:restore') %>
+                            </button>
+                            <small class="text-muted">
+                                <i class="bi bi-info-circle"></i>
+                                <%= t('backups:detail.targetNotFound') %>
+                            </small>
+                        <% } %>
+                    <% } %>
+
+                    <!-- Delete -->
+                    <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                        <i class="bi bi-trash me-2"></i>
+                        <%= t('backups:delete') %>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<% if (preview && preview.files.length > 0) { %>
+<!-- File Preview Card -->
+<div class="card mt-4">
+    <div class="card-header">
+        <h6 class="mb-0">
+            <i class="bi bi-file-earmark-text me-2"></i>
+            <%= t('backups:detail.contents') %>
+            <span class="badge bg-secondary ms-2"><%= preview.totalFiles %> <%= t('backups:detail.files') %></span>
+        </h6>
+    </div>
+    <div class="card-body p-0">
+        <div class="table-responsive" style="max-height: 400px; overflow-y: auto;">
+            <table class="table table-sm table-hover mb-0">
+                <tbody>
+                    <% preview.files.forEach(file => { %>
+                    <tr>
+                        <td class="ps-3">
+                            <i class="bi <%= file.endsWith('/') ? 'bi-folder text-warning' : 'bi-file-earmark text-muted' %> me-2"></i>
+                            <code class="small"><%= file %></code>
+                        </td>
+                    </tr>
+                    <% }) %>
+                </tbody>
+            </table>
+        </div>
+        <% if (preview.truncated) { %>
+        <div class="card-footer text-muted small">
+            <i class="bi bi-info-circle"></i>
+            <%= t('backups:detail.truncated', { shown: preview.files.length, total: preview.totalFiles }) %>
+        </div>
+        <% } %>
+    </div>
+</div>
+<% } %>
+
+<!-- Restore Modal -->
+<div class="modal fade" id="restoreModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-warning">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i> <%= t('backups:confirmRestore.title') %>
+                </h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><%= t('backups:confirmRestore.message') %></p>
+                <div class="alert alert-danger mb-0">
+                    <i class="bi bi-exclamation-triangle"></i>
+                    <strong><%= t('backups:confirmRestore.warning') %></strong>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t('backups:confirmRestore.cancel') %></button>
+                <form action="/backups/<%= backup.id %>/restore" method="POST" class="d-inline">
+                    <%- csrfInput %>
+                    <button type="submit" class="btn btn-warning">
+                        <i class="bi bi-arrow-counterclockwise"></i> <%= t('backups:confirmRestore.confirm') %>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Modal -->
+<div class="modal fade" id="deleteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i> <%= t('backups:confirmDelete.title') %>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><%= t('backups:confirmDelete.message') %></p>
+                <p class="mb-0"><strong><%= backup.filename %></strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t('backups:confirmDelete.cancel') %></button>
+                <form action="/backups/<%= backup.id %>?_method=DELETE" method="POST" class="d-inline">
+                    <%- csrfInput %>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> <%= t('backups:confirmDelete.confirm') %>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

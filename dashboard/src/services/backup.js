@@ -383,6 +383,167 @@ function formatFileSize(bytes) {
     return `${size.toFixed(unitIndex === 0 ? 0 : 1)} ${units[unitIndex]}`;
 }
 
+/**
+ * Gets a preview of files in a project backup archive
+ */
+async function getBackupPreview(systemUsername, filename, limit = 100) {
+    const backupPath = getBackupFilePath(systemUsername, filename);
+
+    // Verify file exists
+    try {
+        await fs.access(backupPath);
+    } catch {
+        throw new Error('Backup file not found');
+    }
+
+    // List archive contents
+    return new Promise((resolve, reject) => {
+        const files = [];
+        const tar = spawn('tar', ['-tzf', backupPath]);
+
+        let stdout = '';
+        tar.stdout.on('data', (data) => {
+            stdout += data.toString();
+        });
+
+        tar.on('close', (code) => {
+            if (code === 0) {
+                const allFiles = stdout.trim().split('\n').filter(f => f);
+                resolve({
+                    files: allFiles.slice(0, limit),
+                    totalFiles: allFiles.length,
+                    truncated: allFiles.length > limit
+                });
+            } else {
+                reject(new Error('Failed to read archive'));
+            }
+        });
+
+        tar.on('error', reject);
+    });
+}
+
+/**
+ * Restores a project from a backup archive
+ * Overwrites existing project files
+ */
+async function restoreProjectBackup(systemUsername, backupId) {
+    const backup = await getBackupInfo(backupId);
+
+    if (!backup) {
+        throw new Error('Backup not found');
+    }
+
+    if (backup.backup_type !== 'project') {
+        throw new Error('Not a project backup');
+    }
+
+    const backupPath = getBackupFilePath(systemUsername, backup.filename);
+    const projectPath = path.join(USERS_PATH, systemUsername, backup.target_name);
+
+    // Verify backup file exists
+    try {
+        await fs.access(backupPath);
+    } catch {
+        throw new Error('Backup file not found');
+    }
+
+    // Verify project directory exists
+    try {
+        await fs.access(projectPath);
+    } catch {
+        throw new Error('Project not found');
+    }
+
+    logger.info('Restoring project backup', {
+        backupId,
+        projectName: backup.target_name,
+        filename: backup.filename
+    });
+
+    // Extract archive, overwriting existing files
+    // We extract to parent directory since archive contains project folder
+    return new Promise((resolve, reject) => {
+        const tar = spawn('tar', [
+            '-xzf', backupPath,
+            '-C', path.join(USERS_PATH, systemUsername),
+            '--overwrite'
+        ]);
+
+        let stderr = '';
+        tar.stderr.on('data', (data) => {
+            stderr += data.toString();
+        });
+
+        tar.on('close', (code) => {
+            if (code === 0) {
+                logger.info('Project backup restored', {
+                    backupId,
+                    projectName: backup.target_name
+                });
+                resolve({ success: true, projectName: backup.target_name });
+            } else {
+                logger.error('Project restore failed', {
+                    backupId,
+                    error: stderr
+                });
+                reject(new Error(`Restore failed: ${stderr}`));
+            }
+        });
+
+        tar.on('error', reject);
+    });
+}
+
+/**
+ * Restores a database from a SQL backup
+ */
+async function restoreDatabaseBackup(systemUsername, backupId) {
+    const backup = await getBackupInfo(backupId);
+
+    if (!backup) {
+        throw new Error('Backup not found');
+    }
+
+    if (backup.backup_type !== 'database') {
+        throw new Error('Not a database backup');
+    }
+
+    const backupPath = getBackupFilePath(systemUsername, backup.filename);
+
+    // Verify backup file exists
+    try {
+        await fs.access(backupPath);
+    } catch {
+        throw new Error('Backup file not found');
+    }
+
+    // Get database credentials
+    const databases = await databaseService.getUserDatabases(systemUsername);
+    const dbInfo = databases.find(db => db.database === backup.target_name);
+
+    if (!dbInfo) {
+        throw new Error('Database not found - cannot restore');
+    }
+
+    logger.info('Restoring database backup', {
+        backupId,
+        databaseName: backup.target_name,
+        dbType: dbInfo.type
+    });
+
+    // Get appropriate provider and restore
+    const provider = databaseService.getProvider(dbInfo.type);
+    await provider.restoreDatabase(backup.target_name, dbInfo.username, dbInfo.password, backupPath);
+
+    logger.info('Database backup restored', {
+        backupId,
+        databaseName: backup.target_name
+    });
+
+    return { success: true, databaseName: backup.target_name };
+}
+
 module.exports = {
     createProjectBackup,
     createDatabaseBackup,
@@ -394,5 +555,8 @@ module.exports = {
     getBackupStats,
     getProjectBackups,
     formatFileSize,
+    getBackupPreview,
+    restoreProjectBackup,
+    restoreDatabaseBackup,
     DEFAULT_EXCLUDE_PATTERNS
 };
