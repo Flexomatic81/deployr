@@ -582,8 +582,9 @@ UPDATE_CHANNEL=stable           # Update channel: 'stable' (main) or 'beta' (dev
 
 **Update Process:**
 1. `git pull origin <branch>` - Download latest code from selected channel
-2. `docker compose build dashboard` - Rebuild container with new version
-3. `docker compose up -d dashboard` - Restart with new image
+2. `docker compose pull` - Pull latest images for all services
+3. `docker compose build dashboard` - Rebuild dashboard container with new version
+4. `docker compose up -d` - Restart all services with new images
 
 **Update Channels:**
 | Channel | Branch | Description |

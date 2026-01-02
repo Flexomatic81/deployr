@@ -122,9 +122,18 @@ do_deploy() {
     export GIT_DATE=$(git log -1 --format=%cd --date=format:'%d.%m.%Y')
 
     if [ "$JSON_OUTPUT" = true ]; then
-        echo "{\"status\":\"building\",\"step\":\"build\",\"version\":\"$GIT_HASH\"}"
+        echo "{\"status\":\"pulling\",\"step\":\"pull-images\",\"version\":\"$GIT_HASH\"}"
     else
         echo "Version: $GIT_HASH ($GIT_DATE)"
+        echo "Pulling latest images..."
+    fi
+
+    # Pull latest images for all services (respects pinned versions in docker-compose.yml)
+    docker compose pull --ignore-pull-failures || true
+
+    if [ "$JSON_OUTPUT" = true ]; then
+        echo "{\"status\":\"building\",\"step\":\"build\",\"version\":\"$GIT_HASH\"}"
+    else
         echo "Building dashboard..."
     fi
 
@@ -134,11 +143,11 @@ do_deploy() {
     if [ "$JSON_OUTPUT" = true ]; then
         echo "{\"status\":\"restarting\",\"step\":\"restart\"}"
     else
-        echo "Restarting dashboard..."
+        echo "Restarting services..."
     fi
 
-    # Restart dashboard
-    docker compose up -d dashboard
+    # Restart all services (will use new images if pulled)
+    docker compose up -d
 
     if [ "$JSON_OUTPUT" = true ]; then
         echo "{\"status\":\"complete\",\"success\":true,\"version\":\"$GIT_HASH\",\"date\":\"$GIT_DATE\"}"
