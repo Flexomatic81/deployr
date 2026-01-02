@@ -292,13 +292,20 @@ router.get('/:name', requireAuth, getProjectAccess(), async (req, res) => {
         // Load backup history (for manage permission or higher)
         let projectBackups = [];
         let databaseBackups = [];
+        let linkedDatabase = null;
         if (access.isOwner || access.permission === 'manage' || access.permission === 'full') {
             projectBackups = await backupService.getProjectBackups(req.session.user.id, req.params.name, 3);
 
-            // Load database backups if user has databases
-            if (userDatabases && userDatabases.length > 0) {
-                const dbNames = userDatabases.map(db => db.database);
-                databaseBackups = await backupService.getDatabaseBackups(req.session.user.id, dbNames, 3);
+            // Detect linked database from project .env
+            linkedDatabase = await projectService.getLinkedDatabase(
+                req.session.user.system_username,
+                req.params.name,
+                userDatabases
+            );
+
+            // Load database backups only for linked database
+            if (linkedDatabase) {
+                databaseBackups = await backupService.getDatabaseBackups(req.session.user.id, [linkedDatabase.database], 3);
             }
         }
 
@@ -331,6 +338,7 @@ router.get('/:name', requireAuth, getProjectAccess(), async (req, res) => {
             // Backup data
             projectBackups,
             databaseBackups,
+            linkedDatabase,
             formatFileSize: backupService.formatFileSize
         });
     } catch (error) {

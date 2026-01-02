@@ -765,6 +765,95 @@ DB_PASSWORD=secret`;
         });
     });
 
+    describe('getLinkedDatabase', () => {
+        const userDatabases = [
+            { database: 'user_blog', type: 'mariadb' },
+            { database: 'user_shop', type: 'postgresql' },
+            { database: 'user_api', type: 'mariadb' }
+        ];
+
+        it('should return null if no user databases provided', async () => {
+            const result = await projectService.getLinkedDatabase('testuser', 'project', []);
+            expect(result).toBeNull();
+        });
+
+        it('should return null if user databases is null', async () => {
+            const result = await projectService.getLinkedDatabase('testuser', 'project', null);
+            expect(result).toBeNull();
+        });
+
+        it('should find linked database by DB_DATABASE variable', async () => {
+            mockGitService.isGitRepository.mockReturnValue(false);
+            mockFs.access.mockRejectedValue(new Error('ENOENT')); // no html folder
+            mockFs.readFile.mockResolvedValue('APP_KEY=secret\nDB_DATABASE=user_blog');
+
+            const result = await projectService.getLinkedDatabase('testuser', 'project', userDatabases);
+
+            expect(result).toEqual({ database: 'user_blog', type: 'mariadb' });
+        });
+
+        it('should find linked database by DB_NAME variable', async () => {
+            mockGitService.isGitRepository.mockReturnValue(false);
+            mockFs.access.mockRejectedValue(new Error('ENOENT'));
+            mockFs.readFile.mockResolvedValue('DB_NAME=user_shop\nAPP_ENV=production');
+
+            const result = await projectService.getLinkedDatabase('testuser', 'project', userDatabases);
+
+            expect(result).toEqual({ database: 'user_shop', type: 'postgresql' });
+        });
+
+        it('should find linked database by MYSQL_DATABASE variable', async () => {
+            mockGitService.isGitRepository.mockReturnValue(false);
+            mockFs.access.mockRejectedValue(new Error('ENOENT'));
+            mockFs.readFile.mockResolvedValue('MYSQL_DATABASE=user_api');
+
+            const result = await projectService.getLinkedDatabase('testuser', 'project', userDatabases);
+
+            expect(result).toEqual({ database: 'user_api', type: 'mariadb' });
+        });
+
+        it('should return null if database in .env is not in user databases', async () => {
+            mockGitService.isGitRepository.mockReturnValue(false);
+            mockFs.access.mockRejectedValue(new Error('ENOENT'));
+            mockFs.readFile.mockResolvedValue('DB_DATABASE=other_database');
+
+            const result = await projectService.getLinkedDatabase('testuser', 'project', userDatabases);
+
+            expect(result).toBeNull();
+        });
+
+        it('should return null if .env has no database variable', async () => {
+            mockGitService.isGitRepository.mockReturnValue(false);
+            mockFs.access.mockRejectedValue(new Error('ENOENT'));
+            mockFs.readFile.mockResolvedValue('APP_KEY=secret\nAPP_ENV=production');
+
+            const result = await projectService.getLinkedDatabase('testuser', 'project', userDatabases);
+
+            expect(result).toBeNull();
+        });
+
+        it('should return null if .env file does not exist', async () => {
+            mockGitService.isGitRepository.mockReturnValue(false);
+            mockFs.access.mockRejectedValue(new Error('ENOENT'));
+            mockFs.readFile.mockRejectedValue(new Error('ENOENT'));
+
+            const result = await projectService.getLinkedDatabase('testuser', 'project', userDatabases);
+
+            expect(result).toBeNull();
+        });
+
+        it('should use first matching database alias', async () => {
+            mockGitService.isGitRepository.mockReturnValue(false);
+            mockFs.access.mockRejectedValue(new Error('ENOENT'));
+            // Both DB_DATABASE and DB_NAME are set, but DB_DATABASE should be checked first
+            mockFs.readFile.mockResolvedValue('DB_NAME=user_api\nDB_DATABASE=user_blog');
+
+            const result = await projectService.getLinkedDatabase('testuser', 'project', userDatabases);
+
+            expect(result).toEqual({ database: 'user_blog', type: 'mariadb' });
+        });
+    });
+
     describe('Module exports', () => {
         it('should export all required functions', () => {
             expect(projectService.getUserProjects).toBeDefined();
@@ -783,6 +872,7 @@ DB_PASSWORD=secret`;
             expect(projectService.appendDbCredentials).toBeDefined();
             expect(projectService.mergeDbCredentials).toBeDefined();
             expect(projectService.getUserDbCredentials).toBeDefined();
+            expect(projectService.getLinkedDatabase).toBeDefined();
         });
     });
 });

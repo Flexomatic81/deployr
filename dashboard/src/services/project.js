@@ -918,6 +918,50 @@ async function getUserDbCredentials(systemUsername) {
     return credentials;
 }
 
+/**
+ * Detects the linked database for a project by reading its .env file
+ * Searches for database-related variables and matches them against user databases
+ *
+ * @param {string} systemUsername - System username
+ * @param {string} projectName - Project name
+ * @param {Array} userDatabases - Array of user's databases (from databaseService)
+ * @returns {Object|null} - Linked database info or null if none found
+ */
+async function getLinkedDatabase(systemUsername, projectName, userDatabases) {
+    if (!userDatabases || userDatabases.length === 0) {
+        return null;
+    }
+
+    try {
+        const envPath = await getAppEnvPath(systemUsername, projectName);
+        const content = await fs.readFile(envPath, 'utf8');
+        const envVars = parseEnvFile(content);
+
+        // Look for database name in known aliases
+        const dbNameAliases = DB_VARIABLE_ALIASES.database;
+        let configuredDbName = null;
+
+        for (const alias of dbNameAliases) {
+            if (envVars[alias]) {
+                configuredDbName = envVars[alias];
+                break;
+            }
+        }
+
+        if (!configuredDbName) {
+            return null;
+        }
+
+        // Match against user's databases
+        const linkedDb = userDatabases.find(db => db.database === configuredDbName);
+        return linkedDb || null;
+
+    } catch (error) {
+        // .env file doesn't exist or couldn't be read
+        return null;
+    }
+}
+
 module.exports = {
     getUserProjects,
     getProjectInfo,
@@ -934,5 +978,6 @@ module.exports = {
     copyEnvExample,
     appendDbCredentials,
     mergeDbCredentials,
-    getUserDbCredentials
+    getUserDbCredentials,
+    getLinkedDatabase
 };

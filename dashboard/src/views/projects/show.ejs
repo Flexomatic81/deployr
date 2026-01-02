@@ -1039,27 +1039,14 @@
                     </button>
                 </form>
 
-                <!-- Database Backup Button (if user has databases) -->
-                <% if (typeof userDatabases !== 'undefined' && userDatabases && userDatabases.length > 0) { %>
-                <div class="dropdown">
-                    <button class="btn btn-outline-primary dropdown-toggle" type="button" data-bs-toggle="dropdown" aria-expanded="false">
+                <!-- Database Backup Button (only if linked database exists) -->
+                <% if (typeof linkedDatabase !== 'undefined' && linkedDatabase) { %>
+                <form action="/backups/database/<%= linkedDatabase.database %>?returnTo=/projects/<%= project.name %>" method="POST" class="d-inline">
+                    <%- csrfInput %>
+                    <button type="submit" class="btn btn-outline-primary" title="<%= linkedDatabase.database %> (<%= linkedDatabase.type %>)">
                         <i class="bi bi-database"></i> <%= t('backups:projectCard.backupDatabase') %>
                     </button>
-                    <ul class="dropdown-menu">
-                        <% userDatabases.forEach(db => { %>
-                        <li>
-                            <form action="/backups/database/<%= db.database %>?returnTo=/projects/<%= project.name %>" method="POST" class="d-inline w-100">
-                                <%- csrfInput %>
-                                <button type="submit" class="dropdown-item">
-                                    <i class="bi <%= db.type === 'mariadb' ? 'bi-database' : 'bi-database-fill' %> me-2"></i>
-                                    <%= db.database %>
-                                    <small class="text-muted ms-2">(<%= db.type %>)</small>
-                                </button>
-                            </form>
-                        </li>
-                        <% }) %>
-                    </ul>
-                </div>
+                </form>
                 <% } %>
             </div>
             <a href="/backups" class="btn btn-link btn-sm">
