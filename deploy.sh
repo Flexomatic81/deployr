@@ -110,7 +110,7 @@ do_deploy() {
     # Git Pull
     git pull origin main
 
-    # Get version information
+    # Get version information for build args
     export GIT_HASH=$(git rev-parse --short HEAD)
     export GIT_DATE=$(git log -1 --format=%cd --date=format:'%d.%m.%Y')
 
@@ -121,8 +121,8 @@ do_deploy() {
         echo "Building dashboard..."
     fi
 
-    # Build dashboard
-    docker compose build dashboard
+    # Build dashboard with version info (env vars are read by docker-compose.yml)
+    docker compose build --no-cache dashboard
 
     if [ "$JSON_OUTPUT" = true ]; then
         echo "{\"status\":\"restarting\",\"step\":\"restart\"}"
