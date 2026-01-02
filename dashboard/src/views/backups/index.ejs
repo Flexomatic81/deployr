@@ -118,33 +118,6 @@
                                     </button>
                                 </td>
                             </tr>
-
-                            <!-- Delete Modal -->
-                            <div class="modal fade" id="deleteModal-<%= backup.id %>" tabindex="-1">
-                                <div class="modal-dialog">
-                                    <div class="modal-content">
-                                        <div class="modal-header bg-danger text-white">
-                                            <h5 class="modal-title">
-                                                <i class="bi bi-exclamation-triangle"></i> <%= t('backups:confirmDelete.title') %>
-                                            </h5>
-                                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
-                                        </div>
-                                        <div class="modal-body">
-                                            <p><%= t('backups:confirmDelete.message') %></p>
-                                            <p class="mb-0"><strong><%= backup.filename %></strong></p>
-                                        </div>
-                                        <div class="modal-footer">
-                                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t('backups:confirmDelete.cancel') %></button>
-                                            <form action="/backups/<%= backup.id %>?_method=DELETE" method="POST" class="d-inline">
-                                                <%- csrfInput %>
-                                                <button type="submit" class="btn btn-danger">
-                                                    <i class="bi bi-trash"></i> <%= t('backups:confirmDelete.confirm') %>
-                                                </button>
-                                            </form>
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
                         <% }) %>
                     </tbody>
                 </table>
@@ -152,3 +125,32 @@
         <% } %>
     </div>
 </div>
+
+<!-- Delete Modals (outside table for valid HTML) -->
+<% backups.forEach(backup => { %>
+<div class="modal fade" id="deleteModal-<%= backup.id %>" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header bg-danger text-white">
+                <h5 class="modal-title">
+                    <i class="bi bi-exclamation-triangle"></i> <%= t('backups:confirmDelete.title') %>
+                </h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <p><%= t('backups:confirmDelete.message') %></p>
+                <p class="mb-0"><strong><%= backup.filename %></strong></p>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal"><%= t('backups:confirmDelete.cancel') %></button>
+                <form action="/backups/<%= backup.id %>?_method=DELETE" method="POST" class="d-inline">
+                    <%- csrfInput %>
+                    <button type="submit" class="btn btn-danger">
+                        <i class="bi bi-trash"></i> <%= t('backups:confirmDelete.confirm') %>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+<% }) %>
