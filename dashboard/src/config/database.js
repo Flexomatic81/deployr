@@ -263,6 +263,26 @@ async function initDatabase() {
             )
         `);
 
+        // Backup logs table for project and database backups
+        await connection.execute(`
+            CREATE TABLE IF NOT EXISTS backup_logs (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                user_id INT NOT NULL,
+                backup_type ENUM('project', 'database') NOT NULL,
+                target_name VARCHAR(100) NOT NULL,
+                filename VARCHAR(255) NOT NULL,
+                file_size BIGINT NULL,
+                status ENUM('pending', 'running', 'success', 'failed') NOT NULL,
+                error_message TEXT NULL,
+                duration_ms INT NULL,
+                metadata JSON NULL,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (user_id) REFERENCES dashboard_users(id) ON DELETE CASCADE,
+                INDEX idx_user_target (user_id, backup_type, target_name),
+                INDEX idx_created (created_at)
+            )
+        `);
+
         connection.release();
         logger.info('Database schema initialized');
     } catch (error) {

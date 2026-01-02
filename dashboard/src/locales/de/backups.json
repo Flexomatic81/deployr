@@ -1,0 +1,63 @@
+{
+  "title": "Backups",
+  "nav": "Backups",
+  "noBackups": "Noch keine Backups vorhanden.",
+  "createFirst": "Erstellen Sie Ihr erstes Backup auf der Projektseite.",
+  "create": "Backup erstellen",
+  "download": "Herunterladen",
+  "delete": "Löschen",
+  "restore": "Wiederherstellen",
+  "types": {
+    "project": "Projekt",
+    "database": "Datenbank"
+  },
+  "status": {
+    "pending": "Ausstehend",
+    "running": "Wird erstellt...",
+    "success": "Erfolgreich",
+    "failed": "Fehlgeschlagen"
+  },
+  "table": {
+    "name": "Name",
+    "type": "Typ",
+    "size": "Größe",
+    "status": "Status",
+    "date": "Datum",
+    "actions": "Aktionen"
+  },
+  "stats": {
+    "total": "Gesamt",
+    "projects": "Projekt-Backups",
+    "databases": "Datenbank-Backups",
+    "totalSize": "Gesamtgröße",
+    "lastBackup": "Letztes Backup"
+  },
+  "projectCard": {
+    "title": "Backups",
+    "lastBackup": "Letztes Backup",
+    "never": "Noch kein Backup",
+    "viewAll": "Alle Backups anzeigen",
+    "creating": "Backup wird erstellt..."
+  },
+  "confirmDelete": {
+    "title": "Backup löschen",
+    "message": "Möchten Sie dieses Backup wirklich löschen? Diese Aktion kann nicht rückgängig gemacht werden.",
+    "confirm": "Löschen",
+    "cancel": "Abbrechen"
+  },
+  "flash": {
+    "created": "Backup erstellt: {{filename}} ({{size}})",
+    "deleted": "Backup wurde gelöscht",
+    "restored": "Backup wurde wiederhergestellt"
+  },
+  "errors": {
+    "loadFailed": "Fehler beim Laden der Backups",
+    "createFailed": "Backup konnte nicht erstellt werden: {{error}}",
+    "deleteFailed": "Backup konnte nicht gelöscht werden",
+    "downloadFailed": "Backup konnte nicht heruntergeladen werden",
+    "restoreFailed": "Backup konnte nicht wiederhergestellt werden",
+    "notFound": "Backup nicht gefunden",
+    "fileNotFound": "Backup-Datei nicht gefunden",
+    "accessDenied": "Zugriff verweigert"
+  }
+}

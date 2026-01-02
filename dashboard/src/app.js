@@ -32,6 +32,7 @@ const helpRoutes = require('./routes/help');
 const proxyRoutes = require('./routes/proxy');
 const webhookRoutes = require('./routes/webhooks');
 const profileRoutes = require('./routes/profile');
+const backupRoutes = require('./routes/backups');
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -307,6 +308,7 @@ app.use('/admin', adminRoutes);
 app.use('/help', helpRoutes);
 app.use('/proxy', proxyRoutes);
 app.use('/profile', profileRoutes);
+app.use('/backups', backupRoutes);
 
 // Home Route
 app.get('/', async (req, res) => {

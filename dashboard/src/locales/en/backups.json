@@ -1,0 +1,63 @@
+{
+  "title": "Backups",
+  "nav": "Backups",
+  "noBackups": "No backups yet.",
+  "createFirst": "Create your first backup on the project page.",
+  "create": "Create Backup",
+  "download": "Download",
+  "delete": "Delete",
+  "restore": "Restore",
+  "types": {
+    "project": "Project",
+    "database": "Database"
+  },
+  "status": {
+    "pending": "Pending",
+    "running": "Creating...",
+    "success": "Successful",
+    "failed": "Failed"
+  },
+  "table": {
+    "name": "Name",
+    "type": "Type",
+    "size": "Size",
+    "status": "Status",
+    "date": "Date",
+    "actions": "Actions"
+  },
+  "stats": {
+    "total": "Total",
+    "projects": "Project Backups",
+    "databases": "Database Backups",
+    "totalSize": "Total Size",
+    "lastBackup": "Last Backup"
+  },
+  "projectCard": {
+    "title": "Backups",
+    "lastBackup": "Last Backup",
+    "never": "No backup yet",
+    "viewAll": "View all backups",
+    "creating": "Creating backup..."
+  },
+  "confirmDelete": {
+    "title": "Delete Backup",
+    "message": "Are you sure you want to delete this backup? This action cannot be undone.",
+    "confirm": "Delete",
+    "cancel": "Cancel"
+  },
+  "flash": {
+    "created": "Backup created: {{filename}} ({{size}})",
+    "deleted": "Backup deleted",
+    "restored": "Backup restored"
+  },
+  "errors": {
+    "loadFailed": "Failed to load backups",
+    "createFailed": "Failed to create backup: {{error}}",
+    "deleteFailed": "Failed to delete backup",
+    "downloadFailed": "Failed to download backup",
+    "restoreFailed": "Failed to restore backup",
+    "notFound": "Backup not found",
+    "fileNotFound": "Backup file not found",
+    "accessDenied": "Access denied"
+  }
+}

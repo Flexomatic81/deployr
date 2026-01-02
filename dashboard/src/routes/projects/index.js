@@ -15,6 +15,7 @@ const zipService = require('../../services/zip');
 const autoDeployService = require('../../services/autodeploy');
 const sharingService = require('../../services/sharing');
 const proxyService = require('../../services/proxy');
+const backupService = require('../../services/backup');
 const upload = require('../../middleware/upload');
 const { validateZipMiddleware } = require('../../middleware/upload');
 const { logger } = require('../../config/logger');
@@ -288,6 +289,12 @@ router.get('/:name', requireAuth, getProjectAccess(), async (req, res) => {
             projectDomains = await proxyService.getProjectDomains(ownerId, req.params.name);
         }
 
+        // Load backup history (for manage permission or higher)
+        let projectBackups = [];
+        if (access.isOwner || access.permission === 'manage' || access.permission === 'full') {
+            projectBackups = await backupService.getProjectBackups(req.session.user.id, req.params.name, 3);
+        }
+
         res.render('projects/show', {
             title: project.name,
             project,
@@ -313,7 +320,10 @@ router.get('/:name', requireAuth, getProjectAccess(), async (req, res) => {
             },
             // NPM data
             npmEnabled,
-            projectDomains
+            projectDomains,
+            // Backup data
+            projectBackups,
+            formatFileSize: backupService.formatFileSize
         });
     } catch (error) {
         logger.error('Error loading project', { error: error.message });
