@@ -190,9 +190,7 @@
                 <div class="text-center d-none" id="updateSuccessContainer">
                     <i class="bi bi-check-circle-fill text-success display-4 mb-3"></i>
                     <p class="mb-2"><%= t('admin:updates.updateComplete') %></p>
-                    <a href="/login" class="btn btn-primary">
-                        <i class="bi bi-box-arrow-in-right"></i> <%= t('admin:updates.toLogin') %>
-                    </a>
+                    <p class="text-muted small"><%= t('admin:updates.redirecting') %></p>
                 </div>
             </div>
         </div>
@@ -358,7 +356,7 @@ async function waitForDashboardReady() {
         if (attempts >= maxAttempts) {
             clearInterval(checkInterval);
             document.getElementById('updateSpinner').classList.add('d-none');
-            document.getElementById('updateStatus').innerHTML = '<%= t("admin:updates.manualRefresh") %> <a href="/login" class="btn btn-sm btn-primary ms-2"><%= t("admin:updates.toLogin") %></a>';
+            document.getElementById('updateStatus').innerHTML = '<%= t("admin:updates.manualRefresh") %>';
         }
     }, 1000);
 }

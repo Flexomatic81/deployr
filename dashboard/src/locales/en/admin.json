@@ -317,6 +317,6 @@
     "stepBuild": "Rebuild dashboard",
     "stepRestart": "Restart services",
     "stepReady": "Waiting for dashboard",
-    "toLogin": "Go to Login"
+    "redirecting": "Redirecting to login..."
   }
 }

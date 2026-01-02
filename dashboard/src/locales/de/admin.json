@@ -317,6 +317,6 @@
     "stepBuild": "Dashboard neu bauen",
     "stepRestart": "Services neu starten",
     "stepReady": "Warten auf Dashboard",
-    "toLogin": "Zum Login"
+    "redirecting": "Weiterleitung zum Login..."
   }
 }
