@@ -23,19 +23,13 @@ router.use(requireAdmin);
 // Admin Dashboard - Overview
 router.get('/', async (req, res) => {
     try {
-        // Fetch all counts in parallel
-        const [userCount, adminCount, pendingCount, users] = await Promise.all([
+        // Fetch all counts in parallel (efficient single queries)
+        const [userCount, adminCount, pendingCount, totalProjects] = await Promise.all([
             userService.getUserCount(),
             userService.getAdminCount(),
             userService.getPendingCount(),
-            userService.getAllUsers()
+            projectService.getTotalProjectCount()
         ]);
-
-        // Fetch all project counts in parallel
-        const projectCounts = await Promise.all(
-            users.map(user => projectService.getUserProjects(user.system_username))
-        );
-        const totalProjects = projectCounts.reduce((sum, projects) => sum + projects.length, 0);
 
         res.render('admin/index', {
             title: 'Admin Area',

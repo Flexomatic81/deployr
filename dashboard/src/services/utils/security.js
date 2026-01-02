@@ -8,6 +8,29 @@ const { logger } = require('../../config/logger');
 const { BLOCKED_PROJECT_FILES } = require('../../config/constants');
 
 /**
+ * Validates and sanitizes a redirect URL to prevent Open Redirect attacks.
+ * Only allows relative paths starting with / and containing safe characters.
+ * @param {string} returnTo - The URL to validate
+ * @param {string} fallback - Fallback URL if validation fails
+ * @returns {string} Safe redirect URL
+ */
+function sanitizeReturnUrl(returnTo, fallback) {
+    if (!returnTo || typeof returnTo !== 'string') {
+        return fallback;
+    }
+
+    // Only allow paths starting with / and not containing protocol or double slashes
+    // This prevents: //evil.com, http://evil.com, javascript:, etc.
+    const isLocalPath = /^\/[a-zA-Z0-9/_-]*$/.test(returnTo);
+
+    if (!isLocalPath) {
+        return fallback;
+    }
+
+    return returnTo;
+}
+
+/**
  * Removes blocked Docker files from user-uploaded content
  * This prevents users from deploying custom Docker configurations
  *
@@ -49,5 +72,6 @@ function removeBlockedFiles(htmlPath) {
 }
 
 module.exports = {
-    removeBlockedFiles
+    removeBlockedFiles,
+    sanitizeReturnUrl
 };

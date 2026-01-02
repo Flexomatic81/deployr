@@ -11,6 +11,7 @@ const { getProjectAccess, requirePermission } = require('../middleware/projectAc
 const backupService = require('../services/backup');
 const projectService = require('../services/project');
 const databaseService = require('../services/database');
+const { sanitizeReturnUrl } = require('../services/utils/security');
 const { logger } = require('../config/logger');
 
 // All backup routes require authentication
@@ -61,8 +62,8 @@ router.post('/project/:name', getProjectAccess(), requirePermission('manage'), a
             size: backupService.formatFileSize(backup.size)
         }));
 
-        // Redirect back to project page or backups page
-        const returnTo = req.query.returnTo || `/projects/${projectName}`;
+        // Redirect back to project page or backups page (sanitized to prevent open redirect)
+        const returnTo = sanitizeReturnUrl(req.query.returnTo, `/projects/${projectName}`);
         res.redirect(returnTo);
 
     } catch (error) {
@@ -106,8 +107,8 @@ router.post('/database/:name', async (req, res) => {
             size: backupService.formatFileSize(backup.size)
         }));
 
-        // Redirect back to databases page or backups page
-        const returnTo = req.query.returnTo || '/databases';
+        // Redirect back to databases page or backups page (sanitized to prevent open redirect)
+        const returnTo = sanitizeReturnUrl(req.query.returnTo, '/databases');
         res.redirect(returnTo);
 
     } catch (error) {

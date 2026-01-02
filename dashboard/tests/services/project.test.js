@@ -854,6 +854,87 @@ DB_PASSWORD=secret`;
         });
     });
 
+    describe('getTotalProjectCount', () => {
+        it('should count all projects across users', async () => {
+            // Mock user directories
+            mockFs.readdir.mockResolvedValueOnce([
+                { name: 'user1', isDirectory: () => true },
+                { name: 'user2', isDirectory: () => true },
+                { name: '.hidden', isDirectory: () => true }
+            ]);
+
+            // Mock user1 projects
+            mockFs.readdir.mockResolvedValueOnce([
+                { name: 'project1', isDirectory: () => true },
+                { name: 'project2', isDirectory: () => true },
+                { name: '.backups', isDirectory: () => true }
+            ]);
+
+            // Mock user2 projects
+            mockFs.readdir.mockResolvedValueOnce([
+                { name: 'projectA', isDirectory: () => true }
+            ]);
+
+            // Mock .env access checks - all projects have .env
+            mockFs.access.mockResolvedValue(undefined);
+
+            const count = await projectService.getTotalProjectCount();
+
+            expect(count).toBe(3); // 2 from user1 + 1 from user2 (.backups excluded)
+        });
+
+        it('should return 0 when USERS_PATH does not exist', async () => {
+            const error = new Error('ENOENT');
+            error.code = 'ENOENT';
+            mockFs.readdir.mockRejectedValue(error);
+
+            const count = await projectService.getTotalProjectCount();
+
+            expect(count).toBe(0);
+        });
+
+        it('should skip directories without .env file', async () => {
+            mockFs.readdir.mockResolvedValueOnce([
+                { name: 'user1', isDirectory: () => true }
+            ]);
+
+            mockFs.readdir.mockResolvedValueOnce([
+                { name: 'validproject', isDirectory: () => true },
+                { name: 'randomdir', isDirectory: () => true }
+            ]);
+
+            // First project has .env, second doesn't
+            mockFs.access
+                .mockResolvedValueOnce(undefined)
+                .mockRejectedValueOnce(new Error('ENOENT'));
+
+            const count = await projectService.getTotalProjectCount();
+
+            expect(count).toBe(1);
+        });
+
+        it('should handle inaccessible user directories', async () => {
+            mockFs.readdir.mockResolvedValueOnce([
+                { name: 'user1', isDirectory: () => true },
+                { name: 'user2', isDirectory: () => true }
+            ]);
+
+            // user1 is accessible
+            mockFs.readdir.mockResolvedValueOnce([
+                { name: 'project1', isDirectory: () => true }
+            ]);
+
+            // user2 throws error
+            mockFs.readdir.mockRejectedValueOnce(new Error('Permission denied'));
+
+            mockFs.access.mockResolvedValue(undefined);
+
+            const count = await projectService.getTotalProjectCount();
+
+            expect(count).toBe(1);
+        });
+    });
+
     describe('Module exports', () => {
         it('should export all required functions', () => {
             expect(projectService.getUserProjects).toBeDefined();
@@ -873,6 +954,7 @@ DB_PASSWORD=secret`;
             expect(projectService.mergeDbCredentials).toBeDefined();
             expect(projectService.getUserDbCredentials).toBeDefined();
             expect(projectService.getLinkedDatabase).toBeDefined();
+            expect(projectService.getTotalProjectCount).toBeDefined();
         });
     });
 });

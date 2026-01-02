@@ -919,6 +919,54 @@ async function getUserDbCredentials(systemUsername) {
 }
 
 /**
+ * Counts total projects across all users efficiently.
+ * Only counts directories that look like projects (have .env file).
+ * Does not fetch container status to avoid N+1 queries.
+ *
+ * @returns {number} - Total project count
+ */
+async function getTotalProjectCount() {
+    try {
+        const entries = await fs.readdir(USERS_PATH, { withFileTypes: true });
+        let totalCount = 0;
+
+        // Process all user directories in parallel
+        await Promise.all(
+            entries
+                .filter(entry => entry.isDirectory() && !entry.name.startsWith('.'))
+                .map(async (userEntry) => {
+                    const userPath = path.join(USERS_PATH, userEntry.name);
+                    try {
+                        const userContents = await fs.readdir(userPath, { withFileTypes: true });
+
+                        for (const projectEntry of userContents) {
+                            if (projectEntry.isDirectory() && !projectEntry.name.startsWith('.')) {
+                                // Check if it has a .env file (indicator of a valid project)
+                                const envPath = path.join(userPath, projectEntry.name, '.env');
+                                try {
+                                    await fs.access(envPath);
+                                    totalCount++;
+                                } catch {
+                                    // Not a valid project
+                                }
+                            }
+                        }
+                    } catch {
+                        // User directory not accessible
+                    }
+                })
+        );
+
+        return totalCount;
+    } catch (error) {
+        if (error.code === 'ENOENT') {
+            return 0;
+        }
+        throw error;
+    }
+}
+
+/**
  * Detects the linked database for a project by reading its .env file
  * Searches for database-related variables and matches them against user databases
  *
@@ -979,5 +1027,6 @@ module.exports = {
     appendDbCredentials,
     mergeDbCredentials,
     getUserDbCredentials,
-    getLinkedDatabase
+    getLinkedDatabase,
+    getTotalProjectCount
 };
