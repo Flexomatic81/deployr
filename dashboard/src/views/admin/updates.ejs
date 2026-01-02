@@ -306,7 +306,9 @@ document.getElementById('installUpdateBtn')?.addEventListener('click', async fun
 // Wait for dashboard to come back online after restart
 async function waitForDashboardReady() {
     let attempts = 0;
+    let successCount = 0;
     const maxAttempts = 90; // 3 minutes max
+    const requiredSuccesses = 3; // Require 3 consecutive successes before redirecting
 
     const checkInterval = setInterval(async () => {
         attempts++;
@@ -318,14 +320,24 @@ async function waitForDashboardReady() {
             });
 
             if (response.ok) {
-                clearInterval(checkInterval);
-                // Show success state
-                setStepStatus('step-ready', 'done');
-                document.getElementById('updateStatusContainer').classList.add('d-none');
-                document.getElementById('updateSuccessContainer').classList.remove('d-none');
+                successCount++;
+                if (successCount >= requiredSuccesses) {
+                    clearInterval(checkInterval);
+                    // Show success state briefly, then redirect
+                    setStepStatus('step-ready', 'done');
+                    document.getElementById('updateStatusContainer').classList.add('d-none');
+                    document.getElementById('updateSuccessContainer').classList.remove('d-none');
+                    // Auto-redirect to login after short delay
+                    setTimeout(() => {
+                        window.location.href = '/login';
+                    }, 1500);
+                }
+            } else {
+                successCount = 0; // Reset on failure
             }
         } catch {
             // Dashboard not ready yet
+            successCount = 0; // Reset on error
         }
 
         if (attempts >= maxAttempts) {
@@ -333,7 +345,7 @@ async function waitForDashboardReady() {
             document.getElementById('updateSpinner').classList.add('d-none');
             document.getElementById('updateStatus').innerHTML = '<%= t("admin:updates.manualRefresh") %> <a href="/login" class="btn btn-sm btn-primary ms-2"><%= t("admin:updates.toLogin") %></a>';
         }
-    }, 2000);
+    }, 1000); // Check every second instead of 2 seconds
 }
 
 // Update channel selection
