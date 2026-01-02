@@ -158,9 +158,14 @@ do_deploy() {
     # Restart dashboard LAST (this will terminate the current process)
     # Small delay to ensure the JSON response is sent
     sleep 1
-    # Run in background with nohup because rm -s will terminate this process
-    # The subshell ensures both commands run even after container stops
-    nohup sh -c 'sleep 2 && docker compose rm -f -s dashboard 2>/dev/null; docker compose up -d dashboard' > /dev/null 2>&1 &
+    # Use a separate Docker container to restart dashboard after this container stops
+    # This container runs detached and executes the restart commands on the host
+    docker run --rm -d \
+        -v /var/run/docker.sock:/var/run/docker.sock \
+        -v "$PWD:$PWD" \
+        -w "$PWD" \
+        docker:cli \
+        sh -c 'sleep 3 && docker compose rm -f -s dashboard 2>/dev/null; docker compose up -d dashboard'
 }
 
 # Execute requested action
