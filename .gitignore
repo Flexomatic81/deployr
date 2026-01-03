@@ -46,3 +46,4 @@ gitignore/
 
 # Claude Code configuration (internal)
 CLAUDE.md
+.claude/
