@@ -43,3 +43,6 @@ Thumbs.db
 # Code Review (internal)
 CODE_REVIEW.md
 gitignore/
+
+# Claude Code configuration (internal)
+CLAUDE.md
