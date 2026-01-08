@@ -377,15 +377,26 @@ app.use('/workspace-proxy', requireAuth, async (req, res, next) => {
             return res.status(500).json({ error: 'Could not determine container IP' });
         }
 
-        logger.debug('Workspace proxy request', {
+        logger.info('Workspace proxy request', {
             projectName,
             containerIp,
             path: req.path,
+            originalUrl: req.originalUrl,
             method: req.method
         });
 
         // Proxy to workspace container with proper redirect handling
         const basePath = `/workspace-proxy/${projectName}`;
+        const targetPath = req.path.startsWith(basePath)
+            ? req.path.replace(basePath, '') || '/'
+            : req.path.replace(/^\/workspace-proxy/, '') || '/';
+
+        logger.info('Workspace proxy target', {
+            target: `http://${containerIp}:8080`,
+            targetPath,
+            basePath
+        });
+
         const proxy = createProxyMiddleware({
             target: `http://${containerIp}:8080`,
             changeOrigin: true,
@@ -394,15 +405,24 @@ app.use('/workspace-proxy', requireAuth, async (req, res, next) => {
             proxyTimeout: 30000,
             followRedirects: false,
             pathRewrite: (path) => {
-                if (path.startsWith(basePath)) {
-                    return path.replace(basePath, '') || '/';
-                }
-                return path.replace(/^\/workspace-proxy/, '') || '/';
+                const rewritten = path.startsWith(basePath)
+                    ? path.replace(basePath, '') || '/'
+                    : path.replace(/^\/workspace-proxy/, '') || '/';
+                logger.info('Workspace proxy pathRewrite', { original: path, rewritten });
+                return rewritten;
             },
             onProxyReq: (proxyReq, req) => {
                 proxyReq.removeHeader('origin');
+                logger.info('Workspace proxy onProxyReq', {
+                    path: proxyReq.path,
+                    method: proxyReq.method
+                });
             },
             onProxyRes: (proxyRes, req, res) => {
+                logger.info('Workspace proxy onProxyRes', {
+                    statusCode: proxyRes.statusCode,
+                    headers: proxyRes.headers
+                });
                 // Rewrite Location header for redirects
                 const location = proxyRes.headers['location'];
                 if (location) {
@@ -413,7 +433,7 @@ app.use('/workspace-proxy', requireAuth, async (req, res, next) => {
                         // Handle absolute paths
                         proxyRes.headers['location'] = `${basePath}${location}`;
                     }
-                    logger.debug('Workspace proxy redirect', {
+                    logger.info('Workspace proxy redirect rewritten', {
                         original: location,
                         rewritten: proxyRes.headers['location']
                     });
