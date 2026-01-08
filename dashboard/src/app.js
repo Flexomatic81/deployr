@@ -738,6 +738,29 @@ async function start() {
                 socket.setNoDelay(true);
                 socket.setKeepAlive(true, 10000);
 
+                // Handle client socket errors
+                socket.on('error', (err) => {
+                    logger.error('WebSocket client socket error', {
+                        error: err.message,
+                        code: err.code,
+                        projectName
+                    });
+                });
+
+                socket.on('close', () => {
+                    logger.info('WebSocket client socket closed', { projectName });
+                });
+
+                // Log what we're about to send
+                logger.info('WebSocket proxy calling ws()', {
+                    projectName,
+                    target: `http://${containerIp}:8080`,
+                    url: req.url,
+                    upgradeHeader: req.headers.upgrade,
+                    connectionHeader: req.headers.connection,
+                    socketKey: req.headers['sec-websocket-key']
+                });
+
                 // Proxy the WebSocket request
                 wsProxy.ws(req, socket, head);
             } catch (error) {
