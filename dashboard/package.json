@@ -37,6 +37,7 @@
     "mysql2": "^3.6.5",
     "nodemailer": "^7.0.12",
     "pg": "^8.11.3",
+    "http-proxy-middleware": "^3.0.3",
     "simple-git": "^3.30.0",
     "winston": "^3.19.0"
   },

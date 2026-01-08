@@ -316,10 +316,8 @@ router.get('/:projectName/ide',
                 req.flash('warning', req.t('workspaces:warnings.concurrentAccess'));
             }
 
-            // Build IDE URL using request host (handles both localhost and production)
-            const protocol = req.protocol;
-            const hostname = req.hostname;
-            const ideUrl = `${protocol}://${hostname}:${req.workspace.assigned_port}`;
+            // Build IDE URL using proxy path (avoids exposing workspace ports directly)
+            const ideUrl = `/workspace-proxy/${req.params.projectName}`;
 
             res.render('workspaces/ide', {
                 title: `IDE - ${req.params.projectName}`,

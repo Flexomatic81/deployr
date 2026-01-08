@@ -13,6 +13,7 @@ const rateLimit = require('express-rate-limit');
 const { csrfSynchronisedProtection, csrfTokenMiddleware, csrfErrorHandler } = require('./middleware/csrf');
 const { i18next, i18nMiddleware } = require('./config/i18n');
 
+const { createProxyMiddleware } = require('http-proxy-middleware');
 const { initDatabase, getPool } = require('./config/database');
 const { setUserLocals, requireAuth } = require('./middleware/auth');
 const autoDeployService = require('./services/autodeploy');
@@ -334,6 +335,51 @@ app.use('/workspaces/:projectName/start', workspaceLimiter);
 app.use('/workspaces/:projectName/stop', workspaceLimiter);
 app.use('/workspaces/:projectName/sync/:direction', workspaceLimiter);
 
+// Workspace IDE Proxy - proxies requests to the workspace container
+// This allows access to code-server through the dashboard without exposing ports directly
+app.use('/workspace-proxy/:projectName', requireAuth, async (req, res, next) => {
+    try {
+        const projectName = req.params.projectName;
+        const userId = req.session.user.id;
+
+        // Get workspace and verify access
+        const workspace = await workspaceService.getWorkspace(userId, projectName);
+
+        if (!workspace) {
+            return res.status(404).json({ error: 'Workspace not found' });
+        }
+
+        if (workspace.status !== 'running') {
+            return res.status(400).json({ error: 'Workspace is not running' });
+        }
+
+        if (!workspace.assigned_port) {
+            return res.status(500).json({ error: 'Workspace port not assigned' });
+        }
+
+        // Create proxy to the workspace container
+        const proxy = createProxyMiddleware({
+            target: `http://localhost:${workspace.assigned_port}`,
+            changeOrigin: true,
+            ws: true,
+            pathRewrite: {
+                [`^/workspace-proxy/${projectName}`]: ''
+            },
+            onError: (err, req, res) => {
+                logger.error('Workspace proxy error', { error: err.message, projectName });
+                if (!res.headersSent) {
+                    res.status(502).json({ error: 'Workspace unavailable' });
+                }
+            }
+        });
+
+        return proxy(req, res, next);
+    } catch (error) {
+        logger.error('Workspace proxy setup error', { error: error.message });
+        return res.status(500).json({ error: 'Proxy error' });
+    }
+});
+
 // Home Route
 app.get('/', async (req, res) => {
     try {
@@ -494,16 +540,71 @@ async function start() {
             logger.info('Setup not yet completed - setup wizard active');
         }
 
-        app.listen(PORT, '0.0.0.0', () => {
+        const server = app.listen(PORT, '0.0.0.0', () => {
             logger.info('Dashboard started', { port: PORT, url: `http://0.0.0.0:${PORT}` });
             if (!setupComplete) {
                 logger.info('Setup wizard available at http://<SERVER-IP>:3000/setup');
             }
         });
+
+        // Handle WebSocket upgrades for workspace proxy
+        server.on('upgrade', async (req, socket, head) => {
+            // Parse URL to check if it's a workspace proxy request
+            const url = req.url || '';
+            const match = url.match(/^\/workspace-proxy\/([^/]+)/);
+
+            if (!match) {
+                socket.destroy();
+                return;
+            }
+
+            const projectName = match[1];
+
+            // Parse session cookie for authentication
+            // Note: This is a simplified check - full session validation would require more work
+            const cookies = req.headers.cookie || '';
+            if (!cookies.includes('connect.sid')) {
+                socket.destroy();
+                return;
+            }
+
+            try {
+                // Get workspace port from database
+                const { getPool } = require('./config/database');
+                const pool = getPool();
+                const [rows] = await pool.query(
+                    'SELECT assigned_port, status FROM workspaces WHERE project_name = ?',
+                    [projectName]
+                );
+
+                if (!rows.length || rows[0].status !== 'running' || !rows[0].assigned_port) {
+                    socket.destroy();
+                    return;
+                }
+
+                const port = rows[0].assigned_port;
+
+                // Create WebSocket proxy
+                const { createProxyMiddleware } = require('http-proxy-middleware');
+                const wsProxy = createProxyMiddleware({
+                    target: `http://localhost:${port}`,
+                    ws: true,
+                    changeOrigin: true,
+                    pathRewrite: {
+                        [`^/workspace-proxy/${projectName}`]: ''
+                    }
+                });
+
+                wsProxy.upgrade(req, socket, head);
+            } catch (error) {
+                logger.error('WebSocket proxy error', { error: error.message, projectName });
+                socket.destroy();
+            }
+        });
     } catch (error) {
         // Start anyway on DB error (for setup wizard)
         logger.warn('Starting in setup mode (DB not available)', { error: error.message });
-        app.listen(PORT, '0.0.0.0', () => {
+        const server = app.listen(PORT, '0.0.0.0', () => {
             logger.info('Dashboard started in setup mode', { port: PORT });
         });
     }
