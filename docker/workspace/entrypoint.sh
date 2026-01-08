@@ -45,9 +45,11 @@ if [ -z "$CODE_SERVER_PASSWORD" ]; then
     echo "INFO: Workspace password saved to /workspace/.code-server-password"
 fi
 
+# Export password for code-server (newer versions require env var instead of CLI arg)
+export PASSWORD="$CODE_SERVER_PASSWORD"
+
 exec code-server \
     --bind-addr 0.0.0.0:8080 \
     --auth password \
-    --password "$CODE_SERVER_PASSWORD" \
     --disable-telemetry \
     /workspace
