@@ -316,20 +316,17 @@ router.get('/:projectName/ide',
                 req.flash('warning', req.t('workspaces:warnings.concurrentAccess'));
             }
 
-            // Build IDE URL - use direct port access for best compatibility with code-server
-            // The workspace ports (10000-10100) must be accessible through firewall
-            // Priority: WORKSPACE_HOST env > SERVER_IP env > auto-detected public IP
-            const workspaceHost = await workspaceService.getWorkspaceHost();
-            if (!workspaceHost) {
-                logger.error('Could not determine workspace host IP');
-                req.flash('error', req.t('workspaces:errors.noWorkspaceHost'));
-                return res.redirect(`/workspaces/${req.params.projectName}`);
-            }
-            const ideUrl = `http://${workspaceHost}:${req.workspace.assigned_port}/`;
+            // Build IDE URL - use internal proxy for secure access
+            // The proxy handles authentication and routes through HTTPS
+            const ideUrl = `/workspace-proxy/${req.params.projectName}/`;
 
-            // Redirect directly to code-server (avoids mixed content issues with HTTPS dashboard)
-            // The iframe wrapper doesn't work when dashboard is HTTPS and code-server is HTTP
-            res.redirect(ideUrl);
+            res.render('workspaces/ide', {
+                title: `IDE - ${req.params.projectName}`,
+                workspace: req.workspace,
+                project: req.projectAccess.project,
+                user: req.session.user,
+                ideUrl
+            });
         } catch (error) {
             logger.error('Failed to access IDE', { error: error.message });
             req.flash('error', req.t('workspaces:errors.ideFailed'));

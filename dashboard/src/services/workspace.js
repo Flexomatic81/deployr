@@ -371,6 +371,8 @@ async function startWorkspace(userId, projectName, systemUsername) {
         }
 
         // Create container
+        // Note: No external port binding - access only via internal Docker network
+        // The dashboard proxy handles external access with authentication
         const container = await docker.createContainer({
             name: containerName,
             Image: WORKSPACE_IMAGE,
@@ -382,9 +384,7 @@ async function startWorkspace(userId, projectName, systemUsername) {
                 Binds: [
                     `${hostProjectPath}:/workspace`
                 ],
-                PortBindings: {
-                    '8080/tcp': [{ HostPort: port.toString() }]
-                },
+                // No PortBindings - container only accessible via Docker network for security
                 Memory: parseMemoryLimit(workspace.ram_limit),
                 NanoCpus: parseCpuLimit(workspace.cpu_limit),
                 RestartPolicy: {

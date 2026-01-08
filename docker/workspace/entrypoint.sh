@@ -37,19 +37,15 @@ fi
 # Start code-server
 # ============================================================
 
-# Generate secure password if not provided
-if [ -z "$CODE_SERVER_PASSWORD" ]; then
-    CODE_SERVER_PASSWORD=$(openssl rand -base64 32)
-    echo "Generated workspace password: $CODE_SERVER_PASSWORD" > /workspace/.code-server-password
-    chmod 600 /workspace/.code-server-password
-    echo "INFO: Workspace password saved to /workspace/.code-server-password"
-fi
+# No authentication - access is controlled by the dashboard proxy
+# The workspace container is only accessible via internal Docker network
 
-# Export password for code-server (newer versions require env var instead of CLI arg)
-export PASSWORD="$CODE_SERVER_PASSWORD"
+# PROXY_BASE_PATH is set by the dashboard when starting the container
+# e.g., /workspace-proxy/tetris
+PROXY_BASE_PATH="${PROXY_BASE_PATH:-}"
 
 exec code-server \
     --bind-addr 0.0.0.0:8080 \
-    --auth password \
+    --auth none \
     --disable-telemetry \
     /workspace

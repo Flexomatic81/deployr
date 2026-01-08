@@ -382,19 +382,57 @@ app.use('/workspace-proxy', requireAuth, async (req, res, next) => {
         }
 
         // Create proxy to the workspace container (internal port is 8080)
+        const basePath = `/workspace-proxy/${projectName}`;
         const proxy = createProxyMiddleware({
             target: `http://${containerIp}:8080`,
             changeOrigin: true,
             ws: true,
+            selfHandleResponse: true,
             pathRewrite: (path) => {
-                // Remove /workspace-proxy/projectName from path if present
-                // e.g., /workspace-proxy/tetris/login -> /login
-                // But keep paths like /workspace-proxy/_static/ as /_static/
-                if (path.startsWith(`/workspace-proxy/${projectName}`)) {
-                    return path.replace(`/workspace-proxy/${projectName}`, '') || '/';
+                // Remove /workspace-proxy/projectName from path
+                if (path.startsWith(basePath)) {
+                    return path.replace(basePath, '') || '/';
                 }
-                // For absolute paths (/_static/, etc.), just remove the proxy prefix
                 return path.replace('/workspace-proxy', '') || '/';
+            },
+            onProxyRes: (proxyRes, req, res) => {
+                // Rewrite URLs in HTML/JS responses to use the proxy base path
+                const contentType = proxyRes.headers['content-type'] || '';
+                const isRewritable = contentType.includes('text/html') ||
+                                     contentType.includes('application/javascript') ||
+                                     contentType.includes('text/javascript');
+
+                // Copy headers (except content-length which may change)
+                Object.keys(proxyRes.headers).forEach(key => {
+                    if (key.toLowerCase() !== 'content-length' &&
+                        key.toLowerCase() !== 'content-encoding') {
+                        res.setHeader(key, proxyRes.headers[key]);
+                    }
+                });
+                res.statusCode = proxyRes.statusCode;
+
+                if (isRewritable) {
+                    let body = '';
+                    proxyRes.on('data', chunk => body += chunk);
+                    proxyRes.on('end', () => {
+                        // Rewrite absolute paths to use proxy base path
+                        // code-server uses paths like /_static/, /static/, /vscode-remote-resource
+                        const rewritten = body
+                            .replace(/"\/_static\//g, `"${basePath}/_static/`)
+                            .replace(/'\/_static\//g, `'${basePath}/_static/`)
+                            .replace(/"\/static\//g, `"${basePath}/static/`)
+                            .replace(/'\/static\//g, `'${basePath}/static/`)
+                            .replace(/"\/vscode/g, `"${basePath}/vscode`)
+                            .replace(/'\/vscode/g, `'${basePath}/vscode`)
+                            .replace(/href="\//g, `href="${basePath}/`)
+                            .replace(/src="\//g, `src="${basePath}/`)
+                            .replace(/url\(\//g, `url(${basePath}/`);
+                        res.end(rewritten);
+                    });
+                } else {
+                    // Pass through non-rewritable content as-is
+                    proxyRes.pipe(res);
+                }
             },
             onError: (err, req, res) => {
                 logger.error('Workspace proxy error', { error: err.message, projectName });
