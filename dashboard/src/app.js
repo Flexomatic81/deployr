@@ -629,27 +629,28 @@ async function start() {
 
         // Handle WebSocket upgrades for workspace proxy
         server.on('upgrade', async (req, socket, head) => {
-            // Parse URL to check if it's a workspace proxy request
             const url = req.url || '';
-            const match = url.match(/^\/workspace-proxy\/([^/]+)/);
+            logger.info('WebSocket upgrade request', { url });
 
+            const match = url.match(/^\/workspace-proxy\/([^/?]+)/);
             if (!match) {
+                logger.warn('WebSocket upgrade: not a workspace proxy request', { url });
                 socket.destroy();
                 return;
             }
 
             const projectName = match[1];
+            logger.info('WebSocket upgrade for workspace', { projectName, url });
 
             // Parse session cookie for authentication
-            // Note: This is a simplified check - full session validation would require more work
             const cookies = req.headers.cookie || '';
             if (!cookies.includes('connect.sid')) {
+                logger.warn('WebSocket upgrade: no session cookie');
                 socket.destroy();
                 return;
             }
 
             try {
-                // Get workspace info from database
                 const { getPool } = require('./config/database');
                 const pool = getPool();
                 const [rows] = await pool.query(
@@ -658,31 +659,45 @@ async function start() {
                 );
 
                 if (!rows.length || rows[0].status !== 'running' || !rows[0].container_id) {
+                    logger.warn('WebSocket upgrade: workspace not running', { projectName });
                     socket.destroy();
                     return;
                 }
 
-                // Get container IP
                 const containerIp = await workspaceService.getContainerIp(rows[0].container_id);
                 if (!containerIp) {
+                    logger.error('WebSocket upgrade: could not get container IP', { projectName });
                     socket.destroy();
                     return;
                 }
 
-                // Create WebSocket proxy (internal port is 8080)
-                const { createProxyMiddleware } = require('http-proxy-middleware');
-                const wsProxy = createProxyMiddleware({
-                    target: `http://${containerIp}:8080`,
-                    ws: true,
-                    changeOrigin: true,
-                    pathRewrite: (path) => {
-                        return path.replace(`/workspace-proxy/${projectName}`, '') || '/';
-                    }
+                // Rewrite the URL to remove the proxy prefix
+                const rewrittenPath = url.replace(`/workspace-proxy/${projectName}`, '') || '/';
+                req.url = rewrittenPath;
+
+                logger.info('WebSocket proxy', {
+                    projectName,
+                    containerIp,
+                    originalUrl: url,
+                    rewrittenUrl: rewrittenPath
                 });
 
-                wsProxy.upgrade(req, socket, head);
+                // Use http-proxy directly for WebSocket
+                const httpProxy = require('http-proxy');
+                const proxy = httpProxy.createProxyServer({
+                    target: `http://${containerIp}:8080`,
+                    ws: true,
+                    changeOrigin: true
+                });
+
+                proxy.on('error', (err) => {
+                    logger.error('WebSocket proxy error', { error: err.message, projectName });
+                    socket.destroy();
+                });
+
+                proxy.ws(req, socket, head);
             } catch (error) {
-                logger.error('WebSocket proxy error', { error: error.message, projectName });
+                logger.error('WebSocket proxy setup error', { error: error.message, projectName });
                 socket.destroy();
             }
         });
