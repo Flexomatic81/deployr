@@ -1024,6 +1024,38 @@ async function markAllAsStopping() {
     }
 }
 
+/**
+ * Gets the IP address of a container for internal proxying
+ * @param {string} containerId - Docker container ID
+ * @returns {Promise<string|null>} Container IP address or null
+ */
+async function getContainerIp(containerId) {
+    try {
+        const container = docker.getContainer(containerId);
+        const info = await container.inspect();
+
+        // Get IP from the dployr-network
+        const networks = info.NetworkSettings.Networks;
+        if (networks[WORKSPACE_NETWORK]) {
+            return networks[WORKSPACE_NETWORK].IPAddress;
+        }
+
+        // Fallback: try to get any available IP
+        for (const network of Object.values(networks)) {
+            if (network.IPAddress) {
+                return network.IPAddress;
+            }
+        }
+
+        return null;
+    } catch (error) {
+        logger.error('Failed to get container IP', {
+            containerId, error: error.message
+        });
+        return null;
+    }
+}
+
 // ============================================================
 // EXPORTS
 // ============================================================
@@ -1066,6 +1098,7 @@ module.exports = {
     // Utility
     logWorkspaceAction,
     markAllAsStopping,
+    getContainerIp,
 
     // Constants
     STATUS

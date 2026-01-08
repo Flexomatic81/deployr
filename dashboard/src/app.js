@@ -353,13 +353,19 @@ app.use('/workspace-proxy/:projectName', requireAuth, async (req, res, next) => 
             return res.status(400).json({ error: 'Workspace is not running' });
         }
 
-        if (!workspace.assigned_port) {
-            return res.status(500).json({ error: 'Workspace port not assigned' });
+        if (!workspace.container_id) {
+            return res.status(500).json({ error: 'Workspace container not found' });
         }
 
-        // Create proxy to the workspace container
+        // Get container IP from Docker
+        const containerIp = await workspaceService.getContainerIp(workspace.container_id);
+        if (!containerIp) {
+            return res.status(500).json({ error: 'Could not determine container IP' });
+        }
+
+        // Create proxy to the workspace container (internal port is 8080)
         const proxy = createProxyMiddleware({
-            target: `http://localhost:${workspace.assigned_port}`,
+            target: `http://${containerIp}:8080`,
             changeOrigin: true,
             ws: true,
             pathRewrite: {
@@ -569,25 +575,30 @@ async function start() {
             }
 
             try {
-                // Get workspace port from database
+                // Get workspace info from database
                 const { getPool } = require('./config/database');
                 const pool = getPool();
                 const [rows] = await pool.query(
-                    'SELECT assigned_port, status FROM workspaces WHERE project_name = ?',
+                    'SELECT container_id, status FROM workspaces WHERE project_name = ?',
                     [projectName]
                 );
 
-                if (!rows.length || rows[0].status !== 'running' || !rows[0].assigned_port) {
+                if (!rows.length || rows[0].status !== 'running' || !rows[0].container_id) {
                     socket.destroy();
                     return;
                 }
 
-                const port = rows[0].assigned_port;
+                // Get container IP
+                const containerIp = await workspaceService.getContainerIp(rows[0].container_id);
+                if (!containerIp) {
+                    socket.destroy();
+                    return;
+                }
 
-                // Create WebSocket proxy
+                // Create WebSocket proxy (internal port is 8080)
                 const { createProxyMiddleware } = require('http-proxy-middleware');
                 const wsProxy = createProxyMiddleware({
-                    target: `http://localhost:${port}`,
+                    target: `http://${containerIp}:8080`,
                     ws: true,
                     changeOrigin: true,
                     pathRewrite: {
