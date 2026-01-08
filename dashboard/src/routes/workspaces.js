@@ -318,13 +318,14 @@ router.get('/:projectName/ide',
 
             // Build IDE URL - use direct port access for best compatibility with code-server
             // The workspace ports (10000-10100) must be accessible through firewall
-            // SERVER_IP is configured during dployr setup (can be IP or domain)
-            const serverHost = process.env.SERVER_IP;
-            if (!serverHost || serverHost === 'localhost') {
-                req.flash('error', req.t('workspaces:errors.noServerHost'));
+            // WORKSPACE_HOST must be the server's public IP (not domain, as ports aren't proxied through NPM)
+            // Falls back to SERVER_IP for installations without NPM
+            const workspaceHost = process.env.WORKSPACE_HOST || process.env.SERVER_IP;
+            if (!workspaceHost || workspaceHost === 'localhost') {
+                req.flash('error', req.t('workspaces:errors.noWorkspaceHost'));
                 return res.redirect(`/workspaces/${req.params.projectName}`);
             }
-            const ideUrl = `http://${serverHost}:${req.workspace.assigned_port}/`;
+            const ideUrl = `http://${workspaceHost}:${req.workspace.assigned_port}/`;
 
             res.render('workspaces/ide', {
                 title: `IDE - ${req.params.projectName}`,

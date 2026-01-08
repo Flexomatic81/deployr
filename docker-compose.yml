@@ -155,6 +155,8 @@ services:
       - NPM_API_PASSWORD=${NPM_API_PASSWORD:-}
       # Dployr installation path (for updates)
       - HOST_DPLOYR_PATH=${HOST_DPLOYR_PATH:-/opt/dployr}
+      # Workspace host IP (required for direct port access to code-server)
+      - WORKSPACE_HOST=${WORKSPACE_HOST:-}
     networks:
       - dployr-network
     depends_on:
