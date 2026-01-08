@@ -13,12 +13,19 @@ const Docker = require('dockerode');
 const crypto = require('crypto');
 const path = require('path');
 const fs = require('fs').promises;
+const https = require('https');
+const http = require('http');
 const { pool } = require('../config/database');
 const { logger } = require('../config/logger');
 const portManager = require('./portManager');
 const encryption = require('./encryption');
 
 const docker = new Docker({ socketPath: '/var/run/docker.sock' });
+
+// Cache for public IP (refreshed every hour)
+let cachedPublicIp = null;
+let publicIpCacheTime = 0;
+const PUBLIC_IP_CACHE_TTL = 60 * 60 * 1000; // 1 hour
 
 // ============================================================
 // CONSTANTS
@@ -41,6 +48,75 @@ const STATUS = {
 // ============================================================
 // HELPER FUNCTIONS
 // ============================================================
+
+/**
+ * Fetches the server's public IP address from external services
+ * Uses caching to avoid excessive API calls
+ * @returns {Promise<string|null>} Public IP or null if detection fails
+ */
+async function getPublicIp() {
+    // Return cached value if still valid
+    if (cachedPublicIp && (Date.now() - publicIpCacheTime) < PUBLIC_IP_CACHE_TTL) {
+        return cachedPublicIp;
+    }
+
+    // List of IP detection services (fallback chain)
+    const services = [
+        { url: 'https://api.ipify.org', protocol: https },
+        { url: 'https://ifconfig.me/ip', protocol: https },
+        { url: 'https://icanhazip.com', protocol: https },
+        { url: 'http://checkip.amazonaws.com', protocol: http }
+    ];
+
+    for (const service of services) {
+        try {
+            const ip = await new Promise((resolve, reject) => {
+                const req = service.protocol.get(service.url, { timeout: 5000 }, (res) => {
+                    let data = '';
+                    res.on('data', chunk => data += chunk);
+                    res.on('end', () => resolve(data.trim()));
+                });
+                req.on('error', reject);
+                req.on('timeout', () => {
+                    req.destroy();
+                    reject(new Error('Timeout'));
+                });
+            });
+
+            // Validate IP format
+            if (/^(\d{1,3}\.){3}\d{1,3}$/.test(ip)) {
+                cachedPublicIp = ip;
+                publicIpCacheTime = Date.now();
+                logger.info('Detected public IP', { ip, source: service.url });
+                return ip;
+            }
+        } catch (error) {
+            logger.debug('IP detection failed for service', { service: service.url, error: error.message });
+        }
+    }
+
+    logger.warn('Could not detect public IP from any service');
+    return null;
+}
+
+/**
+ * Gets the workspace host address (IP for direct port access)
+ * Priority: WORKSPACE_HOST env > SERVER_IP env > auto-detected public IP
+ * @returns {Promise<string|null>} Host address or null
+ */
+async function getWorkspaceHost() {
+    // First check explicit configuration
+    if (process.env.WORKSPACE_HOST && process.env.WORKSPACE_HOST !== 'localhost') {
+        return process.env.WORKSPACE_HOST;
+    }
+
+    if (process.env.SERVER_IP && process.env.SERVER_IP !== 'localhost') {
+        return process.env.SERVER_IP;
+    }
+
+    // Auto-detect public IP
+    return await getPublicIp();
+}
 
 /**
  * Converts container path to host path for Docker volume mounts
@@ -1099,6 +1175,7 @@ module.exports = {
     logWorkspaceAction,
     markAllAsStopping,
     getContainerIp,
+    getWorkspaceHost,
 
     // Constants
     STATUS

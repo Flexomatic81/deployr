@@ -318,10 +318,10 @@ router.get('/:projectName/ide',
 
             // Build IDE URL - use direct port access for best compatibility with code-server
             // The workspace ports (10000-10100) must be accessible through firewall
-            // WORKSPACE_HOST must be the server's public IP (not domain, as ports aren't proxied through NPM)
-            // Falls back to SERVER_IP for installations without NPM
-            const workspaceHost = process.env.WORKSPACE_HOST || process.env.SERVER_IP;
-            if (!workspaceHost || workspaceHost === 'localhost') {
+            // Priority: WORKSPACE_HOST env > SERVER_IP env > auto-detected public IP
+            const workspaceHost = await workspaceService.getWorkspaceHost();
+            if (!workspaceHost) {
+                logger.error('Could not determine workspace host IP');
                 req.flash('error', req.t('workspaces:errors.noWorkspaceHost'));
                 return res.redirect(`/workspaces/${req.params.projectName}`);
             }
