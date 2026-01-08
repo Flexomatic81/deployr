@@ -318,8 +318,13 @@ router.get('/:projectName/ide',
 
             // Build IDE URL - use direct port access for best compatibility with code-server
             // The workspace ports (10000-10100) must be accessible through firewall
-            const serverIp = process.env.SERVER_IP || req.hostname;
-            const ideUrl = `http://${serverIp}:${req.workspace.assigned_port}/`;
+            // WORKSPACE_HOST should be the server's public IP (not domain, as ports aren't proxied)
+            const workspaceHost = process.env.WORKSPACE_HOST || process.env.SERVER_IP;
+            if (!workspaceHost) {
+                req.flash('error', req.t('workspaces:errors.noWorkspaceHost'));
+                return res.redirect(`/workspaces/${req.params.projectName}`);
+            }
+            const ideUrl = `http://${workspaceHost}:${req.workspace.assigned_port}/`;
 
             res.render('workspaces/ide', {
                 title: `IDE - ${req.params.projectName}`,
