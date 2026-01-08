@@ -327,13 +327,9 @@ router.get('/:projectName/ide',
             }
             const ideUrl = `http://${workspaceHost}:${req.workspace.assigned_port}/`;
 
-            res.render('workspaces/ide', {
-                title: `IDE - ${req.params.projectName}`,
-                workspace: req.workspace,
-                project: req.projectAccess.project,
-                user: req.session.user,
-                ideUrl
-            });
+            // Redirect directly to code-server (avoids mixed content issues with HTTPS dashboard)
+            // The iframe wrapper doesn't work when dashboard is HTTPS and code-server is HTTP
+            res.redirect(ideUrl);
         } catch (error) {
             logger.error('Failed to access IDE', { error: error.message });
             req.flash('error', req.t('workspaces:errors.ideFailed'));
