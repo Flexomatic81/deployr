@@ -47,8 +47,8 @@ const PORT = process.env.PORT || 3000;
 // Required for correct IP detection and rate limiting
 app.set('trust proxy', 1);
 
-// Security: Helmet for HTTP security headers
-app.use(helmet({
+// Security: Helmet for HTTP security headers (skip for workspace proxy)
+const helmetMiddleware = helmet({
     contentSecurityPolicy: {
         directives: {
             defaultSrc: ["'self'"],
@@ -69,7 +69,15 @@ app.use(helmet({
     crossOriginOpenerPolicy: false,
     originAgentCluster: false,
     hsts: false
-}));
+});
+
+// Skip helmet for workspace proxy - code-server has its own security headers
+app.use((req, res, next) => {
+    if (req.path.startsWith('/workspace-proxy/')) {
+        return next();
+    }
+    helmetMiddleware(req, res, next);
+});
 
 // Security: Rate limiting for auth routes
 const authLimiter = rateLimit({
@@ -80,13 +88,13 @@ const authLimiter = rateLimit({
     legacyHeaders: false
 });
 
-// Security: General rate limiting (skip for setup routes)
+// Security: General rate limiting (skip for setup and workspace-proxy routes)
 const generalLimiter = rateLimit({
     windowMs: 1 * 60 * 1000, // 1 minute
     max: 100, // 100 requests per minute
     standardHeaders: true,
     legacyHeaders: false,
-    skip: (req) => req.path.startsWith('/setup')
+    skip: (req) => req.path.startsWith('/setup') || req.path.startsWith('/workspace-proxy/')
 });
 
 // Security: Webhook rate limiting (more permissive for CI/CD)
