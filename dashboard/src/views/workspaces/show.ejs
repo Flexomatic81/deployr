@@ -78,7 +78,7 @@
             <div class="card-body">
                 <div class="d-grid gap-2">
                     <% if (workspace.status === 'stopped') { %>
-                        <button class="btn btn-success" onclick="startWorkspace()">
+                        <button class="btn btn-success" onclick="startWorkspace(this)">
                             <i class="bi bi-play-fill"></i>
                             <%= t('workspaces:actions.start') %>
                         </button>
@@ -88,7 +88,7 @@
                             <i class="bi bi-box-arrow-up-right"></i>
                             <%= t('workspaces:actions.openIDE') %>
                         </a>
-                        <button class="btn btn-warning" onclick="stopWorkspace()">
+                        <button class="btn btn-warning" onclick="stopWorkspace(this)">
                             <i class="bi bi-stop-fill"></i>
                             <%= t('workspaces:actions.stop') %>
                         </button>
@@ -144,8 +144,7 @@
 </div>
 
 <script>
-async function startWorkspace() {
-    const btn = event.target.closest('button');
+async function startWorkspace(btn) {
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Starting...';
 
@@ -174,10 +173,9 @@ async function startWorkspace() {
     }
 }
 
-async function stopWorkspace() {
+async function stopWorkspace(btn) {
     if (!confirm('<%= t("common:confirm.action") %>')) return;
 
-    const btn = event.target.closest('button');
     btn.disabled = true;
     btn.innerHTML = '<span class="spinner-border spinner-border-sm"></span> Stopping...';
 
