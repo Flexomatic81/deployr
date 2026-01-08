@@ -56,7 +56,7 @@ app.use(helmet({
             fontSrc: ["'self'", "https://fonts.gstatic.com", "https://cdn.jsdelivr.net", "data:"],
             imgSrc: ["'self'", "data:", "https:"],
             connectSrc: ["'self'", "ws:", "wss:", "https://cdn.jsdelivr.net"],
-            frameSrc: ["'self'", "http://localhost:*", "https://localhost:*"],
+            frameSrc: ["'self'", "http:", "https:"],
             formAction: ["'self'"],
             frameAncestors: ["'self'"],
             objectSrc: ["'none'"],
