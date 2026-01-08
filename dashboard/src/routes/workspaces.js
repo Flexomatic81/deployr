@@ -316,9 +316,10 @@ router.get('/:projectName/ide',
                 req.flash('warning', req.t('workspaces:warnings.concurrentAccess'));
             }
 
-            // Build IDE URL using proxy path (avoids exposing workspace ports directly)
-            // Trailing slash is important so relative URLs like ./login resolve correctly
-            const ideUrl = `/workspace-proxy/${req.params.projectName}/`;
+            // Build IDE URL - use direct port access for best compatibility with code-server
+            // The workspace ports (10000-10100) must be accessible through firewall
+            const serverIp = process.env.SERVER_IP || req.hostname;
+            const ideUrl = `http://${serverIp}:${req.workspace.assigned_port}/`;
 
             res.render('workspaces/ide', {
                 title: `IDE - ${req.params.projectName}`,

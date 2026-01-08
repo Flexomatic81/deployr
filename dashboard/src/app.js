@@ -343,10 +343,16 @@ app.use('/workspace-proxy', requireAuth, async (req, res, next) => {
         // Extract projectName from the URL path (first segment after /workspace-proxy/)
         // e.g., /workspace-proxy/tetris/login -> projectName = 'tetris'
         const pathParts = req.path.split('/').filter(p => p);
-        const projectName = pathParts[0];
+        let projectName = pathParts[0];
 
-        if (!projectName) {
-            return res.status(400).json({ error: 'Project name required' });
+        // If no projectName in path, check if we have one stored in session
+        // This handles code-server's absolute paths like /_static/
+        if (!projectName || projectName.startsWith('_') || projectName === 'static') {
+            projectName = req.session.activeWorkspace;
+            if (!projectName) {
+                return res.status(400).json({ error: 'Project name required' });
+            }
+            // For absolute paths, we need to proxy the original path without stripping
         }
 
         const userId = req.session.user.id;
@@ -366,6 +372,9 @@ app.use('/workspace-proxy', requireAuth, async (req, res, next) => {
             return res.status(500).json({ error: 'Workspace container not found' });
         }
 
+        // Store active workspace in session for subsequent requests
+        req.session.activeWorkspace = projectName;
+
         // Get container IP from Docker
         const containerIp = await workspaceService.getContainerIp(workspace.container_id);
         if (!containerIp) {
@@ -378,9 +387,14 @@ app.use('/workspace-proxy', requireAuth, async (req, res, next) => {
             changeOrigin: true,
             ws: true,
             pathRewrite: (path) => {
-                // Remove /workspace-proxy/projectName from path
+                // Remove /workspace-proxy/projectName from path if present
                 // e.g., /workspace-proxy/tetris/login -> /login
-                return path.replace(`/workspace-proxy/${projectName}`, '') || '/';
+                // But keep paths like /workspace-proxy/_static/ as /_static/
+                if (path.startsWith(`/workspace-proxy/${projectName}`)) {
+                    return path.replace(`/workspace-proxy/${projectName}`, '') || '/';
+                }
+                // For absolute paths (/_static/, etc.), just remove the proxy prefix
+                return path.replace('/workspace-proxy', '') || '/';
             },
             onError: (err, req, res) => {
                 logger.error('Workspace proxy error', { error: err.message, projectName });
