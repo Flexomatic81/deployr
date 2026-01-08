@@ -337,27 +337,22 @@ app.use('/workspaces/:projectName/sync/:direction', workspaceLimiter);
 
 // Workspace IDE Proxy - proxies requests to the workspace container
 // This allows access to code-server through the dashboard without exposing ports directly
-// Uses a wildcard route to capture all paths after the projectName
 app.use('/workspace-proxy', requireAuth, async (req, res, next) => {
     try {
         // Extract projectName from the URL path (first segment after /workspace-proxy/)
-        // e.g., /workspace-proxy/tetris/login -> projectName = 'tetris'
         const pathParts = req.path.split('/').filter(p => p);
         let projectName = pathParts[0];
 
-        // If no projectName in path, check if we have one stored in session
-        // This handles code-server's absolute paths like /_static/
-        if (!projectName || projectName.startsWith('_') || projectName === 'static') {
+        // If no projectName in path, check session for active workspace
+        if (!projectName || projectName.startsWith('_') || projectName === 'static' || projectName === 'vscode') {
             projectName = req.session.activeWorkspace;
             if (!projectName) {
+                logger.warn('Workspace proxy: No project name in path or session');
                 return res.status(400).json({ error: 'Project name required' });
             }
-            // For absolute paths, we need to proxy the original path without stripping
         }
 
         const userId = req.session.user.id;
-
-        // Get workspace and verify access
         const workspace = await workspaceService.getWorkspace(userId, projectName);
 
         if (!workspace) {
@@ -372,79 +367,59 @@ app.use('/workspace-proxy', requireAuth, async (req, res, next) => {
             return res.status(500).json({ error: 'Workspace container not found' });
         }
 
-        // Store active workspace in session for subsequent requests
+        // Store active workspace in session
         req.session.activeWorkspace = projectName;
 
         // Get container IP from Docker
         const containerIp = await workspaceService.getContainerIp(workspace.container_id);
         if (!containerIp) {
+            logger.error('Workspace proxy: Could not get container IP', { containerId: workspace.container_id });
             return res.status(500).json({ error: 'Could not determine container IP' });
         }
 
-        // Create proxy to the workspace container (internal port is 8080)
+        logger.debug('Workspace proxy request', {
+            projectName,
+            containerIp,
+            path: req.path,
+            method: req.method
+        });
+
+        // Simple proxy without URL rewriting - let code-server handle its own paths
+        // code-server 4.x works better with a consistent base path
         const basePath = `/workspace-proxy/${projectName}`;
         const proxy = createProxyMiddleware({
             target: `http://${containerIp}:8080`,
             changeOrigin: true,
             ws: true,
-            selfHandleResponse: true,
+            timeout: 30000,
+            proxyTimeout: 30000,
             pathRewrite: (path) => {
-                // Remove /workspace-proxy/projectName from path
                 if (path.startsWith(basePath)) {
                     return path.replace(basePath, '') || '/';
                 }
-                return path.replace('/workspace-proxy', '') || '/';
+                // For paths like /_static/ that don't include project name
+                return path.replace(/^\/workspace-proxy/, '') || '/';
             },
-            onProxyRes: (proxyRes, req, res) => {
-                // Rewrite URLs in HTML/JS responses to use the proxy base path
-                const contentType = proxyRes.headers['content-type'] || '';
-                const isRewritable = contentType.includes('text/html') ||
-                                     contentType.includes('application/javascript') ||
-                                     contentType.includes('text/javascript');
-
-                // Copy headers (except content-length which may change)
-                Object.keys(proxyRes.headers).forEach(key => {
-                    if (key.toLowerCase() !== 'content-length' &&
-                        key.toLowerCase() !== 'content-encoding') {
-                        res.setHeader(key, proxyRes.headers[key]);
-                    }
-                });
-                res.statusCode = proxyRes.statusCode;
-
-                if (isRewritable) {
-                    let body = '';
-                    proxyRes.on('data', chunk => body += chunk);
-                    proxyRes.on('end', () => {
-                        // Rewrite absolute paths to use proxy base path
-                        // code-server uses paths like /_static/, /static/, /vscode-remote-resource
-                        const rewritten = body
-                            .replace(/"\/_static\//g, `"${basePath}/_static/`)
-                            .replace(/'\/_static\//g, `'${basePath}/_static/`)
-                            .replace(/"\/static\//g, `"${basePath}/static/`)
-                            .replace(/'\/static\//g, `'${basePath}/static/`)
-                            .replace(/"\/vscode/g, `"${basePath}/vscode`)
-                            .replace(/'\/vscode/g, `'${basePath}/vscode`)
-                            .replace(/href="\//g, `href="${basePath}/`)
-                            .replace(/src="\//g, `src="${basePath}/`)
-                            .replace(/url\(\//g, `url(${basePath}/`);
-                        res.end(rewritten);
-                    });
-                } else {
-                    // Pass through non-rewritable content as-is
-                    proxyRes.pipe(res);
-                }
+            onProxyReq: (proxyReq, req) => {
+                // Remove problematic headers
+                proxyReq.removeHeader('origin');
             },
             onError: (err, req, res) => {
-                logger.error('Workspace proxy error', { error: err.message, projectName });
+                logger.error('Workspace proxy error', {
+                    error: err.message,
+                    code: err.code,
+                    projectName,
+                    path: req.path
+                });
                 if (!res.headersSent) {
-                    res.status(502).json({ error: 'Workspace unavailable' });
+                    res.status(502).json({ error: 'Workspace unavailable: ' + err.message });
                 }
             }
         });
 
         return proxy(req, res, next);
     } catch (error) {
-        logger.error('Workspace proxy setup error', { error: error.message });
+        logger.error('Workspace proxy setup error', { error: error.message, stack: error.stack });
         return res.status(500).json({ error: 'Proxy error' });
     }
 });
