@@ -378,25 +378,10 @@ app.use('/workspace-proxy', requireAuth, async (req, res, next) => {
             return res.status(500).json({ error: 'Could not determine container IP' });
         }
 
-        logger.info('Workspace proxy request', {
-            projectName,
-            containerIp,
-            path: req.path,
-            originalUrl: req.originalUrl,
-            method: req.method
-        });
+        logger.debug('Workspace proxy request', { projectName, path: req.path });
 
         // Proxy to workspace container with proper redirect handling
         const basePath = `/workspace-proxy/${projectName}`;
-        const targetPath = req.path.startsWith(basePath)
-            ? req.path.replace(basePath, '') || '/'
-            : req.path.replace(/^\/workspace-proxy/, '') || '/';
-
-        logger.info('Workspace proxy target', {
-            target: `http://${containerIp}:8080`,
-            targetPath,
-            basePath
-        });
 
         const proxy = createProxyMiddleware({
             target: `http://${containerIp}:8080`,
@@ -406,44 +391,27 @@ app.use('/workspace-proxy', requireAuth, async (req, res, next) => {
             proxyTimeout: 30000,
             followRedirects: false,
             pathRewrite: (path) => {
-                // path can be the full originalUrl or just the relative path
-                // Strip both /workspace-proxy/ and the project name to get the code-server path
+                // Strip /workspace-proxy/ and project name to get code-server path
                 let rewritten = path;
-                // First, strip /workspace-proxy/ if present
                 if (rewritten.startsWith('/workspace-proxy/')) {
                     rewritten = rewritten.replace('/workspace-proxy/', '/');
                 }
-                // Then strip the project name
                 rewritten = rewritten.replace(new RegExp(`^/${projectName}`), '') || '/';
-                logger.info('Workspace proxy pathRewrite', { original: path, rewritten, projectName });
                 return rewritten;
             },
-            onProxyReq: (proxyReq, req) => {
+            onProxyReq: (proxyReq) => {
+                // Remove origin header - code-server rejects external origins
                 proxyReq.removeHeader('origin');
-                logger.info('Workspace proxy onProxyReq', {
-                    path: proxyReq.path,
-                    method: proxyReq.method
-                });
             },
-            onProxyRes: (proxyRes, req, res) => {
-                logger.info('Workspace proxy onProxyRes', {
-                    statusCode: proxyRes.statusCode,
-                    headers: proxyRes.headers
-                });
+            onProxyRes: (proxyRes) => {
                 // Rewrite Location header for redirects
                 const location = proxyRes.headers['location'];
                 if (location) {
-                    // Handle relative redirects (like "./?folder=/workspace")
                     if (location.startsWith('./') || location.startsWith('?')) {
                         proxyRes.headers['location'] = `${basePath}/${location.replace('./', '')}`;
                     } else if (location.startsWith('/') && !location.startsWith(basePath)) {
-                        // Handle absolute paths
                         proxyRes.headers['location'] = `${basePath}${location}`;
                     }
-                    logger.info('Workspace proxy redirect rewritten', {
-                        original: location,
-                        rewritten: proxyRes.headers['location']
-                    });
                 }
             },
             onError: (err, req, res) => {
@@ -636,22 +604,19 @@ async function start() {
         // Handle WebSocket upgrades for workspace proxy
         server.on('upgrade', async (req, socket, head) => {
             const url = req.url || '';
-            logger.info('WebSocket upgrade request', { url, headers: req.headers });
 
             const match = url.match(/^\/workspace-proxy\/([^/?]+)/);
             if (!match) {
-                logger.warn('WebSocket upgrade: not a workspace proxy request', { url });
                 socket.destroy();
                 return;
             }
 
             const projectName = match[1];
-            logger.info('WebSocket upgrade for workspace', { projectName, url });
 
-            // Parse session cookie for authentication
+            // Require session cookie for authentication
             const cookies = req.headers.cookie || '';
             if (!cookies.includes('connect.sid')) {
-                logger.warn('WebSocket upgrade: no session cookie');
+                logger.warn('WebSocket upgrade rejected: no session', { projectName });
                 socket.destroy();
                 return;
             }
@@ -664,14 +629,14 @@ async function start() {
                 );
 
                 if (!rows.length || rows[0].status !== 'running' || !rows[0].container_id) {
-                    logger.warn('WebSocket upgrade: workspace not running', { projectName });
+                    logger.warn('WebSocket upgrade rejected: workspace not running', { projectName });
                     socket.destroy();
                     return;
                 }
 
                 const containerIp = await workspaceService.getContainerIp(rows[0].container_id);
                 if (!containerIp) {
-                    logger.error('WebSocket upgrade: could not get container IP', { projectName });
+                    logger.error('WebSocket upgrade failed: no container IP', { projectName });
                     socket.destroy();
                     return;
                 }
@@ -680,12 +645,7 @@ async function start() {
                 const rewrittenPath = url.replace(`/workspace-proxy/${projectName}`, '') || '/';
                 req.url = rewrittenPath;
 
-                logger.info('WebSocket proxy', {
-                    projectName,
-                    containerIp,
-                    originalUrl: url,
-                    rewrittenUrl: rewrittenPath
-                });
+                logger.debug('WebSocket proxy', { projectName, containerIp });
 
                 // Create proxy for this WebSocket connection
                 const wsProxy = httpProxy.createProxyServer({
@@ -695,44 +655,17 @@ async function start() {
                     xfwd: true
                 });
 
-                // Preserve WebSocket headers and add forwarding info
-                if (req.headers['sec-websocket-protocol']) {
-                    logger.info('WebSocket protocols requested', {
-                        protocols: req.headers['sec-websocket-protocol']
-                    });
-                }
-
-                // Log outgoing proxy request and remove Origin header
-                wsProxy.on('proxyReqWs', (proxyReq, req, socket, options, head) => {
-                    // Remove origin header - code-server rejects requests with external origin
+                // Remove origin header - code-server rejects requests with external origin
+                wsProxy.on('proxyReqWs', (proxyReq) => {
                     proxyReq.removeHeader('origin');
-                    logger.info('WebSocket proxy request sent', {
-                        projectName,
-                        target: options.target.href,
-                        path: proxyReq.path
-                    });
                 });
 
                 // Handle proxy errors
-                wsProxy.on('error', (err, req, res) => {
-                    logger.error('WebSocket proxy error', {
-                        error: err.message,
-                        code: err.code,
-                        projectName
-                    });
+                wsProxy.on('error', (err) => {
+                    logger.error('WebSocket proxy error', { error: err.message, projectName });
                     if (socket && !socket.destroyed) {
                         socket.destroy();
                     }
-                });
-
-                // Handle proxy open
-                wsProxy.on('open', (proxySocket) => {
-                    logger.info('WebSocket proxy connection opened', { projectName });
-                });
-
-                // Handle proxy close
-                wsProxy.on('close', (res, socket, head) => {
-                    logger.info('WebSocket proxy connection closed', { projectName });
                 });
 
                 // Keep socket alive
@@ -742,25 +675,12 @@ async function start() {
 
                 // Handle client socket errors
                 socket.on('error', (err) => {
-                    logger.error('WebSocket client socket error', {
-                        error: err.message,
-                        code: err.code,
-                        projectName
-                    });
+                    logger.debug('WebSocket client error', { error: err.message, projectName });
                 });
 
+                // Clean up proxy when socket closes
                 socket.on('close', () => {
-                    logger.info('WebSocket client socket closed', { projectName });
-                });
-
-                // Log what we're about to send
-                logger.info('WebSocket proxy calling ws()', {
-                    projectName,
-                    target: `http://${containerIp}:8080`,
-                    url: req.url,
-                    upgradeHeader: req.headers.upgrade,
-                    connectionHeader: req.headers.connection,
-                    socketKey: req.headers['sec-websocket-key']
+                    wsProxy.close();
                 });
 
                 // Proxy the WebSocket request
