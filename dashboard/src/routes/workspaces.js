@@ -321,6 +321,7 @@ router.get('/:projectName/ide',
             const ideUrl = `/workspace-proxy/${req.params.projectName}/`;
 
             res.render('workspaces/ide', {
+                layout: false,
                 title: `IDE - ${req.params.projectName}`,
                 workspace: req.workspace,
                 project: req.projectAccess.project,
