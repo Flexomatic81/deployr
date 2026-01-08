@@ -337,9 +337,18 @@ app.use('/workspaces/:projectName/sync/:direction', workspaceLimiter);
 
 // Workspace IDE Proxy - proxies requests to the workspace container
 // This allows access to code-server through the dashboard without exposing ports directly
-app.use('/workspace-proxy/:projectName', requireAuth, async (req, res, next) => {
+// Uses a wildcard route to capture all paths after the projectName
+app.use('/workspace-proxy', requireAuth, async (req, res, next) => {
     try {
-        const projectName = req.params.projectName;
+        // Extract projectName from the URL path (first segment after /workspace-proxy/)
+        // e.g., /workspace-proxy/tetris/login -> projectName = 'tetris'
+        const pathParts = req.path.split('/').filter(p => p);
+        const projectName = pathParts[0];
+
+        if (!projectName) {
+            return res.status(400).json({ error: 'Project name required' });
+        }
+
         const userId = req.session.user.id;
 
         // Get workspace and verify access
@@ -368,8 +377,10 @@ app.use('/workspace-proxy/:projectName', requireAuth, async (req, res, next) => 
             target: `http://${containerIp}:8080`,
             changeOrigin: true,
             ws: true,
-            pathRewrite: {
-                [`^/workspace-proxy/${projectName}`]: ''
+            pathRewrite: (path) => {
+                // Remove /workspace-proxy/projectName from path
+                // e.g., /workspace-proxy/tetris/login -> /login
+                return path.replace(`/workspace-proxy/${projectName}`, '') || '/';
             },
             onError: (err, req, res) => {
                 logger.error('Workspace proxy error', { error: err.message, projectName });
@@ -601,8 +612,8 @@ async function start() {
                     target: `http://${containerIp}:8080`,
                     ws: true,
                     changeOrigin: true,
-                    pathRewrite: {
-                        [`^/workspace-proxy/${projectName}`]: ''
+                    pathRewrite: (path) => {
+                        return path.replace(`/workspace-proxy/${projectName}`, '') || '/';
                     }
                 });
 

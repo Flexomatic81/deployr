@@ -317,7 +317,8 @@ router.get('/:projectName/ide',
             }
 
             // Build IDE URL using proxy path (avoids exposing workspace ports directly)
-            const ideUrl = `/workspace-proxy/${req.params.projectName}`;
+            // Trailing slash is important so relative URLs like ./login resolve correctly
+            const ideUrl = `/workspace-proxy/${req.params.projectName}/`;
 
             res.render('workspaces/ide', {
                 title: `IDE - ${req.params.projectName}`,
