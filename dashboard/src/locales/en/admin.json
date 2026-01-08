@@ -315,7 +315,7 @@
     "channelWarning": "Beta updates may be unstable and cause issues.",
     "stepPull": "Download code (git pull)",
     "stepImages": "Update Docker images",
-    "stepBuild": "Rebuild dashboard",
+    "stepBuild": "Build dashboard image",
     "stepWorkspace": "Build workspace image",
     "stepRestart": "Restart services",
     "stepReady": "Waiting for dashboard",

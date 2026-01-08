@@ -315,7 +315,7 @@
     "channelWarning": "Beta-Updates können instabil sein und zu Problemen führen.",
     "stepPull": "Code herunterladen (git pull)",
     "stepImages": "Docker Images aktualisieren",
-    "stepBuild": "Dashboard neu bauen",
+    "stepBuild": "Dashboard-Image bauen",
     "stepWorkspace": "Workspace-Image bauen",
     "stepRestart": "Services neu starten",
     "stepReady": "Warten auf Dashboard",
